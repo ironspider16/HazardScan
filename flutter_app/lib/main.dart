@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // make sure this file is in lib/login_screen.dart
+import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
