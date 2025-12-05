@@ -1,46 +1,67 @@
 import 'package:flutter/material.dart';
+import '../config/app_users.dart';
+import '../pages/login_screen.dart';
+import 'admin/edit_accounts_page.dart';
+
+
 
 class MainMenu extends StatelessWidget {
-  const MainMenu({super.key});
+  final AppUser user;
+
+  const MainMenu({super.key, required this.user});
+
+  bool get isAdmin => user.role == UserRole.admin;
+
+  void _logout(BuildContext context) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.black,
+
+      // ---------------------------------------------------
+      // TOP BAR WITH LOGOUT
+      // ---------------------------------------------------
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        title: Text(
+          "Main Menu (${isAdmin ? 'Admin' : 'User'})",
+          style: const TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: () => _logout(context),
+            tooltip: "Log Out",
+          ),
+        ],
+      ),
 
       // Floating Camera Button
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF2563EB),
-        elevation: 6,
         onPressed: () {},
-        child: const Icon(Icons.camera_alt, color: Colors.white, size: 32),
+        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
       body: SafeArea(
         child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
 
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
 
-              // HEADER
-              const Text(
-                "Main Menu",
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 40),
-
-              // Menu Buttons (centered)
               Expanded(
                 child: Center(
                   child: ConstrainedBox(
@@ -48,37 +69,81 @@ class MainMenu extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-
-                        // REPORTS BUTTON
+                        // ---- SHARED BUTTON ----
                         _MenuButton(
                           icon: Icons.description_outlined,
-                          label: "Reports",
+                          label: isAdmin ? "All Reports" : "My Reports",
                           color: const Color(0xFF2563EB),
                           onTap: () {},
                         ),
                         const SizedBox(height: 20),
 
-                        // DASHBOARD BUTTON
-                        _MenuButton(
-                          icon: Icons.dashboard_outlined,
-                          label: "Dashboard",
-                          color: const Color(0xFF1F2937), // gray-900
-                          onTap: () {},
-                        ),
-                        const SizedBox(height: 20),
+                        // ---- ROLE-BASED BUTTONS ----
+                        if (isAdmin) ...[
+                          _MenuButton(
+                            icon: Icons.group_outlined,
+                            label: "User Management",
+                            color: const Color(0xFF1F2937),
+                            onTap: () {},
+                          ),
+                          const SizedBox(height: 20),
+                          _MenuButton(
+                            icon: Icons.settings_outlined,
+                            label: "System Settings",
+                            color: const Color(0xFF1F2937),
+                            onTap: () {},
+                          ),
+                          const SizedBox(height: 20),
+                          _MenuButton(
+                            icon: Icons.edit_note_outlined,
+                            label: "Edit Accounts",
+                            color: const Color(0xFF1F2937),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (_) => EditAccountsPage()),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
 
-                        // SETTINGS BUTTON
-                        _MenuButton(
-                          icon: Icons.settings_outlined,
-                          label: "Settings",
-                          color: const Color(0xFF1F2937),
-                          onTap: () {},
+                        ] else ...[
+                          _MenuButton(
+                            icon: Icons.assignment_turned_in_outlined,
+                            label: "My Tasks",
+                            color: const Color(0xFF1F2937),
+                            onTap: () {},
+                          ),
+                          const SizedBox(height: 20),
+                          _MenuButton(
+                            icon: Icons.person_outline,
+                            label: "Profile / Help",
+                            color: const Color(0xFF1F2937),
+                            onTap: () {},
+                          ),
+                        ],
+
+                        const SizedBox(height: 40),
+
+                        // ---------------------------------------------------
+                        // OPTIONAL: LOGOUT BUTTON AT BOTTOM
+                        // ---------------------------------------------------
+                        TextButton(
+                          onPressed: () => _logout(context),
+                          child: const Text(
+                            "Log Out",
+                            style: TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -87,9 +152,6 @@ class MainMenu extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------
-// Reusable Menu Button
-// ---------------------------------------------------------------
 class _MenuButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -108,31 +170,25 @@ class _MenuButton extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-
       child: Container(
         height: 80,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color == const Color(0xFF2563EB)
-                ? const Color(0xFF2563EB)
-                : const Color(0xFF374151),
-          ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.white, size: 32),
+            Icon(icon, color: Colors.white, size: 30),
             const SizedBox(width: 16),
             Text(
               label,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.w500,
               ),
-            )
+            ),
           ],
         ),
       ),

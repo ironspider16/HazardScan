@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../config/app_users.dart'; //  import the config
+import '../config/app_users.dart';
 import '../pages/main_menu.dart';
-
+import '../services/accounts_file_service.dart';   // <-- ADD THIS
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _showPassword = false;
+  bool _loading = false;   // To show loading state
 
   @override
   void dispose() {
@@ -23,33 +24,44 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin() {
+  // ---------------------------------------------------------
+  // Updated login function using accounts.txt
+  // ---------------------------------------------------------
+  Future<void> _handleLogin() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    setState(() => _loading = true);
+
     final email = _emailCtrl.text.trim();
-    final password = _passwordCtrl.text;
+    final password = _passwordCtrl.text.trim();
 
-    final isValid = AppUsersConfig.validate(email, password);
+    final service = AccountsFileService.instance;
+    final AppUser? user = await service.login(email, password);
 
-    if (isValid) {
-      // ✅ Correct email + password
+    setState(() => _loading = false);
+
+    if (user != null) {
+      // Login OK
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login successful')),
       );
 
-      // TODO: navigate to your home page:
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const MainMenu()),
+        MaterialPageRoute(
+          builder: (_) => MainMenu(user: user),
+        ),
       );
     } else {
-      // ❌ Wrong credentials
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Invalid email or password')),
       );
     }
   }
 
+  // ---------------------------------------------------------
+  // UI BELOW (unchanged from your original)
+  // ---------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -136,13 +148,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 horizontal: 16, vertical: 20),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE5E7EB)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE5E7EB)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -176,13 +188,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextFormField(
                           controller: _passwordCtrl,
                           obscureText: !_showPassword,
-                          autofillHints: const [AutofillHints.password],
                           decoration: InputDecoration(
                             hintText: "Enter your password",
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              onPressed: () => setState(
-                                  () => _showPassword = !_showPassword),
+                              onPressed: () =>
+                                  setState(() => _showPassword = !_showPassword),
                               icon: Icon(_showPassword
                                   ? Icons.visibility_off
                                   : Icons.visibility),
@@ -193,13 +204,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 horizontal: 16, vertical: 20),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE5E7EB)),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                  color: Color(0xFFE5E7EB)),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFE5E7EB)),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -223,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _handleLogin,
+                            onPressed: _loading ? null : _handleLogin,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF2563EB),
                               foregroundColor: Colors.white,
@@ -232,7 +243,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: const Text("Sign In"),
+                            child: _loading
+                                ? const CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  )
+                                : const Text("Sign In"),
                           ),
                         ),
                       ],

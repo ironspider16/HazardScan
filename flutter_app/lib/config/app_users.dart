@@ -1,29 +1,18 @@
 // lib/config/app_users.dart
 
+enum UserRole { admin, user }
+
 class AppUser {
   final String email;
   final String password;
+  final UserRole role;
 
-  const AppUser({
+  AppUser({
     required this.email,
     required this.password,
+    required this.role,
   });
-}
 
-class AppUsersConfig {
-  //  Add your allowed users here
-  static const List<AppUser> users = [
-    AppUser(email: 'admin@example.com', password: 'password123'),
-    AppUser(email: 'user@example.com', password: '123456'),
-  ];
-
-  static bool validate(String email, String password) {
-    for (final u in users) {
-      if (u.email.toLowerCase() == email.toLowerCase() &&
-          u.password == password) {
-        return true;
-      }
-    }
-    return false;
-  }
+  @override
+  String toString() => '$email,${password},${role.name}';
 }
