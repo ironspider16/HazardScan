@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'admin/edit_accounts_page.dart';
+import '../pages/camera_screen.dart';
+import '../pages/image_confirm_screen.dart';
 
 
 
@@ -47,10 +49,39 @@ class MainMenu extends StatelessWidget {
 
       // Floating Camera Button
       floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF2563EB),
-        onPressed: () {},
-        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+  backgroundColor: const Color(0xFF2563EB),
+  onPressed: () async {
+    // 1. Open camera
+    final imagePath = await Navigator.push<String?>(
+      context,
+      MaterialPageRoute(builder: (_) => const CameraScreen()),
+    );
+
+    if (imagePath == null) {
+      // User backed out of the camera
+      return;
+    }
+
+    // 2. Show confirm / reject screen
+    final confirmed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ImageConfirmScreen(imagePath: imagePath),
       ),
+    );
+
+    // 3. Handle result (optional)
+    if (confirmed == true) {
+      // Image was confirmed & "sent" to backend in ImageConfirmScreen
+      // You could also refresh a list, navigate, etc.
+      debugPrint("Image confirmed & sent: $imagePath");
+    } else {
+      debugPrint("User rejected image");
+    }
+  },
+  child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
       body: SafeArea(
