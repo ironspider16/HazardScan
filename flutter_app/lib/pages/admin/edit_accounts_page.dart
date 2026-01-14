@@ -48,16 +48,37 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Edit Accounts"),
-        backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _resetFile,
-            tooltip: "Reset to default",
-          ),
-        ],
-      ),
+  backgroundColor: Colors.black,
+
+  // Back arrow colour
+  iconTheme: const IconThemeData(
+    color: Colors.white,
+  ),
+
+  // Refresh icon colour
+  actionsIconTheme: const IconThemeData(
+    color: Colors.white,
+  ),
+
+  // Title styling
+  title: const Text(
+    "Edit Accounts",
+    style: TextStyle(
+      color: Color.fromARGB(255, 255, 255, 255), // title colour
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+    ),
+  ),
+
+  actions: [
+    IconButton(
+      icon: const Icon(Icons.refresh),
+      onPressed: _resetFile,
+      tooltip: "Reset to default",
+    ),
+  ],
+),
+
       backgroundColor: Colors.black,
       body: _loading
           ? const Center(

@@ -4,7 +4,8 @@ import '../pages/login_screen.dart';
 import 'admin/edit_accounts_page.dart';
 import '../pages/camera_screen.dart';
 import '../pages/image_confirm_screen.dart';
-
+import '../pages/reports_list_page.dart';
+import '../pages/swp_category_page.dart';
 
 
 class MainMenu extends StatelessWidget {
@@ -27,9 +28,7 @@ class MainMenu extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
 
-      // ---------------------------------------------------
-      // TOP BAR WITH LOGOUT
-      // ---------------------------------------------------
+      // ------------------ APP BAR ------------------
       appBar: AppBar(
         backgroundColor: Colors.black,
         elevation: 0,
@@ -47,135 +46,104 @@ class MainMenu extends StatelessWidget {
         ],
       ),
 
-      // Floating Camera Button
+      // ------------------ CAMERA BUTTON ------------------
       floatingActionButton: FloatingActionButton(
-  backgroundColor: const Color(0xFF2563EB),
-  onPressed: () async {
-    // 1. Open camera
-    final imagePath = await Navigator.push<String?>(
-      context,
-      MaterialPageRoute(builder: (_) => const CameraScreen()),
-    );
+        backgroundColor: const Color(0xFF2563EB),
+        onPressed: () async {
+          final imagePath = await Navigator.push<String?>(
+            context,
+            MaterialPageRoute(builder: (_) => const CameraScreen()),
+          );
 
-    if (imagePath == null) {
-      // User backed out of the camera
-      return;
-    }
+          if (imagePath == null) return;
 
-    // 2. Show confirm / reject screen
-    final confirmed = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ImageConfirmScreen(imagePath: imagePath),
+          final confirmed = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ImageConfirmScreen(imagePath: imagePath),
+            ),
+          );
+
+          if (confirmed == true) {
+            debugPrint("Image confirmed & sent: $imagePath");
+          }
+        },
+        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
       ),
-    );
-
-    // 3. Handle result (optional)
-    if (confirmed == true) {
-      // Image was confirmed & "sent" to backend in ImageConfirmScreen
-      // You could also refresh a list, navigate, etc.
-      debugPrint("Image confirmed & sent: $imagePath");
-    } else {
-      debugPrint("User rejected image");
-    }
-  },
-  child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
-),
-
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
+      // ------------------ BODY ------------------
       body: SafeArea(
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          width: double.infinity,
-
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // ---- SHARED BUTTON ----
-                        _MenuButton(
-                          icon: Icons.description_outlined,
-                          label: isAdmin ? "All Reports" : "My Reports",
-                          color: const Color(0xFF2563EB),
-                          onTap: () {},
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // -------- REPORTS BUTTON --------
+                  _MenuButton(
+                    icon: Icons.description_outlined,
+                    label: isAdmin ? "All Reports" : "My Reports",
+                    color: const Color(0xFF2563EB),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              ReportsListPage(isAdmin: isAdmin),
                         ),
-                        const SizedBox(height: 20),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
 
-                        // ---- ROLE-BASED BUTTONS ----
-                        if (isAdmin) ...[
-                          _MenuButton(
-                            icon: Icons.group_outlined,
-                            label: "User Management",
-                            color: const Color(0xFF1F2937),
-                            onTap: () {},
-                          ),
-                          const SizedBox(height: 20),
-                          _MenuButton(
-                            icon: Icons.settings_outlined,
-                            label: "System Settings",
-                            color: const Color(0xFF1F2937),
-                            onTap: () {},
-                          ),
-                          const SizedBox(height: 20),
-                          _MenuButton(
-                            icon: Icons.edit_note_outlined,
-                            label: "Edit Accounts",
-                            color: const Color(0xFF1F2937),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => EditAccountsPage()),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 20),
+                  
 
-                        ] else ...[
-                          _MenuButton(
-                            icon: Icons.assignment_turned_in_outlined,
-                            label: "My Tasks",
-                            color: const Color(0xFF1F2937),
-                            onTap: () {},
+                  // -------- ROLE-BASED BUTTONS --------
+                  if (isAdmin) ...[
+                    _MenuButton(
+                      icon: Icons.edit_note_outlined,
+                      label: "Edit Accounts",
+                      color: const Color(0xFF1F2937),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const EditAccountsPage(),
                           ),
-                          const SizedBox(height: 20),
-                          _MenuButton(
-                            icon: Icons.person_outline,
-                            label: "Profile / Help",
-                            color: const Color(0xFF1F2937),
-                            onTap: () {},
-                          ),
-                        ],
+                        );
+                      },
+                    ),
+                  ] else ...[
+                    _MenuButton(
+                      icon: Icons.assignment_turned_in_outlined,
+                      label: "My Tasks",
+                      color: const Color(0xFF1F2937),
+                      onTap: () {
+                        // TODO: Implement user tasks if needed
+                      },
+                    ),
+                  ],
 
-                        const SizedBox(height: 40),
+                  const SizedBox(height: 40),
 
-                        // ---------------------------------------------------
-                        // OPTIONAL: LOGOUT BUTTON AT BOTTOM
-                        // ---------------------------------------------------
-                        TextButton(
-                          onPressed: () => _logout(context),
-                          child: const Text(
-                            "Log Out",
-                            style: TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
+                  // -------- LOGOUT BUTTON --------
+                  TextButton(
+                    onPressed: () => _logout(context),
+                    child: const Text(
+                      "Log Out",
+                      style: TextStyle(
+                        color: Colors.redAccent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -183,6 +151,7 @@ class MainMenu extends StatelessWidget {
   }
 }
 
+// ------------------ MENU BUTTON WIDGET ------------------
 class _MenuButton extends StatelessWidget {
   final IconData icon;
   final String label;

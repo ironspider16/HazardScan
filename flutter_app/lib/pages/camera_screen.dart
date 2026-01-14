@@ -42,29 +42,44 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     if (controller == null || !controller!.value.isInitialized) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: Colors.black,
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
+
+      // ------------------ APP BAR WITH WHITE BACK BUTTON ------------------
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        elevation: 0,
+        iconTheme: const IconThemeData(
+          color: Colors.white, // back arrow colour
+        ),
+      ),
+
+      // ------------------ CAMERA PREVIEW ------------------
+      body: Stack(  
         children: [
-          // Camera preview
           CameraPreview(controller!),
 
-          // Capture button at bottom center
+          // Capture button
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 30),
               child: FloatingActionButton(
                 backgroundColor: Colors.white,
-                child: const Icon(Icons.camera_alt, color: Colors.black, size: 32),
                 onPressed: () async {
                   final file = await controller!.takePicture();
-                  Navigator.pop(context, file.path);  // Return image path
+                  Navigator.pop(context, file.path); // Return image path
                 },
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.black,
+                  size: 32,
+                ),
               ),
             ),
           ),
