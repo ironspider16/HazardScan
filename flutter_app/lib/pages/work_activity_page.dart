@@ -22,9 +22,9 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
     final isAdmin = widget.user.role == UserRole.admin;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         automaticallyImplyLeading: false, // no back button after login
         title: const Text(
           'Select Work Activity',
@@ -84,7 +84,9 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2563EB) : const Color(0xFF1F2937),
+          color: selected
+              ? const Color(0xFF2563EB)
+              : const Color.fromARGB(255, 157, 157, 157),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white24),
         ),
@@ -164,9 +166,7 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
   Future<void> _openChecklist(SwpTemplate template) async {
     final submitted = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => SwpChecklistPage(template: template),
-      ),
+      MaterialPageRoute(builder: (_) => SwpChecklistPage(template: template)),
     );
 
     // After SWP submit -> go main menu
@@ -179,23 +179,20 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
   }
 }
 
-// ------------------ PROCEDURE PICKER PAGE ------------------
+// ------------------ PROCEDURE PICKER PAGE after Select Work Activity page ------------------
 
 class _ProcedurePickPage extends StatelessWidget {
   final String title;
   final List<SwpTemplate> templates;
 
-  const _ProcedurePickPage({
-    required this.title,
-    required this.templates,
-  });
+  const _ProcedurePickPage({required this.title, required this.templates});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           title,
@@ -217,7 +214,7 @@ class _ProcedurePickPage extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1F2937),
+                color: const Color.fromARGB(255, 157, 157, 157),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(

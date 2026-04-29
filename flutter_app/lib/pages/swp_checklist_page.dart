@@ -90,9 +90,9 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
     final t = widget.template;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'SWP Checklist',
@@ -108,7 +108,7 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
           Text(
             t.title,
             style: const TextStyle(
-              color: Colors.white,
+              color: Color.fromARGB(255, 64, 64, 64),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -119,7 +119,7 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
           if (_isWah) ...[
             const Text(
               'Work at height above 3 metres?',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
             ),
             const SizedBox(height: 8),
             Row(
@@ -145,15 +145,17 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
             if (_ptwRequired) ...[
               const Text(
                 'Permit To Work (PTW) Number (required):',
-                style: TextStyle(color: Colors.white70),
+                style: TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
               ),
               const SizedBox(height: 8),
               TextField(
                 controller: _ptwCtrl,
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
                 decoration: InputDecoration(
                   hintText: 'Enter PTW number',
-                  hintStyle: const TextStyle(color: Colors.white38),
+                  hintStyle: const TextStyle(
+                    color: Color.fromARGB(255, 255, 255, 255),
+                  ),
                   filled: true,
                   fillColor: const Color(0xFF1F2937),
                   enabledBorder: OutlineInputBorder(
@@ -175,7 +177,7 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
 
           const Text(
             'Checklist (tick all to continue):',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
           ),
           const SizedBox(height: 8),
 
@@ -184,10 +186,10 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
               value: _checks[i],
               onChanged: (v) => setState(() => _checks[i] = v ?? false),
               activeColor: const Color(0xFF2563EB),
-              checkColor: Colors.white,
+              checkColor: const Color.fromARGB(255, 255, 255, 255),
               title: Text(
                 t.checklist[i],
-                style: const TextStyle(color: Colors.white),
+                style: const TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
               ),
               controlAffinity: ListTileControlAffinity.leading,
             );
@@ -200,7 +202,7 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
           // ---------------- ATTACHMENTS ----------------
           const Text(
             'Attachments (image/video):',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
           ),
           const SizedBox(height: 8),
           Row(
@@ -233,14 +235,16 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
           const SizedBox(height: 8),
           Text(
             'Attached: ${_attachments.length} file(s)',
-            style: const TextStyle(color: Colors.white60),
+            style: const TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
           ),
 
           const SizedBox(height: 12),
 
           // ---------------- NOTES ----------------
-          const Text('Notes (optional):',
-              style: TextStyle(color: Colors.white70)),
+          const Text(
+            'Notes (optional):',
+            style: TextStyle(color: Color.fromARGB(255, 64, 64, 64)),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: _notesCtrl,
@@ -248,9 +252,11 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Add notes about hazards / observations...',
-              hintStyle: const TextStyle(color: Colors.white38),
+              hintStyle: const TextStyle(
+                color: Color.fromARGB(255, 255, 255, 255),
+              ),
               filled: true,
-              fillColor: const Color(0xFF1F2937),
+              fillColor: const Color.fromARGB(255, 130, 130, 130),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: Colors.white24),
@@ -293,7 +299,9 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
         height: 44,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2563EB) : const Color(0xFF1F2937),
+          color: selected
+              ? const Color(0xFF2563EB)
+              : const Color.fromARGB(255, 157, 157, 157),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white24),
         ),

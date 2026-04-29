@@ -74,9 +74,9 @@ class _SwpAckPageState extends State<SwpAckPage> {
     if (!mounted) return;
     setState(() => _submitting = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("SWP submitted ✅")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("SWP submitted ✅")));
 
     // pop back to wherever you want; simplest: go back 2 pages
     Navigator.pop(context, true);
@@ -85,9 +85,9 @@ class _SwpAckPageState extends State<SwpAckPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           "Acknowledgement",
@@ -108,7 +108,7 @@ class _SwpAckPageState extends State<SwpAckPage> {
                     Text(
                       widget.template.title,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Color.fromARGB(255, 64, 64, 64),
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
@@ -142,7 +142,7 @@ class _SwpAckPageState extends State<SwpAckPage> {
                     const Text(
                       "Acknowledgement",
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Color.fromARGB(255, 64, 64, 64),
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -150,7 +150,10 @@ class _SwpAckPageState extends State<SwpAckPage> {
                     const SizedBox(height: 8),
                     const Text(
                       ackMessage,
-                      style: TextStyle(color: Colors.white70, height: 1.35),
+                      style: TextStyle(
+                        color: Color.fromARGB(255, 64, 64, 64),
+                        height: 1.35,
+                      ),
                     ),
 
                     const SizedBox(height: 24),
@@ -162,8 +165,10 @@ class _SwpAckPageState extends State<SwpAckPage> {
                           backgroundColor: const Color(0xFF2563EB),
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text("SUBMIT",
-                            style: TextStyle(fontSize: 16)),
+                        child: const Text(
+                          "SUBMIT",
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ),
                   ],
@@ -181,9 +186,13 @@ class _SwpAckPageState extends State<SwpAckPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Color.fromARGB(255, 97, 97, 97),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -191,9 +200,11 @@ class _SwpAckPageState extends State<SwpAckPage> {
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFF1F2937),
+            fillColor: const Color.fromARGB(255, 157, 157, 157),
             hintText: "Enter $label",
-            hintStyle: const TextStyle(color: Colors.white38),
+            hintStyle: const TextStyle(
+              color: Color.fromARGB(255, 255, 255, 255),
+            ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Colors.white24),
