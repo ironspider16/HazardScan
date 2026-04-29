@@ -272,8 +272,16 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color.fromARGB(90, 37, 100, 235), // when not all checklist is ticked
+                disabledForegroundColor: const Color.fromARGB(90, 255, 255, 255)
               ),
-              child: const Text('Next', style: TextStyle(fontSize: 16)),
+              child: Text(
+                _canProceed
+                    ? 'Next'
+                    // next button text to show how many more to tick
+                    : 'Next (tick ${_checks.where((c) => !c).length} more to continue)', 
+                style: const TextStyle(fontSize: 16),
+              ),
             ),
           ),
         ],
