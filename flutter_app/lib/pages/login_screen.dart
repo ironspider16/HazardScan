@@ -33,21 +33,18 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
 
-    final user =
-        await AccountsFileService.instance.login(email, password);
+    final user = await AccountsFileService.instance.login(email, password);
 
     setState(() => _loading = false);
 
     if (user != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login successful')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Login successful')));
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => WorkActivityPage(user: user),
-        ),
+        MaterialPageRoute(builder: (_) => WorkActivityPage(user: user)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -59,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
 
       body: Center(
         child: SingleChildScrollView(
@@ -79,11 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: const Color(0xFF2563EB),
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(
-                    Icons.lock,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+                  child: const Icon(Icons.lock, color: Colors.white, size: 40),
                 ),
 
                 const SizedBox(height: 16),
@@ -92,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text(
                   "Welcome Back",
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Color.fromARGB(255, 41, 41, 41),
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
                   ),
@@ -103,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text(
                   "Sign in to continue",
                   style: TextStyle(
-                    color: Colors.white70,
+                    color: Color.fromARGB(255, 41, 41, 41),
                     fontSize: 14,
                   ),
                 ),
@@ -127,8 +120,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             return "Email is required";
                           }
                           final ok = RegExp(
-                                  r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-                              .hasMatch(v.trim());
+                            r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+                          ).hasMatch(v.trim());
                           if (!ok) return "Enter a valid email";
                           return null;
                         },
@@ -173,8 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: ElevatedButton(
                           onPressed: _loading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                const Color(0xFF2563EB),
+                            backgroundColor: const Color(0xFF2563EB),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -234,19 +226,18 @@ class _LoginScreenState extends State<LoginScreen> {
       validator: validator,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white38),
+        hintStyle: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
         prefixIcon: Icon(icon, color: Colors.white70),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: const Color(0xFF1F2937),
+        fillColor: const Color.fromARGB(255, 157, 157, 157),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: Colors.white24),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Color(0xFF2563EB)),
+          borderSide: const BorderSide(color: Color(0xFF2563EB)),
         ),
       ),
     );
