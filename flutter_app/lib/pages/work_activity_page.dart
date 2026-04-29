@@ -193,7 +193,7 @@ class _ProcedurePickPage extends StatelessWidget {
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Color.fromARGB(255, 0, 0, 0)),
         title: Text(
           title,
           style: const TextStyle(
@@ -214,7 +214,7 @@ class _ProcedurePickPage extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 157, 157, 157),
+                color: const Color.fromARGB(22, 37, 100, 235),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -224,7 +224,7 @@ class _ProcedurePickPage extends StatelessWidget {
                   Expanded(
                     child: Text(
                       t.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 16),
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: Colors.white70),
