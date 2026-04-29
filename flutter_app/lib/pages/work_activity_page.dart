@@ -25,7 +25,7 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        automaticallyImplyLeading: false, // no back button after login
+        automaticallyImplyLeading: true, // back button after login
         title: const Text(
           'Select Work Activity',
           style: TextStyle(
@@ -86,9 +86,9 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
         decoration: BoxDecoration(
           color: selected
               ? const Color(0xFF2563EB)
-              : const Color.fromARGB(255, 157, 157, 157),
+              : const Color.fromARGB(22, 37, 100, 235),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white24),
+          border: Border.all(color: const Color.fromARGB(0, 0, 0, 0)),
         ),
         child: Row(
           children: [
@@ -100,7 +100,7 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 16),
               ),
             ),
           ],

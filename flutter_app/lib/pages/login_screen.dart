@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => WorkActivityPage(user: user)),
+        MaterialPageRoute(builder: (_) => MainMenu(user: user)),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -141,7 +141,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             _showPassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.white70,
+                            color: const Color.fromARGB(255, 41, 41, 41),
                           ),
                           onPressed: () =>
                               setState(() => _showPassword = !_showPassword),
@@ -222,18 +222,18 @@ class _LoginScreenState extends State<LoginScreen> {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      style: const TextStyle(color: Colors.white),
+      style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
       validator: validator,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        prefixIcon: Icon(icon, color: Colors.white70),
+        hintStyle: const TextStyle(color: Color.fromARGB(170, 0, 0, 0)),
+        prefixIcon: Icon(icon, color: const Color.fromARGB(170, 0, 0, 0)),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: const Color.fromARGB(255, 157, 157, 157),
+        fillColor: const Color.fromARGB(255, 255, 255, 255),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white24),
+          borderSide: const BorderSide(color: Color.fromARGB(170, 0, 0, 0)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/pages/work_activity_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'admin/edit_accounts_page.dart';
@@ -92,7 +93,7 @@ class MainMenu extends StatelessWidget {
                   _MenuButton(
                     icon: Icons.description_outlined,
                     label: isAdmin ? "All Reports" : "My Reports",
-                    color: const Color(0xFF2563EB),
+                    color: const Color.fromARGB(255, 0, 0, 0),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -104,12 +105,29 @@ class MainMenu extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
 
+                  // -------- MAKE A REPORT BUTTON --------
+                  _MenuButton(
+                    icon: Icons.edit_outlined,
+                    label: "Write a Report",
+                    color: const Color(0xFF2563EB),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => WorkActivityPage(user: user),
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
                   // -------- ROLE-BASED BUTTONS --------
                   if (isAdmin) ...[
                     _MenuButton(
                       icon: Icons.edit_note_outlined,
                       label: "Edit Accounts",
-                      color: const Color(0xFF1F2937),
+                      color: const Color(0xFF2563EB),
                       onTap: () {
                         Navigator.push(
                           context,
@@ -123,7 +141,7 @@ class MainMenu extends StatelessWidget {
                     _MenuButton(
                       icon: Icons.assignment_turned_in_outlined,
                       label: "My Tasks",
-                      color: const Color.fromARGB(255, 157, 157, 157),
+                      color: const Color.fromARGB(255, 0, 0, 0),
                       onTap: () {
                         // TODO: Implement user tasks if needed
                       },
