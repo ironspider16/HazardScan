@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'login_screen.dart'; // make sure this file is in lib/login_screen.dart
+import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,9 +15,9 @@ class MyApp extends StatelessWidget {
       title: 'Safety App Login',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        useMaterial3: true, 
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2563EB), // blue-600 tone
+          seedColor: const Color.fromARGB(255, 239, 13, 1), // blue-600 tone
         ),
         scaffoldBackgroundColor: Colors.white,
         inputDecorationTheme: InputDecorationTheme(
