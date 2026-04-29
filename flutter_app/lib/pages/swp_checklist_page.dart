@@ -27,6 +27,7 @@ class _SwpChecklistPageState extends State<SwpChecklistPage> {
   void initState() {
     super.initState();
     _checks = List<bool>.filled(widget.template.checklist.length, false);
+    _above3m = false;
   }
 
   @override
