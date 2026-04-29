@@ -37,38 +37,45 @@ class MainMenu extends StatelessWidget {
           style: const TextStyle(color: Colors.white),
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: () => _logout(context),
-            tooltip: "Log Out",
-          ),
-        ],
+        actions: [],
       ),
 
-      // ------------------ CAMERA BUTTON ------------------
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF2563EB),
-        onPressed: () async {
-          final imagePath = await Navigator.push<String?>(
-            context,
-            MaterialPageRoute(builder: (_) => const CameraScreen()),
-          );
+      // ------------------ ACTION FABS (LOGOUT + CAMERA) ------------------
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            backgroundColor: Colors.redAccent,
+            onPressed: () => _logout(context),
+            child: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Log Out',
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            backgroundColor: const Color(0xFF2563EB),
+            onPressed: () async {
+              final imagePath = await Navigator.push<String?>(
+                context,
+                MaterialPageRoute(builder: (_) => const CameraScreen()),
+              );
 
-          if (imagePath == null) return;
+              if (imagePath == null) return;
 
-          final confirmed = await Navigator.push<bool>(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ImageConfirmScreen(imagePath: imagePath),
-            ),
-          );
+              final confirmed = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ImageConfirmScreen(imagePath: imagePath),
+                ),
+              );
 
-          if (confirmed == true) {
-            debugPrint("Image confirmed & sent: $imagePath");
-          }
-        },
-        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+              if (confirmed == true) {
+                debugPrint("Image confirmed & sent: $imagePath");
+              }
+            },
+            child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+          ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
 
@@ -129,18 +136,7 @@ class MainMenu extends StatelessWidget {
 
                   const SizedBox(height: 40),
 
-                  // -------- LOGOUT BUTTON --------
-                  TextButton(
-                    onPressed: () => _logout(context),
-                    child: const Text(
-                      "Log Out",
-                      style: TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  // (Logout moved to FAB column)
                 ],
               ),
             ),
