@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
+import 'package:flutter_application_1/supabase_client.dart';
 
 class EditAccountsPage extends StatefulWidget {
   const EditAccountsPage({super.key});
@@ -27,10 +28,44 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
   }
 
   Future<void> _saveFile() async {
-    await AccountsFileService.instance.saveRaw(_controller.text);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Accounts updated")),
+    final rawText = _controller.text.trim();
+
+    await AccountsFileService.instance.saveRaw(rawText);
+
+    try{
+      final lines = rawText.split('\n');
+      final List<Map<String,dynamic>> accountsToSync = [];
+
+      for (var line in lines) {
+        if (line.trim().isEmpty) continue;
+
+        final parts = line.split(',');
+        if (parts.length >= 3) {
+          accountsToSync.add({
+            'email': parts[0].trim(),
+            'password' : parts[1].trim(),
+            'role':parts[2].trim(),
+          });
+        }
+      }
+
+      if (accountsToSync.isNotEmpty) {
+        await supabase
+          .from('accounts')
+          .upsert(accountsToSync, onConflict: 'email');
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Local file and Supabase synced successfully")),
     );
+
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error Syncing to Supabase: $e"),backgroundColor: Colors.red,),
+      );
+    }
   }
 
   Future<void> _resetFile() async {

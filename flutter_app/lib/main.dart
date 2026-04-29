@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
-
-void main() {
+import 'package:supabase_flutter/supabase_flutter.dart';
+void main() async{
   WidgetsFlutterBinding.ensureInitialized();
+  await Supabase.initialize(
+    url: 'https://bpknkumrsvuhkobxsvom.supabase.co',// replace with your Supabase URL
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwa25rdW1yc3Z1aGtvYnhzdm9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MTg4OTYsImV4cCI6MjA5Mjk5NDg5Nn0.-Vyj7QvPKAkNcnlPC6OjE_KugMTPgLQyDh2o-0thdNM', // replace with your Supabase anon key
+  );  
   runApp(const MyApp());
 }
 
