@@ -9,13 +9,16 @@ class SwpCategoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
           'Safe Work Procedures',
-          style: TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: Color(0xFF2563EB),
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: ListView(
@@ -39,7 +42,8 @@ class SwpCategoryPage extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => _TemplatePickPage(title: title, templates: templates),
+            builder: (_) =>
+                _TemplatePickPage(title: title, templates: templates),
           ),
         );
       },
@@ -54,7 +58,10 @@ class SwpCategoryPage extends StatelessWidget {
             const Icon(Icons.checklist, color: Colors.white),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16)),
+              child: Text(
+                title,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
             ),
             const Icon(Icons.chevron_right, color: Colors.white70),
           ],
@@ -73,13 +80,16 @@ class _TemplatePickPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         iconTheme: const IconThemeData(color: Colors.white),
         title: Text(
           title,
-          style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Color(0xFF2563EB),
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: ListView.separated(
@@ -93,7 +103,9 @@ class _TemplatePickPage extends StatelessWidget {
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => SwpChecklistPage(template: t)),
+                MaterialPageRoute(
+                  builder: (_) => SwpChecklistPage(template: t),
+                ),
               );
             },
             child: Container(
@@ -107,7 +119,10 @@ class _TemplatePickPage extends StatelessWidget {
                   const Icon(Icons.description_outlined, color: Colors.white),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(t.title, style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    child: Text(
+                      t.title,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
                   ),
                   const Icon(Icons.chevron_right, color: Colors.white70),
                 ],

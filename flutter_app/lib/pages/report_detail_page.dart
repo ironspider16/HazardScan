@@ -47,8 +47,18 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
 
   String _monthName(int m) {
     const names = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return names[m - 1];
   }
@@ -73,9 +83,9 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
       _saving = false;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Report updated')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Report updated')));
 
     // return "changed = true" to the list page
     Navigator.pop(context, true);
@@ -86,10 +96,10 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
     final report = widget.report;
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
         title: const Text('Report Details'),
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         actions: [
           if (widget.isAdmin && !_isEditing)
             IconButton(
@@ -115,27 +125,29 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                         ? TextField(
                             controller: _titleController,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Color.fromARGB(255, 60, 60, 60),
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
                             ),
                             decoration: const InputDecoration(
                               labelText: 'Title',
-                              labelStyle: TextStyle(color: Colors.white70),
+                              labelStyle: TextStyle(
+                                color: Color.fromARGB(179, 31, 31, 31),
+                              ),
                               enabledBorder: UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: Colors.white24),
+                                borderSide: BorderSide(color: Colors.white24),
                               ),
                               focusedBorder: UnderlineInputBorder(
-                                borderSide:
-                                    BorderSide(color: Colors.blueAccent),
+                                borderSide: BorderSide(
+                                  color: Colors.blueAccent,
+                                ),
                               ),
                             ),
                           )
                         : Text(
                             report.title,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Color.fromARGB(255, 45, 45, 45),
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
                             ),
@@ -144,12 +156,12 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                     Text(
                       _formatDate(report.createdAt),
                       style: const TextStyle(
-                        color: Colors.white60,
+                        color: Color.fromARGB(255, 45, 45, 45),
                         fontSize: 14,
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Divider(color: Colors.white24),
+                    const Divider(color: Color.fromARGB(255, 133, 133, 133)),
                     const SizedBox(height: 16),
                     _isEditing
                         ? TextField(
@@ -162,19 +174,25 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                             ),
                             decoration: InputDecoration(
                               filled: true,
-                              fillColor: const Color(0xFF111827),
+                              fillColor: const Color.fromARGB(
+                                255,
+                                119,
+                                120,
+                                120,
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               hintText: 'Edit report body...',
-                              hintStyle:
-                                  const TextStyle(color: Colors.white38),
+                              hintStyle: const TextStyle(
+                                color: Color.fromARGB(255, 45, 45, 45),
+                              ),
                             ),
                           )
                         : Text(
                             report.body,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: Color.fromARGB(255, 45, 45, 45),
                               fontSize: 16,
                               height: 1.4,
                             ),
@@ -186,8 +204,15 @@ class _ReportDetailPageState extends State<ReportDetailPage> {
                           Expanded(
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.white38),
+                                foregroundColor: const Color.fromARGB(
+                                  255,
+                                  65,
+                                  65,
+                                  65,
+                                ),
+                                side: const BorderSide(
+                                  color: Color.fromARGB(97, 56, 56, 56),
+                                ),
                               ),
                               onPressed: () {
                                 setState(() {

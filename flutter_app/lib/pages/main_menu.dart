@@ -7,7 +7,6 @@ import '../pages/image_confirm_screen.dart';
 import '../pages/reports_list_page.dart';
 import '../pages/swp_category_page.dart';
 
-
 class MainMenu extends StatelessWidget {
   final AppUser user;
 
@@ -26,15 +25,15 @@ class MainMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
 
       // ------------------ APP BAR ------------------
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         elevation: 0,
         title: Text(
           "Main Menu (${isAdmin ? 'Admin' : 'User'})",
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: Color(0xFF2563EB)),
         ),
         centerTitle: true,
         actions: [
@@ -91,15 +90,12 @@ class MainMenu extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              ReportsListPage(isAdmin: isAdmin),
+                          builder: (_) => ReportsListPage(isAdmin: isAdmin),
                         ),
                       );
                     },
                   ),
                   const SizedBox(height: 20),
-
-                  
 
                   // -------- ROLE-BASED BUTTONS --------
                   if (isAdmin) ...[
@@ -120,7 +116,7 @@ class MainMenu extends StatelessWidget {
                     _MenuButton(
                       icon: Icons.assignment_turned_in_outlined,
                       label: "My Tasks",
-                      color: const Color(0xFF1F2937),
+                      color: const Color.fromARGB(255, 157, 157, 157),
                       onTap: () {
                         // TODO: Implement user tasks if needed
                       },

@@ -40,8 +40,18 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
   String _monthName(int m) {
     const names = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return names[m - 1];
   }
@@ -49,96 +59,102 @@ class _ReportsListPageState extends State<ReportsListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       appBar: AppBar(
         iconTheme: const IconThemeData(
-        color: Colors.white,), // <-- back arrow colour
-        title: const Text('Reports', style: TextStyle(
-      color: Color.fromARGB(255, 255, 255, 255), // <-- change to any colour you want
-      fontWeight: FontWeight.w600,
-      ),
-        ),  
-        backgroundColor: Colors.black,
+          color: Color.fromARGB(255, 68, 68, 68),
+        ), // <-- back arrow colour
+        title: const Text(
+          'Reports',
+          style: TextStyle(
+            color: Color.fromARGB(
+              255,
+              64,
+              64,
+              64,
+            ), // <-- change to any colour you want
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
       body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            )
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : _reports.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No reports yet.\nThey will appear here after analysis.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _reports.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final r = _reports[index];
-                    return InkWell(
-                      onTap: () async {
-                        final changed = await Navigator.push<bool>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ReportDetailPage(
-                              report: r,
-                              index: index,
-                              isAdmin: widget.isAdmin,
-                            ),
-                          ),
-                        );
-
-                        if (changed == true) {
-                          // user (admin) edited report, reload list
-                          _loadReports();
-                        }
-                      },
-
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1F2937),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              r.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _formatDate(r.createdAt),
-                              style: const TextStyle(
-                                color: Colors.white60,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              r.body.length > 120
-                                  ? '${r.body.substring(0, 120)}...'
-                                  : r.body,
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+          ? const Center(
+              child: Text(
+                'No reports yet.\nThey will appear here after analysis.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70),
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: _reports.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final r = _reports[index];
+                return InkWell(
+                  onTap: () async {
+                    final changed = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReportDetailPage(
+                          report: r,
+                          index: index,
+                          isAdmin: widget.isAdmin,
                         ),
                       ),
                     );
+
+                    if (changed == true) {
+                      // user (admin) edited report, reload list
+                      _loadReports();
+                    }
                   },
-                ),
+
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1F2937),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          r.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _formatDate(r.createdAt),
+                          style: const TextStyle(
+                            color: Colors.white60,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          r.body.length > 120
+                              ? '${r.body.substring(0, 120)}...'
+                              : r.body,
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }
