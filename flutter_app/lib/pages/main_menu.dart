@@ -71,7 +71,6 @@ class MainMenu extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 45),
-
                     if (isAdmin) ...[
                       _MenuButton(
                         label: "Assign Tasks",
@@ -84,7 +83,8 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
+
                       _MenuButton(
                         label: "All Tasks",
                         onTap: () {
@@ -96,9 +96,10 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 16),
+
                       _MenuButton(
-                        label: "Add Users",
+                        label: "Manage Worker Accounts",
                         onTap: () {
                           Navigator.push(
                             context,
@@ -108,8 +109,6 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 14),
-                      _MenuButton(label: "Profile", onTap: () {}),
                     ] else ...[
                       _MenuButton(
                         label: "My Tasks",
