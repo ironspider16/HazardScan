@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
 import 'package:flutter_application_1/supabase_client.dart';
 
-class EditAccountsPage extends StatefulWidget {
-  final Map<String, dynamic> account;
-  const EditAccountsPage({super.key, required this.account});
+class AddAccountsPage extends StatefulWidget {
+  const AddAccountsPage({super.key});
 
   @override
-  State<EditAccountsPage> createState() => _EditAccountsPageState();
+  State<AddAccountsPage> createState() => _AddAccountsPageState();
 }
 
-class _EditAccountsPageState extends State<EditAccountsPage> {
+class _AddAccountsPageState extends State<AddAccountsPage> {
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _nameCtrl = TextEditingController();
@@ -18,17 +17,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
   String? _selectedRole;
   bool _saving = false;
 
-  @override
-  void initState() {
-  super.initState();
-  // Fill the controllers with existing data
-  _emailCtrl.text = widget.account['email'] ?? '';
-  _nameCtrl.text = widget.account['name'] ?? '';
-  _passwordCtrl.text = widget.account['password'] ?? '';
-  _selectedRole = widget.account['role'];
-  }
-
-  Future<void> _updateUser() async {
+  Future<void> _addUser() async {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
     final name = _nameCtrl.text.trim();
@@ -44,18 +33,14 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     setState(() => _saving = true);
 
     try {
+      final newLine = "$email,$password,$role";
 
       final oldText = await AccountsFileService.instance.loadRaw();
-      List<String> lines = oldText.split('\n');
-      final updatedLine = "$email,$password,$role";
-      final newContent = lines.map((line) {
-        if (line.startsWith("email,")) {
-          return updatedLine; // Replace the line with updated info
-        }
-        return line; // Keep other lines unchanged
-      }).join('\n');
+      final updatedText = oldText.trim().isEmpty
+          ? newLine
+          : "${oldText.trim()}\n$newLine";
 
-      await AccountsFileService.instance.saveRaw(newContent);
+      await AccountsFileService.instance.saveRaw(updatedText);
 
       await supabase.from('accounts').upsert({
         'email': email,
@@ -68,13 +53,16 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("User updated successfully")));
+      ).showSnackBar(const SnackBar(content: Text("User added successfully")));
 
-      Navigator.pop(context); // Go back after update
+      _emailCtrl.clear();
+      _passwordCtrl.clear();
+      _nameCtrl.clear();
+      setState(() => _selectedRole = null);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Error updating user: $e"),
+          content: Text("Error adding user: $e"),
           backgroundColor: Colors.red,
         ),
       );
@@ -144,7 +132,6 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     required String hint,
     required TextEditingController controller,
     bool obscureText = false,
-    bool enabled = true,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +141,6 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
           height: 50,
           child: TextField(
             controller: controller,
-            enabled : enabled,
             obscureText: obscureText,
             style: const TextStyle(fontSize: 15, color: Colors.black87),
             decoration: _inputDecoration(hint),
@@ -205,7 +191,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                 children: [
                   const Center(
                     child: Text(
-                      "Edit User",
+                      "Add Users",
                       style: TextStyle(
                         fontSize: 15,
                         color: Colors.black,
@@ -233,7 +219,6 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                 label: "Technician Email",
                 hint: "worker1@example.com",
                 controller: _emailCtrl,
-                enabled : false, // Email should not be editable
               ),
 
               const SizedBox(height: 28),
@@ -263,7 +248,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: canSubmit ? _updateUser : null,
+                  onPressed: canSubmit ? _addUser : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     disabledBackgroundColor: const Color.fromARGB(
@@ -284,7 +269,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Text(
-                          "Update User",
+                          "Add User",
                           style: TextStyle(
                             color: Color.fromARGB(255, 255, 255, 255),
                             fontSize: 15,

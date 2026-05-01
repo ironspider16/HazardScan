@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
 import 'package:flutter_application_1/pages/work_activity_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
-import 'admin/edit_accounts_page.dart';
+import 'admin/add_accounts_page.dart';
 import '../pages/reports_list_page.dart';
 
 class MainMenu extends StatelessWidget {
@@ -104,7 +105,7 @@ class MainMenu extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const EditAccountsPage(),
+                              builder: (_) => const ManageAccountsPage(),
                             ),
                           );
                         },
