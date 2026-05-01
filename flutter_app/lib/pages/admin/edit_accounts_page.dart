@@ -98,11 +98,31 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 15),
       filled: true,
-      fillColor: const Color(0xFFC9C9C9),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: BorderSide.none,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+
+      // 👇 DEFAULT BORDER
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(
+          color: Color.fromARGB(255, 136, 136, 136), // dark grey
+          width: 1,
+        ),
+      ),
+
+      // 👇 WHEN CLICKED (FOCUSED)
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(
+          color: Color.fromARGB(255, 77, 77, 77), // darker when active
+          width: 2,
+        ),
+      ),
+
+      // 👇 ERROR STATE (optional)
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.red, width: 1),
       ),
     );
   }

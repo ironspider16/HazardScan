@@ -125,8 +125,8 @@ class MainMenu extends StatelessWidget {
                   // -------- ROLE-BASED BUTTONS --------
                   if (isAdmin) ...[
                     _MenuButton(
-                      icon: Icons.edit_note_outlined,
-                      label: "Edit Accounts",
+                      icon: Icons.add,
+                      label: "Add Users",
                       color: const Color(0xFF2563EB),
                       onTap: () {
                         Navigator.push(
