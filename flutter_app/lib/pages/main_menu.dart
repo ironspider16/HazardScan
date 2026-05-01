@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
 import 'package:flutter_application_1/pages/work_activity_page.dart';
+import 'package:flutter_application_1/pages/assign_task_page.dart';
+import 'package:flutter_application_1/pages/all_tasks_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'admin/add_accounts_page.dart';
@@ -78,9 +80,7 @@ class MainMenu extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => WorkActivityPage(user: user),
-                            ),
+                            MaterialPageRoute(builder: (_) => AssignTaskPage()),
                           );
                         },
                       ),
@@ -91,9 +91,7 @@ class MainMenu extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => ReportsListPage(isAdmin: true),
-                            ),
+                            MaterialPageRoute(builder: (_) => AllTasksPage()),
                           );
                         },
                       ),

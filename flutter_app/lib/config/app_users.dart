@@ -7,11 +7,7 @@ class AppUser {
   final String password;
   final UserRole role;
 
-  AppUser({
-    required this.email,
-    required this.password,
-    required this.role,
-  });
+  AppUser({required this.email, required this.password, required this.role});
 
   @override
   String toString() => '$email,${password},${role.name}';
