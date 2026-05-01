@@ -125,7 +125,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
         gradient: const LinearGradient(
           colors: [
             Color(0xFFF8FAFF), // light blue
-            Color.fromARGB(255, 218, 227, 255), // light purple
+            Color.fromARGB(255, 244, 246, 251), // light purple
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -156,7 +156,10 @@ class _AllTasksPageState extends State<AllTasksPage> {
             height: 150,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                colors: [
+                  Color.fromARGB(255, 155, 188, 241),
+                  Color.fromARGB(255, 180, 156, 237),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
