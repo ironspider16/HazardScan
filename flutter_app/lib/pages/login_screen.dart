@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const Text(
                   "Sign in to continue",
-                  style: TextStyle(fontSize: 15, color: Color(0xFF6F6F6F)),
+                  style: TextStyle(fontSize: 15, color: Color(0xFF333333)),
                 ),
 
                 const SizedBox(height: 50),
