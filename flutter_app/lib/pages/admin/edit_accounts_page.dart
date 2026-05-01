@@ -10,168 +10,257 @@ class EditAccountsPage extends StatefulWidget {
 }
 
 class _EditAccountsPageState extends State<EditAccountsPage> {
-  final _controller = TextEditingController();
-  bool _loading = true;
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _loadFile();
-  }
+  String? _selectedRole;
+  bool _saving = false;
 
-  Future<void> _loadFile() async {
-    final txt = await AccountsFileService.instance.loadRaw();
-    setState(() {
-      _controller.text = txt;
-      _loading = false;
-    });
-  }
+  Future<void> _addUser() async {
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text.trim();
+    final name = _nameCtrl.text.trim();
+    final role = _selectedRole;
 
-  Future<void> _saveFile() async {
-    final rawText = _controller.text.trim();
-
-    await AccountsFileService.instance.saveRaw(rawText);
-
-    try{
-      final lines = rawText.split('\n');
-      final List<Map<String,dynamic>> accountsToSync = [];
-
-      for (var line in lines) {
-        if (line.trim().isEmpty) continue;
-
-        final parts = line.split(',');
-        if (parts.length >= 3) {
-          accountsToSync.add({
-            'email': parts[0].trim(),
-            'password' : parts[1].trim(),
-            'role':parts[2].trim(),
-          });
-        }
-      }
-
-      if (accountsToSync.isNotEmpty) {
-        await supabase
-          .from('accounts')
-          .upsert(accountsToSync, onConflict: 'email');
-      }
-
-      if (!mounted) return;
+    if (email.isEmpty || password.isEmpty || name.isEmpty || role == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Local file and Supabase synced successfully")),
-    );
-
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error Syncing to Supabase: $e"),backgroundColor: Colors.red,),
+        const SnackBar(content: Text("Please fill in all fields")),
       );
+      return;
+    }
+
+    setState(() => _saving = true);
+
+    try {
+      final newLine = "$email,$password,$role";
+
+      final oldText = await AccountsFileService.instance.loadRaw();
+      final updatedText = oldText.trim().isEmpty
+          ? newLine
+          : "${oldText.trim()}\n$newLine";
+
+      await AccountsFileService.instance.saveRaw(updatedText);
+
+      await supabase.from('accounts').upsert({
+        'email': email,
+        'password': password,
+        'role': role,
+        'name': name,
+      }, onConflict: 'email');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("User added successfully")));
+
+      _emailCtrl.clear();
+      _passwordCtrl.clear();
+      _nameCtrl.clear();
+      setState(() => _selectedRole = null);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error adding user: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
-  Future<void> _resetFile() async {
-    await AccountsFileService.instance.saveRaw(
-      "admin@example.com,password123,admin\n"
-      "worker@example.com,123456,user",
+  @override
+  void dispose() {
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Widget _label(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 10, bottom: 6),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 15,
+          color: Color(0xFF333333),
+          fontWeight: FontWeight.w400,
+        ),
+      ),
     );
-    await _loadFile();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Reset to default")),
+  }
+
+  InputDecoration _inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 15),
+      filled: true,
+      fillColor: const Color(0xFFC9C9C9),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(6),
+        borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  Widget _textField({
+    required String label,
+    required String hint,
+    required TextEditingController controller,
+    bool obscureText = false,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label(label),
+        SizedBox(
+          height: 50,
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            style: const TextStyle(fontSize: 15, color: Colors.black87),
+            decoration: _inputDecoration(hint),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _roleDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label("Role"),
+        SizedBox(
+          height: 50,
+          child: DropdownButtonFormField<String>(
+            value: _selectedRole,
+            decoration: _inputDecoration("Role"),
+            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
+            dropdownColor: Colors.white,
+            items: const [
+              DropdownMenuItem(value: "Technician", child: Text("Technician")),
+              DropdownMenuItem(value: "Administrator", child: Text("Admin")),
+            ],
+            onChanged: (value) {
+              setState(() => _selectedRole = value);
+            },
+          ),
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final canSubmit = !_saving;
+
     return Scaffold(
-      appBar: AppBar(
-  backgroundColor: Colors.black,
-
-  // Back arrow colour
-  iconTheme: const IconThemeData(
-    color: Colors.white,
-  ),
-
-  // Refresh icon colour
-  actionsIconTheme: const IconThemeData(
-    color: Colors.white,
-  ),
-
-  // Title styling
-  title: const Text(
-    "Edit Accounts",
-    style: TextStyle(
-      color: Color.fromARGB(255, 255, 255, 255), // title colour
-      fontSize: 20,
-      fontWeight: FontWeight.w600,
-    ),
-  ),
-
-  actions: [
-    IconButton(
-      icon: const Icon(Icons.refresh),
-      onPressed: _resetFile,
-      tooltip: "Reset to default",
-    ),
-  ],
-),
-
-      backgroundColor: Colors.black,
-      body: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            )
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(23, 16, 23, 30),
+          child: Column(
+            children: [
+              Stack(
+                alignment: Alignment.center,
                 children: [
-                  const Text(
-                    "Edit accounts.txt\n"
-                    "Format: email,password,role\n"
-                    "Example: admin@example.com,password123,admin",
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Text editor
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      maxLines: null,
-                      expands: true,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.grey[900],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.all(12),
+                  const Center(
+                    child: Text(
+                      "Add Users",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-
-                  // SAVE BUTTON
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
-                      onPressed: _saveFile,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Save Changes",
-                        style: TextStyle(color: Colors.white, fontSize: 18),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        size: 28,
+                        color: Colors.black,
                       ),
                     ),
                   ),
                 ],
               ),
-            ),
+
+              const SizedBox(height: 82),
+
+              _textField(
+                label: "Technician Email",
+                hint: "worker1@example.com",
+                controller: _emailCtrl,
+              ),
+
+              const SizedBox(height: 28),
+
+              _textField(
+                label: "Password",
+                hint: "********",
+                controller: _passwordCtrl,
+                obscureText: false,
+              ),
+
+              const SizedBox(height: 28),
+
+              _textField(
+                label: "Name",
+                hint: "Johnathan",
+                controller: _nameCtrl,
+              ),
+
+              const SizedBox(height: 28),
+
+              _roleDropdown(),
+
+              const Spacer(),
+
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: canSubmit ? _addUser : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    disabledBackgroundColor: const Color.fromARGB(
+                      255,
+                      135,
+                      166,
+                      233,
+                    ),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text(
+                          "Add User",
+                          style: TextStyle(
+                            color: Color.fromARGB(255, 255, 255, 255),
+                            fontSize: 15,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
