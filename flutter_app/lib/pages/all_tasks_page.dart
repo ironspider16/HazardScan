@@ -29,23 +29,21 @@ class _AllTasksPageState extends State<AllTasksPage> {
     try {
       final taskResponse = await supabase
           .from('tasks')
-          .select()
+          .select('''
+          *,
+          task_assignments (
+            accounts (
+              id,
+              name,
+              email
+            )
+          )
+        ''')
           .eq('status', selectedStatus)
           .order('id', ascending: false);
 
-      final accountResponse = await supabase
-          .from('accounts')
-          .select('id, email');
-
-      final Map<int, String> emails = {};
-
-      for (final acc in accountResponse) {
-        emails[acc['id']] = acc['email'];
-      }
-
       setState(() {
         tasks = List<Map<String, dynamic>>.from(taskResponse);
-        technicianEmails = emails;
         isLoading = false;
       });
     } catch (e) {
@@ -115,8 +113,16 @@ class _AllTasksPageState extends State<AllTasksPage> {
   }
 
   Widget _taskCard(Map<String, dynamic> task) {
-    final int technicianId = task['technician_id'];
-    final String email = technicianEmails[technicianId] ?? 'Unknown technician';
+    final List assignments = task['task_assignments'] ?? [];
+
+    final List<String> techNames = assignments.map((a) {
+      final account = a['accounts'];
+      return (account['name'] ?? account['email'] ?? 'Unknown').toString();
+      }).toList();
+
+    final String displayNames = techNames.isEmpty
+      ? 'Unassigned'
+      : techNames.join(', ');
 
     return Container(
       margin: const EdgeInsets.only(top: 30),
@@ -190,7 +196,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   style: const TextStyle(fontSize: 18),
                 ),
                 const SizedBox(height: 18),
-                Text(email, style: const TextStyle(fontSize: 18)),
+                Text(displayNames, maxLines: 4,style: const TextStyle(fontSize: 18)),
               ],
             ),
           ),
