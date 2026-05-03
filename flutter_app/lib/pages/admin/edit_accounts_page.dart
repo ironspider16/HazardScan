@@ -48,11 +48,12 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
       await supabase
         .from('accounts')
         .update({
+          'email': email,
           'password': password,
           'role': role,
           'name': name,
         })
-        .eq('email', email); // This tells Supabase: "Find the row where email matches, and update it"
+        .eq('id', widget.account['id']); 
 
 
 
