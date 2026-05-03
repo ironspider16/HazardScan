@@ -33,21 +33,13 @@ class _AddAccountsPageState extends State<AddAccountsPage> {
     setState(() => _saving = true);
 
     try {
-      final newLine = "$email,$password,$role";
 
-      final oldText = await AccountsFileService.instance.loadRaw();
-      final updatedText = oldText.trim().isEmpty
-          ? newLine
-          : "${oldText.trim()}\n$newLine";
-
-      await AccountsFileService.instance.saveRaw(updatedText);
-
-      await supabase.from('accounts').upsert({
+      await supabase.from('accounts').insert({
         'email': email,
         'password': password,
         'role': role,
         'name': name,
-      }, onConflict: 'email');
+      }, );
 
       if (!mounted) return;
 

@@ -52,6 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : UserRole.user;
 
         final user = AppUser(
+          id: data['id'] as int, 
           email: data['email'].toString(),
           password: data['password'].toString(),
           role: role,

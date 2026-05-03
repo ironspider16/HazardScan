@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/config/app_users.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class AllTasksPage extends StatefulWidget {
-  const AllTasksPage({super.key});
+class TechnicianTaskPage extends StatefulWidget {
+
+  final AppUser user; // Pass the user object to this page
+  const TechnicianTaskPage({super.key , required this.user});
 
   @override
-  State<AllTasksPage> createState() => _AllTasksPageState();
+  State<TechnicianTaskPage> createState() => _TechnicianTaskPageState();
 }
 
-class _AllTasksPageState extends State<AllTasksPage> {
+class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> tasks = [];
-  Map<int, String> technicianEmails = {};
 
   bool isLoading = true;
   String selectedStatus = 'Assigned';
@@ -28,23 +30,18 @@ class _AllTasksPageState extends State<AllTasksPage> {
 
     try {
       final taskResponse = await supabase
-          .from('tasks')
-          .select('''
+        .from('tasks')
+        .select('''
           *,
-          swp_templates: safe_work_procedure (
-            category,
-            title
-          ),
-          task_assignments (
-            accounts (
-              id,
-              name,
-              email
-            )
+          swp_templates: safe_work_procedure (category, title),
+          task_assignments!inner (  
+            technician_id,
+            accounts (id, name, email)
           )
         ''')
-          .eq('status', selectedStatus)
-          .order('id', ascending: false);
+        .eq('status', selectedStatus)
+        .eq('task_assignments.technician_id', widget.user.id) // Filter by logged in id
+        .order('id', ascending: false);
 
       setState(() {
         tasks = List<Map<String, dynamic>>.from(taskResponse);
@@ -56,22 +53,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error loading tasks: $e')));
-    }
-  }
-
-  Future<void> deleteTask(int id) async {
-    try {
-      await supabase.from('tasks').delete().eq('id', id);
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Task deleted')));
-
-      loadTasks();
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Delete error: $e')));
     }
   }
 
@@ -202,16 +183,16 @@ class _AllTasksPageState extends State<AllTasksPage> {
             ),
           ),
 
-
-          // 🎯 Buttons (UNCHANGED style, just cleaner border feel)
           Column(
             children: [
               SizedBox(
                 width: 150,
                 height: 34,
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: () {},
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color.fromARGB(255, 37, 100, 235), // Set the background color
+                    foregroundColor: Colors.white, // Set the text color
                     side: const BorderSide(
                       color: Color.fromARGB(255, 103, 103, 103),
                     ),
@@ -219,29 +200,9 @@ class _AllTasksPageState extends State<AllTasksPage> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Text(
-                    'Edit Task',
-                    style: TextStyle(color: Color.fromARGB(255, 87, 87, 87)),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: 150,
-                height: 34,
-                child: OutlinedButton(
-                  onPressed: () => deleteTask(task['id']),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(
-                      color: Color.fromARGB(255, 251, 69, 69),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text(
-                    'Delete Task',
-                    style: TextStyle(color: Color.fromARGB(255, 251, 69, 69)),
+                  child: Text(
+                    selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
+                    style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
                   ),
                 ),
               ),
@@ -297,7 +258,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   const Expanded(
                     child: Center(
                       child: Text(
-                        'All Tasks',
+                        'My Tasks',
                         style: TextStyle(fontSize: 17, color: Colors.black),
                       ),
                     ),
@@ -327,8 +288,8 @@ class _AllTasksPageState extends State<AllTasksPage> {
                     ? Center(
                         child: Text(
                           selectedStatus == 'Assigned'
-                              ? 'No ongoing tasks'
-                              : 'No completed tasks',
+                              ? 'You have no ongoing tasks'
+                              : 'You have no completed tasks',
                         ),
                       )
                     : ListView.builder(

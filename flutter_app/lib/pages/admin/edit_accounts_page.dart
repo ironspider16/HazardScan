@@ -45,24 +45,16 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
 
     try {
 
-      final oldText = await AccountsFileService.instance.loadRaw();
-      List<String> lines = oldText.split('\n');
-      final updatedLine = "$email,$password,$role";
-      final newContent = lines.map((line) {
-        if (line.startsWith("email,")) {
-          return updatedLine; // Replace the line with updated info
-        }
-        return line; // Keep other lines unchanged
-      }).join('\n');
+      await supabase
+        .from('accounts')
+        .update({
+          'password': password,
+          'role': role,
+          'name': name,
+        })
+        .eq('email', email); // This tells Supabase: "Find the row where email matches, and update it"
 
-      await AccountsFileService.instance.saveRaw(newContent);
 
-      await supabase.from('accounts').upsert({
-        'email': email,
-        'password': password,
-        'role': role,
-        'name': name,
-      }, onConflict: 'email');
 
       if (!mounted) return;
 
@@ -233,7 +225,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                 label: "Technician Email",
                 hint: "worker1@example.com",
                 controller: _emailCtrl,
-                enabled : false, // Email should not be editable
+                enabled : true, // Email should not be editable
               ),
 
               const SizedBox(height: 28),
