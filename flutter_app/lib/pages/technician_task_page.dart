@@ -16,6 +16,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
 
   List<Map<String, dynamic>> tasks = [];
 
+
   bool isLoading = true;
   String selectedStatus = 'Assigned';
 
@@ -98,135 +99,123 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   }
 
   Widget _taskCard(Map<String, dynamic> task) {
-    final List assignments = task['task_assignments'] ?? [];
+  double screenwidth = MediaQuery.of(context).size.width;
+  bool showIcon = screenwidth > 380; 
+  
+  final List assignments = task['task_assignments'] ?? [];
+  final List<String> techNames = assignments.map((a) {
+    final account = a['accounts'];
+    if (account == null) return 'Unknown Technician';
+    return (account['name'] ?? account['email'] ?? 'Unknown').toString();
+  }).toList();
 
-    final List<String> techNames = assignments.map((a) {
-      final account = a['accounts'];
-      if (account == null) return 'Unknown Technician';
-      return (account['name'] ?? account['email'] ?? 'Unknown').toString();
-      }).toList();
+  final String displayNames = techNames.isEmpty ? 'Unassigned' : techNames.join(', ');
+  final swp = task['swp_templates'];
+  String swpDisplay = task['task_type'] ?? 'General Task';
 
-    final String displayNames = techNames.isEmpty
-      ? 'Unassigned'
-      : techNames.join(', ');
+  if (swp != null) {
+    final String category = swp['category'] ?? '';
+    final String title = swp['title'] ?? '';
+    swpDisplay += ' | $category - $title';
+  }
 
-      final swp = task['swp_templates'];
-      String swpDisplay = task['task_type'] ?? 'General Task';
-
-      if (swp != null) {
-        final String category = swp['category'] ?? '';
-        final String title = swp['title'] ?? '';
-        swpDisplay += ' | $category - $title';
-      }
-
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+  return Container(
+    margin: const EdgeInsets.only(top: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Colors.grey.shade200, // Matches your input borders
-        ),
-      ),
- 
-
-      child: Row(
-        children: [
-          // 🔵 Premium gradient circle (same size, upgraded look)
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-            color: const Color.fromARGB(26, 37, 100, 235),
-            borderRadius: BorderRadius.circular(12),
-          ),
-
-            child: const Icon(Icons.assignment, size: 30, color: Color(0xFF2563EB)),
-          ),
-
-          const SizedBox(width: 16),
-
-          // 📄 Content (UNCHANGED)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 🆔 PRIMARY ID: Bold and larger to act as the header
-                Text(
-                  task['workorder_id']?.toUpperCase() ?? 'NO ID',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700, // Extra bold for hierarchy
-                    color: Color(0xFF1E293B),    // Darker slate for better contrast
+      border: Border.all(color: Colors.grey.shade200),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))
+      ],
+    ),
+    child: Column( // Changed main wrapper to Column
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (showIcon) ...[
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(26, 37, 100, 235),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.assignment, size: 24, color: Color(0xFF2563EB)),
+              ),
+              const SizedBox(width: 16),
+            ],
+            // Text Content - Now has full width minus icon
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task['workorder_id']?.toUpperCase() ?? 'NO ID',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E293B),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-
-                // 🛠 TASK TYPE: Using a subtle "tag" style or icon
-                _buildInfoRow(Icons.settings_outlined, swpDisplay),
-                
-                const SizedBox(height: 8),
-
-                // 📍 LOCATION
-                _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Remote / Field'),
-
-                const SizedBox(height: 8),
-
-                // 👥 ASSIGNED TECHS: Slightly different color to distinguish from task info
-                _buildInfoRow(
-                  Icons.people_alt_outlined, 
-                  displayNames, 
-                  textColor: Colors.blueGrey.shade600,
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  _buildInfoRow(Icons.settings_outlined, swpDisplay),
+                  const SizedBox(height: 6),
+                  _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Field'),
+                  const SizedBox(height: 6),
+                  _buildInfoRow(Icons.people_alt_outlined, displayNames, 
+                      textColor: Colors.blueGrey.shade600),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+        ),
+        // Action Button - Now full width at the bottom
+        SizedBox(
+          width: double.infinity, // Makes button fill the card width
+          height: 40,
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2563EB),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
-
-          Column(
-            children: [
-              SizedBox(
-                width: 150,
-                height: 34,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 37, 100, 235), // Set the background color
-                    foregroundColor: Colors.white, // Set the text color
-                    side: const BorderSide(
-                      color: Color.fromARGB(255, 103, 103, 103),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
-                    style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
   return Row(
+    crossAxisAlignment: CrossAxisAlignment.start, 
     children: [
-      Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
+      Padding(padding: const EdgeInsets.only(top:2),
+      child:Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
+      ),
       const SizedBox(width: 8),
       Expanded(
         child: Text(
           text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 14,
             color: textColor ?? Colors.grey.shade700,
             fontWeight: FontWeight.w500,
+            height: 1.3,
           ),
         ),
       ),
@@ -271,13 +260,29 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
 
               Row(
                 children: [
-                  _tabButton('Ongoing Tasks', 'Assigned'),
-                  const SizedBox(width: 15),
-                  _tabButton('Completed Tasks', 'Completed'),
-                  const Spacer(),
-                  const Icon(Icons.filter_alt_outlined, size: 20),
-                  const SizedBox(width: 5),
-                  const Text('All Filter', style: TextStyle(fontSize: 20)),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(children: [
+                        _tabButton('Ongoing Tasks', 'Assigned'),
+                        const SizedBox(width: 15),
+                        _tabButton('Completed Tasks', 'Completed'),
+                      ],
+                     ),
+                    ),
+                  ),
+
+                  const SizedBox(width:8,),
+
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.filter_alt_outlined, size: 18),
+                      SizedBox(width: 4),
+                      Text('Filter', style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
                 ],
               ),
 

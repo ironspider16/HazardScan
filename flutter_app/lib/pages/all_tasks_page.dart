@@ -117,132 +117,103 @@ class _AllTasksPageState extends State<AllTasksPage> {
   }
 
   Widget _taskCard(Map<String, dynamic> task) {
-    final List assignments = task['task_assignments'] ?? [];
 
+    double screenwidth = MediaQuery.of(context).size.width;
+    bool showIcon = screenwidth > 380; // Show icon only on wider screens
+    final List assignments = task['task_assignments'] ?? [];
     final List<String> techNames = assignments.map((a) {
       final account = a['accounts'];
       if (account == null) return 'Unknown Technician';
       return (account['name'] ?? account['email'] ?? 'Unknown').toString();
-      }).toList();
+    }).toList();
 
-    final String displayNames = techNames.isEmpty
-      ? 'Unassigned'
-      : techNames.join(', ');
+    final String displayNames = techNames.isEmpty ? 'Unassigned' : techNames.join(', ');
+    final swp = task['swp_templates'];
+    String swpDisplay = task['task_type'] ?? 'General Task';
 
-      final swp = task['swp_templates'];
-      String swpDisplay = task['task_type'] ?? 'General Task';
-
-      if (swp != null) {
-        final String category = swp['category'] ?? '';
-        final String title = swp['title'] ?? '';
-        swpDisplay += ' | $category - $title';
-      }
+    if (swp != null) {
+      final String category = swp['category'] ?? '';
+      final String title = swp['title'] ?? '';
+      swpDisplay += ' | $category - $title';
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Colors.grey.shade200, // Matches your input borders
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
- 
-
-      child: Row(
+      child: Column( // Changed to Column to allow vertical stacking
         children: [
-          // 🔵 Premium gradient circle (same size, upgraded look)
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-            color: const Color.fromARGB(26, 37, 100, 235),
-            borderRadius: BorderRadius.circular(12),
-          ),
-
-            child: const Icon(Icons.assignment, size: 30, color: Color(0xFF2563EB)),
-          ),
-
-          const SizedBox(width: 16),
-
-          // 📄 Content (UNCHANGED)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 🆔 PRIMARY ID: Bold and larger to act as the header
-                Text(
-                  task['workorder_id']?.toUpperCase() ?? 'NO ID',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700, // Extra bold for hierarchy
-                    color: Color(0xFF1E293B),    // Darker slate for better contrast
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // 🛠 TASK TYPE: Using a subtle "tag" style or icon
-                _buildInfoRow(Icons.settings_outlined, swpDisplay),
-                
-                const SizedBox(height: 8),
-
-                // 📍 LOCATION
-                _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Remote / Field'),
-
-                const SizedBox(height: 8),
-
-                // 👥 ASSIGNED TECHS: Slightly different color to distinguish from task info
-                _buildInfoRow(
-                  Icons.people_alt_outlined, 
-                  displayNames, 
-                  textColor: Colors.blueGrey.shade600,
-                ),
-              ],
-            ),
-          ),
-
-
-          // 🎯 Buttons (UNCHANGED style, just cleaner border feel)
-          Column(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                width: 150,
-                height: 34,
+              if (showIcon) ...[
+              // Icon Box
+              Container(
+                width: 50, // Reduced slightly for better fit
+                height: 50,
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(26, 37, 100, 235),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.assignment, size: 24, color: Color(0xFF2563EB)),
+              ),
+              ],
+              const SizedBox(width: 16),
+              // Text Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task['workorder_id']?.toUpperCase() ?? 'NO ID',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildInfoRow(Icons.settings_outlined, swpDisplay),
+                    const SizedBox(height: 6),
+                    _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Field'),
+                    const SizedBox(height: 6),
+                    _buildInfoRow(Icons.people_alt_outlined, displayNames, 
+                        textColor: Colors.blueGrey.shade600),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1), // Optional: adds a nice separator
+          ),
+          // Action Buttons - Now Full Width at the bottom
+          Row(
+            children: [
+              Expanded(
                 child: OutlinedButton(
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(
-                      color: Color.fromARGB(255, 103, 103, 103),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    side: const BorderSide(color: Colors.grey),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text(
-                    'Edit Task',
-                    style: TextStyle(color: Color.fromARGB(255, 87, 87, 87)),
-                  ),
+                  child: const Text('Edit', style: TextStyle(color: Colors.black54)),
                 ),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: 150,
-                height: 34,
+              const SizedBox(width: 12),
+              Expanded(
                 child: OutlinedButton(
                   onPressed: () => deleteTask(task['id']),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(
-                      color: Color.fromARGB(255, 251, 69, 69),
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    side: const BorderSide(color: Colors.redAccent),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                  child: const Text(
-                    'Delete Task',
-                    style: TextStyle(color: Color.fromARGB(255, 251, 69, 69)),
-                  ),
+                  child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
                 ),
               ),
             ],
@@ -254,18 +225,21 @@ class _AllTasksPageState extends State<AllTasksPage> {
 
   Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
   return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
+      Padding(
+        padding: const EdgeInsets.only(top: 2),
+        child: Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
+      ),
       const SizedBox(width: 8),
       Expanded(
         child: Text(
           text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: 14,
             color: textColor ?? Colors.grey.shade700,
             fontWeight: FontWeight.w500,
+            height: 1.3,
           ),
         ),
       ),
@@ -308,17 +282,36 @@ class _AllTasksPageState extends State<AllTasksPage> {
 
               const SizedBox(height: 85),
 
+              // Inside build() -> Column -> children:
               Row(
                 children: [
-                  _tabButton('Ongoing Tasks', 'Assigned'),
-                  const SizedBox(width: 15),
-                  _tabButton('Completed Tasks', 'Completed'),
-                  const Spacer(),
-                  const Icon(Icons.filter_alt_outlined, size: 20),
-                  const SizedBox(width: 5),
-                  const Text('All Filter', style: TextStyle(fontSize: 20)),
+                  Expanded( // Wrap tabs in Expanded + FittedBox
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown, // This shrinks the text if it's too wide
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          _tabButton('Ongoing Tasks', 'Assigned'),
+                          const SizedBox(width: 15),
+                          _tabButton('Completed Tasks', 'Completed'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  // Filter Button
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.filter_alt_outlined, size: 18),
+                      SizedBox(width: 4),
+                      Text('Filter', style: TextStyle(fontSize: 16)), // Slightly smaller font
+                    ],
+                  ),
                 ],
               ),
+
+
 
               Expanded(
                 child: isLoading
