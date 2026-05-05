@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
 import 'package:flutter_application_1/pages/work_activity_page.dart';
+import 'package:flutter_application_1/pages/assign_task_page.dart';
+import 'package:flutter_application_1/pages/all_tasks_page.dart';
+import 'package:flutter_application_1/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
-import 'admin/edit_accounts_page.dart';
-import '../pages/camera_screen.dart';
-import '../pages/image_confirm_screen.dart';
+import 'admin/add_accounts_page.dart';
 import '../pages/reports_list_page.dart';
-import '../pages/swp_category_page.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -25,181 +26,185 @@ class MainMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final roleText = isAdmin ? "Admin" : "Technician";
+
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-
-      // ------------------ APP BAR ------------------
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        elevation: 0,
-        title: Text(
-          "Main Menu (${isAdmin ? 'Admin' : 'User'})",
-          style: const TextStyle(color: Color(0xFF2563EB)),
-        ),
-        centerTitle: true,
-        actions: [],
-      ),
-
-      // ------------------ ACTION FABS (LOGOUT + CAMERA) ------------------
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            backgroundColor: Colors.redAccent,
-            onPressed: () => _logout(context),
-            child: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Log Out',
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton(
-            backgroundColor: const Color(0xFF2563EB),
-            onPressed: () async {
-              final imagePath = await Navigator.push<String?>(
-                context,
-                MaterialPageRoute(builder: (_) => const CameraScreen()),
-              );
-
-              if (imagePath == null) return;
-
-              final confirmed = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ImageConfirmScreen(imagePath: imagePath),
-                ),
-              );
-
-              if (confirmed == true) {
-                debugPrint("Image confirmed & sent: $imagePath");
-              }
-            },
-            child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
-          ),
-        ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-
-      // ------------------ BODY ------------------
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // -------- REPORTS BUTTON --------
-                  _MenuButton(
-                    icon: Icons.description_outlined,
-                    label: isAdmin ? "All Reports" : "My Reports",
-                    color: const Color.fromARGB(255, 0, 0, 0),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ReportsListPage(isAdmin: isAdmin),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 20),
-
-                  // -------- MAKE A REPORT BUTTON --------
-                  _MenuButton(
-                    icon: Icons.edit_outlined,
-                    label: "Write a Report",
-                    color: const Color(0xFF2563EB),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => WorkActivityPage(user: user),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // -------- ROLE-BASED BUTTONS --------
-                  if (isAdmin) ...[
-                    _MenuButton(
-                      icon: Icons.edit_note_outlined,
-                      label: "Edit Accounts",
-                      color: const Color(0xFF2563EB),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const EditAccountsPage(),
-                          ),
-                        );
-                      },
+        child: Stack(
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 🔷 ICON
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2563EB),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(
+                        Icons.local_hospital, // or Icons.medical_services
+                        color: Colors.white,
+                        size: 36,
+                      ),
                     ),
-                  ] else ...[
-                    _MenuButton(
-                      icon: Icons.assignment_turned_in_outlined,
-                      label: "My Tasks",
-                      color: const Color.fromARGB(255, 0, 0, 0),
-                      onTap: () {
-                        // TODO: Implement user tasks if needed
-                      },
+
+                    const SizedBox(height: 20),
+                    const Text(
+                      "HazardScan",
+                      style: TextStyle(
+                        fontSize: 35,
+                        fontWeight: FontWeight.w400,
+                        color: Color(0xFF4A4A4A),
+                      ),
                     ),
+
+                    const SizedBox(height: 10),
+
+                    Text(
+                      "Hi, $roleText",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF333333),
+                      ),
+                    ),
+
+                    const SizedBox(height: 45),
+                    if (isAdmin) ...[
+                      _MenuButton(
+                        label: "Assign Tasks",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => AssignTaskPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      _MenuButton(
+                        label: "All Tasks",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => AllTasksPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      _MenuButton(
+                        label: "Manage Worker Accounts",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ManageAccountsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ] else ...[
+                      _MenuButton(
+                        label: "My Tasks",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => TechnicianTaskPage(user:user)
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                      _MenuButton(label: "Profile", onTap: () {}),
+                    ],
                   ],
-
-                  const SizedBox(height: 40),
-
-                  // (Logout moved to FAB column)
-                ],
+                ),
               ),
             ),
-          ),
+
+            Positioned(
+              right: 28,
+              bottom: 45,
+              child: GestureDetector(
+                onTap: () => _logout(context),
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 253, 27, 27),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.logout,
+                    color: Color.fromARGB(221, 255, 255, 255),
+                    size: 28,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ------------------ MENU BUTTON WIDGET ------------------
-class _MenuButton extends StatelessWidget {
-  final IconData icon;
+class _MenuButton extends StatefulWidget {
   final String label;
-  final Color color;
   final VoidCallback onTap;
 
-  const _MenuButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
+  const _MenuButton({required this.label, required this.onTap});
+
+  @override
+  State<_MenuButton> createState() => _MenuButtonState();
+}
+
+class _MenuButtonState extends State<_MenuButton> {
+  bool _pressed = false;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 80,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) {
+        setState(() => _pressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _pressed = false),
+
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 50),
+        width: 500, // 🔥 wider
+        height: 50, // 🔥 bigger
+        alignment: Alignment.center,
+
         decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(12),
+          color: _pressed
+              ? const Color(0xFF2563EB) // 🔵 pressed
+              : Colors.white, // ⚪ normal
+
+          borderRadius: BorderRadius.circular(8),
+
+          border: Border.all(
+            color: const Color.fromARGB(255, 147, 147, 147), // outline
+            width: 1,
+          ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white, size: 30),
-            const SizedBox(width: 16),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+
+        child: Text(
+          widget.label,
+          style: TextStyle(
+            fontSize: 16,
+            color: _pressed ? Colors.white : const Color(0xFF333333),
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );

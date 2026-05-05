@@ -34,6 +34,7 @@ dependencies:
   camera: ^0.11.3
   onnxruntime: ^1.4.1
   image: ^4.2.0 
+  supabase_flutter: ^2.12.4
 
 
   # The following adds the Cupertino Icons font to your application.

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_users.dart';
 import '../pages/main_menu.dart';
-import '../services/accounts_file_service.dart';
-import '../pages/work_activity_page.dart';
+import 'package:flutter_application_1/supabase_client.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +14,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+
   bool _showPassword = false;
   bool _loading = false;
 
@@ -33,61 +33,110 @@ class _LoginScreenState extends State<LoginScreen> {
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
 
-    final user = await AccountsFileService.instance.login(email, password);
+    try {
+      final data = await supabase
+          .from('accounts')
+          .select()
+          .eq('email', email)
+          .eq('password', password)
+          .maybeSingle();
 
-    setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
 
-    if (user != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Login successful')));
+      if (data != null) {
+        final roleFromDb = data['role'].toString();
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => MainMenu(user: user)),
-      );
-    } else {
+        final role = roleFromDb == 'Administrator'
+            ? UserRole.admin
+            : UserRole.user;
+
+        final user = AppUser(
+          id: data['id'] as int, 
+          email: data['email'].toString(),
+          password: data['password'].toString(),
+          role: role,
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainMenu(user: user)),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid email or password')),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid email or password')),
+        SnackBar(content: Text("Login error: $e"), backgroundColor: Colors.red),
       );
     }
   }
 
+  InputDecoration _inputStyle({
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: const TextStyle(fontSize: 15, color: Colors.grey),
+      prefixIcon: Icon(icon, size: 20, color: Colors.grey),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFFBDBDBD)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF3366CC), width: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width * 0.5;
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
+      body: SafeArea(
+        child: Center(
+          child: Form(
+            key: _formKey,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(height: 12),
-
-                // -------- ICON --------
+                // 🔷 ICON
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
                     color: const Color(0xFF2563EB),
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(Icons.lock, color: Colors.white, size: 40),
+                  child: const Icon(
+                    Icons.local_hospital, // or Icons.medical_services
+                    color: Colors.white,
+                    size: 36,
+                  ),
                 ),
 
-                const SizedBox(height: 16),
-
-                // -------- TITLE --------
+                const SizedBox(height: 20),
+                // 🔥 TITLE
                 const Text(
-                  "Welcome Back",
+                  "HazardScan",
                   style: TextStyle(
-                    color: Color.fromARGB(255, 41, 41, 41),
-                    fontSize: 24,
+                    fontSize: 35,
                     fontWeight: FontWeight.w600,
+                    color: Color(0xFF4A4A4A),
                   ),
                 ),
 
@@ -95,149 +144,98 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const Text(
                   "Sign in to continue",
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 41, 41, 41),
-                    fontSize: 14,
+                  style: TextStyle(fontSize: 15, color: Color(0xFF333333)),
+                ),
+
+                const SizedBox(height: 50),
+
+                // EMAIL
+                SizedBox(
+                  width: width,
+                  height: 70,
+                  child: TextFormField(
+                    controller: _emailCtrl,
+                    style: const TextStyle(fontSize: 15),
+                    decoration: _inputStyle(
+                      hint: "Enter your email",
+                      icon: Icons.email_outlined,
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return "Email is required";
+                      }
+                      return null;
+                    },
                   ),
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
-                // -------- FORM --------
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      _label("Email"),
-                      const SizedBox(height: 8),
-                      _inputField(
-                        controller: _emailCtrl,
-                        hint: "Enter your email",
-                        icon: Icons.mail_outline,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) {
-                            return "Email is required";
-                          }
-                          final ok = RegExp(
-                            r"^[^\s@]+@[^\s@]+\.[^\s@]+$",
-                          ).hasMatch(v.trim());
-                          if (!ok) return "Enter a valid email";
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      _label("Password"),
-                      const SizedBox(height: 8),
-                      _inputField(
-                        controller: _passwordCtrl,
-                        hint: "Enter your password",
-                        icon: Icons.lock_outline,
-                        obscureText: !_showPassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _showPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: const Color.fromARGB(255, 41, 41, 41),
-                          ),
-                          onPressed: () =>
-                              setState(() => _showPassword = !_showPassword),
+                // PASSWORD
+                SizedBox(
+                  width: width,
+                  height: 70,
+                  child: TextFormField(
+                    controller: _passwordCtrl,
+                    obscureText: !_showPassword,
+                    style: const TextStyle(fontSize: 15),
+                    decoration: _inputStyle(
+                      hint: "Enter your password",
+                      icon: Icons.lock_outline,
+                      suffix: IconButton(
+                        icon: Icon(
+                          _showPassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          size: 20,
+                          color: const Color.fromARGB(255, 81, 81, 81),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return "Password is required";
-                          }
-                          if (v.length < 6) {
-                            return "Minimum 6 characters";
-                          }
-                          return null;
+                        onPressed: () {
+                          setState(() => _showPassword = !_showPassword);
                         },
                       ),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) {
+                        return "Password is required";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
 
-                      const SizedBox(height: 40),
+                const SizedBox(height: 30),
 
-                      // -------- BUTTON --------
-                      SizedBox(
-                        width: double.infinity,
-                        height: 56,
-                        child: ElevatedButton(
-                          onPressed: _loading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF2563EB),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                // BUTTON
+                SizedBox(
+                  width: width,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _loading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: _loading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             ),
+                          )
+                        : const Text(
+                            "Sign In",
+                            style: TextStyle(fontSize: 15, color: Colors.white),
                           ),
-                          child: _loading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                )
-                              : const Text(
-                                  "Sign In",
-                                  style: TextStyle(fontSize: 18),
-                                ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  // -------- HELPER WIDGETS --------
-
-  Widget _label(String text) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-      validator: validator,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color.fromARGB(170, 0, 0, 0)),
-        prefixIcon: Icon(icon, color: const Color.fromARGB(170, 0, 0, 0)),
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: const Color.fromARGB(255, 255, 255, 255),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color.fromARGB(170, 0, 0, 0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2563EB)),
         ),
       ),
     );
