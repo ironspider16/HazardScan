@@ -31,9 +31,11 @@ class _AllTasksPageState extends State<AllTasksPage> {
           .from('tasks')
           .select('''
           *,
-          swp_templates: safe_work_procedure (
-            category,
-            title
+          task_swp_assignments (
+             swp_templates (
+              category,
+              title
+            )
           ),
           task_assignments (
             accounts (
@@ -128,13 +130,18 @@ class _AllTasksPageState extends State<AllTasksPage> {
     }).toList();
 
     final String displayNames = techNames.isEmpty ? 'Unassigned' : techNames.join(', ');
-    final swp = task['swp_templates'];
+    final List swpAssignments = task['task_swp_assignments'] ?? [];
+    
+    final List<String> swpTitles = swpAssignments.map((assignment) {
+    final template = assignment['swp_templates'];
+    if (template == null) return 'Unknown Template';
+    return '${template['category']} - ${template['title']}';
+    }).toList();
+    
     String swpDisplay = task['task_type'] ?? 'General Task';
 
-    if (swp != null) {
-      final String category = swp['category'] ?? '';
-      final String title = swp['title'] ?? '';
-      swpDisplay += ' | $category - $title';
+    if (swpTitles.isNotEmpty) {
+      swpDisplay += ' | ' + swpTitles.join(' · ');
     }
 
     return Container(

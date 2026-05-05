@@ -29,20 +29,38 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   Future<void> loadTasks() async {
     setState(() => isLoading = true);
 
+
     try {
+
+      final assignedTaskData = await supabase
+        .from('task_assignments')
+        .select('task_id')
+        .eq('technician_id', widget.user.id);
+
+      final List<int> myTaskIds = List<int>.from(
+        assignedTaskData.map((row) => row['task_id'])
+    );
+
+
+
       final taskResponse = await supabase
         .from('tasks')
         .select('''
           *,
-          swp_templates: safe_work_procedure (category, title),
-          task_assignments!inner (  
-            technician_id,
+          task_swp_assignments (
+             swp_templates (
+              category,
+              title
+            )
+          ),
+          task_assignments (
             accounts (id, name, email)
           )
         ''')
+        .inFilter('id', myTaskIds)
         .eq('status', selectedStatus)
-        .eq('task_assignments.technician_id', widget.user.id) // Filter by logged in id
         .order('id', ascending: false);
+
 
       setState(() {
         tasks = List<Map<String, dynamic>>.from(taskResponse);
@@ -110,13 +128,17 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   }).toList();
 
   final String displayNames = techNames.isEmpty ? 'Unassigned' : techNames.join(', ');
-  final swp = task['swp_templates'];
+  final List swpAssignments = task['task_swp_assignments'] ?? [];
+    
+  final List<String> swpTitles = swpAssignments.map((assignment) {
+  final template = assignment['swp_templates'];
+  if (template == null) return 'Unknown Template';
+  return '${template['category']} - ${template['title']}';
+  }).toList();
   String swpDisplay = task['task_type'] ?? 'General Task';
 
-  if (swp != null) {
-    final String category = swp['category'] ?? '';
-    final String title = swp['title'] ?? '';
-    swpDisplay += ' | $category - $title';
+  if (swpTitles.isNotEmpty) {
+    swpDisplay += ' | ' + swpTitles.join(' · ');
   }
 
   return Container(

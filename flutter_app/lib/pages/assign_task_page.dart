@@ -19,7 +19,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
 
   // Safe work procedure template data
   List<Map<String, dynamic>> swpTemplates = [];
-  String? selectedSWPId;
+  List<String>  selectedSWPIds = [];
   bool isLoadingSWPs = true;
 
   // Technician data
@@ -104,17 +104,27 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
         'task_type': selectedTaskType,
         'task_details': detailsCtrl.text,
         'remarks_notes': remarksCtrl.text,
-        'safe_work_procedure' : selectedSWPId != null ? int.parse(selectedSWPId!) : null,
       }).select().single();  
 
       final newTaskId = taskResponse['id'];
 
-      final assignment = selectedTechnicianIds.map((techId) => {
+
+
+      final techAssignment = selectedTechnicianIds.map((techId) => {
             'task_id': newTaskId,
             'technician_id': int.parse(techId),
           }).toList();
 
-      await supabase.from('task_assignments').insert(assignment);
+      await supabase.from('task_assignments').insert(techAssignment);
+
+      if (selectedSWPIds.isNotEmpty) {
+        final swpAssignment = selectedSWPIds.map((swpId) => {
+              'task_id': newTaskId,
+              'swp_template_id': int.parse(swpId),
+            }).toList();
+
+        await supabase.from('task_swp_assignments').insert(swpAssignment);
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Task assigned successfully')),
@@ -217,7 +227,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           children: selectedTechnicianIds.map((id) {
             final tech = technicians.firstWhere((t) => t['id'].toString() == id);
             return Chip(
-              label: Text(tech['name'] ?? tech['email'], style: const TextStyle(fontSize: 12)),
+              label: Text(tech['name'] ?? tech['email'], style: const TextStyle(fontSize: 12, color: Colors.black54)),
               backgroundColor: Color.fromARGB(22, 37, 100, 235),
               deleteIconColor: Colors.red,
               shape: RoundedRectangleBorder(
@@ -312,45 +322,120 @@ void _showTechSelectionDialog() {
     );
   }
 
-  Widget _swpDropDown() {
-    if (isLoadingSWPs) {
-    return const Center(child: CircularProgressIndicator());
-  }
+  Widget _swpMultiSelect() {
+  if (isLoadingSWPs) return const Center(child: CircularProgressIndicator());
 
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _label('Safe Work Procedure (Optional)'),
-      DropdownButtonFormField<String>(
-        value: selectedSWPId,
-        decoration: _inputDecoration('Select SWP Template'),
-        isExpanded: true, // Prevents text overflow
-        items: [
-          // 1. Add a "None" option to allow null selection
-          const DropdownMenuItem<String>(
-            value: null,
-            child: Text('No SWP Required', style: TextStyle(color: Colors.grey)),
+      _label('Safe Work Procedures'),
+      GestureDetector(
+        onTap: () => _showSWPSelectionDialog(),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: const Color(0xFF555555)),
           ),
-          // 2. Map your templates
-          ...swpTemplates.map((swp) {
-            return DropdownMenuItem<String>(
-              value: swp['id'].toString(),
-              child: Text(
-                '${swp['category']} - ${swp['title']}', // 👈 Combined string
-                overflow: TextOverflow.ellipsis,
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  selectedSWPIds.isEmpty
+                      ? 'Select SWP templates'
+                      : '${selectedSWPIds.length} procedures selected',
+                  style: TextStyle(
+                    color: selectedSWPIds.isEmpty ? const Color(0xFF9E9E9E) : Colors.black,
+                  ),
+                ),
               ),
-            );
-          }),
-        ],
-        onChanged: (value) {
-          setState(() {
-            selectedSWPId = value;
-          });
-        },
+              const Icon(Icons.list_alt_outlined, size: 20),
+            ],
+          ),
+        ),
       ),
+      //label: Text('${swp['category']}: ${swp['title']}', 
+      if (selectedSWPIds.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          children: selectedSWPIds.map((id) {
+            final swp = swpTemplates.firstWhere((s) => s['id'].toString() == id);
+            return Chip(
+              label: Text('${swp['category']}: ${swp['title']}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              backgroundColor: Color.fromARGB(22, 37, 100, 235),
+              deleteIconColor: Colors.red,
+              shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: Colors.transparent), // Removes the default border
+            ),
+              onDeleted: () {
+                setState(() => selectedSWPIds.remove(id));
+              },
+            );
+          }).toList(),
+        ),
+      ],
     ],
   );
-  }
+}
+
+void _showSWPSelectionDialog() {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Color.fromARGB(255, 235, 237, 242),
+            title: const Text("Select SWP Templates"),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: swpTemplates.length,
+                itemBuilder: (ctx, index) {
+                  final swp = swpTemplates[index];
+                  final id = swp['id'].toString();
+                  final isSelected = selectedSWPIds.contains(id);
+
+                  return CheckboxListTile(
+                    title: Text(swp['category']),
+                    subtitle: Text(swp['title']),
+                    activeColor: const Color(0xFF2563EB),
+                    value: isSelected,
+                    onChanged: (bool? checked) {
+                      setDialogState(() {
+                        if (checked == true) {
+                          selectedSWPIds.add(id);
+                        } else {
+                          selectedSWPIds.remove(id);
+                        }
+                      });
+                      setState(() {});
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Done"),
+                style: TextButton.styleFrom(
+                  foregroundColor:Colors.white,
+                  backgroundColor: const Color(0xFF2563EB)
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
 
   @override
   void dispose() {
@@ -426,7 +511,7 @@ void _showTechSelectionDialog() {
 
               const SizedBox(height: 25),
 
-              _swpDropDown(),
+              _swpMultiSelect(),
 
               const SizedBox(height: 25),
 
