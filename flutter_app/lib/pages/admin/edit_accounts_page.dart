@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
-import 'package:flutter_application_1/supabase_client.dart';
+import 'package:kkhazardscan/supabase_client.dart';
 
 class EditAccountsPage extends StatefulWidget {
   final Map<String, dynamic> account;
@@ -20,12 +20,12 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
 
   @override
   void initState() {
-  super.initState();
-  // Fill the controllers with existing data
-  _emailCtrl.text = widget.account['email'] ?? '';
-  _nameCtrl.text = widget.account['name'] ?? '';
-  _passwordCtrl.text = widget.account['password'] ?? '';
-  _selectedRole = widget.account['role'];
+    super.initState();
+    // Fill the controllers with existing data
+    _emailCtrl.text = widget.account['email'] ?? '';
+    _nameCtrl.text = widget.account['name'] ?? '';
+    _passwordCtrl.text = widget.account['password'] ?? '';
+    _selectedRole = widget.account['role'];
   }
 
   Future<void> _updateUser() async {
@@ -44,24 +44,21 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     setState(() => _saving = true);
 
     try {
-
       await supabase
-        .from('accounts')
-        .update({
-          'email': email,
-          'password': password,
-          'role': role,
-          'name': name,
-        })
-        .eq('id', widget.account['id']); 
-
-
+          .from('accounts')
+          .update({
+            'email': email,
+            'password': password,
+            'role': role,
+            'name': name,
+          })
+          .eq('id', widget.account['id']);
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("User updated successfully")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User updated successfully")),
+      );
 
       Navigator.pop(context); // Go back after update
     } catch (e) {
@@ -147,7 +144,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
           height: 50,
           child: TextField(
             controller: controller,
-            enabled : enabled,
+            enabled: enabled,
             obscureText: obscureText,
             style: const TextStyle(fontSize: 15, color: Colors.black87),
             decoration: _inputDecoration(hint),
@@ -226,7 +223,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                 label: "Technician Email",
                 hint: "worker1@example.com",
                 controller: _emailCtrl,
-                enabled : true, // Email should not be editable
+                enabled: true, // Email should not be editable
               ),
 
               const SizedBox(height: 28),

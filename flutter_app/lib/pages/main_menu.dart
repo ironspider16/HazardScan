@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
-import 'package:flutter_application_1/pages/work_activity_page.dart';
-import 'package:flutter_application_1/pages/assign_task_page.dart';
-import 'package:flutter_application_1/pages/all_tasks_page.dart';
-import 'package:flutter_application_1/pages/technician_task_page.dart';
+import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
+import 'package:kkhazardscan/pages/work_activity_page.dart';
+import 'package:kkhazardscan/pages/assign_task_page.dart';
+import 'package:kkhazardscan/pages/all_tasks_page.dart';
+import 'package:kkhazardscan/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'admin/add_accounts_page.dart';
@@ -116,7 +116,7 @@ class MainMenu extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => TechnicianTaskPage(user:user)
+                              builder: (_) => TechnicianTaskPage(user: user),
                             ),
                           );
                         },

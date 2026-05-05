@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/config/app_users.dart';
+import 'package:kkhazardscan/config/app_users.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class TechnicianTaskPage extends StatefulWidget {
-
   final AppUser user; // Pass the user object to this page
-  const TechnicianTaskPage({super.key , required this.user});
+  const TechnicianTaskPage({super.key, required this.user});
 
   @override
   State<TechnicianTaskPage> createState() => _TechnicianTaskPageState();
@@ -30,8 +29,8 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
 
     try {
       final taskResponse = await supabase
-        .from('tasks')
-        .select('''
+          .from('tasks')
+          .select('''
           *,
           swp_templates: safe_work_procedure (category, title),
           task_assignments!inner (  
@@ -39,9 +38,12 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
             accounts (id, name, email)
           )
         ''')
-        .eq('status', selectedStatus)
-        .eq('task_assignments.technician_id', widget.user.id) // Filter by logged in id
-        .order('id', ascending: false);
+          .eq('status', selectedStatus)
+          .eq(
+            'task_assignments.technician_id',
+            widget.user.id,
+          ) // Filter by logged in id
+          .order('id', ascending: false);
 
       setState(() {
         tasks = List<Map<String, dynamic>>.from(taskResponse);
@@ -104,32 +106,31 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
       final account = a['accounts'];
       if (account == null) return 'Unknown Technician';
       return (account['name'] ?? account['email'] ?? 'Unknown').toString();
-      }).toList();
+    }).toList();
 
     final String displayNames = techNames.isEmpty
-      ? 'Unassigned'
-      : techNames.join(', ');
+        ? 'Unassigned'
+        : techNames.join(', ');
 
-      final swp = task['swp_templates'];
-      String swpDisplay = task['task_type'] ?? 'General Task';
+    final swp = task['swp_templates'];
+    String swpDisplay = task['task_type'] ?? 'General Task';
 
-      if (swp != null) {
-        final String category = swp['category'] ?? '';
-        final String title = swp['title'] ?? '';
-        swpDisplay += ' | $category - $title';
-      }
+    if (swp != null) {
+      final String category = swp['category'] ?? '';
+      final String title = swp['title'] ?? '';
+      swpDisplay += ' | $category - $title';
+    }
 
     return Container(
       margin: const EdgeInsets.only(top: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: Colors.grey.shade200, // Matches your input borders
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.grey.shade200, // Matches your input borders
         ),
       ),
- 
 
       child: Row(
         children: [
@@ -138,11 +139,15 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-            color: const Color.fromARGB(26, 37, 100, 235),
-            borderRadius: BorderRadius.circular(12),
-          ),
+              color: const Color.fromARGB(26, 37, 100, 235),
+              borderRadius: BorderRadius.circular(12),
+            ),
 
-            child: const Icon(Icons.assignment, size: 30, color: Color(0xFF2563EB)),
+            child: const Icon(
+              Icons.assignment,
+              size: 30,
+              color: Color(0xFF2563EB),
+            ),
           ),
 
           const SizedBox(width: 16),
@@ -158,25 +163,30 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700, // Extra bold for hierarchy
-                    color: Color(0xFF1E293B),    // Darker slate for better contrast
+                    color: Color(
+                      0xFF1E293B,
+                    ), // Darker slate for better contrast
                   ),
                 ),
                 const SizedBox(height: 12),
 
                 // 🛠 TASK TYPE: Using a subtle "tag" style or icon
                 _buildInfoRow(Icons.settings_outlined, swpDisplay),
-                
+
                 const SizedBox(height: 8),
 
                 // 📍 LOCATION
-                _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Remote / Field'),
+                _buildInfoRow(
+                  Icons.location_on_outlined,
+                  task['location'] ?? 'Remote / Field',
+                ),
 
                 const SizedBox(height: 8),
 
                 // 👥 ASSIGNED TECHS: Slightly different color to distinguish from task info
                 _buildInfoRow(
-                  Icons.people_alt_outlined, 
-                  displayNames, 
+                  Icons.people_alt_outlined,
+                  displayNames,
                   textColor: Colors.blueGrey.shade600,
                 ),
               ],
@@ -191,7 +201,12 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                 child: ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 37, 100, 235), // Set the background color
+                    backgroundColor: const Color.fromARGB(
+                      255,
+                      37,
+                      100,
+                      235,
+                    ), // Set the background color
                     foregroundColor: Colors.white, // Set the text color
                     side: const BorderSide(
                       color: Color.fromARGB(255, 103, 103, 103),
@@ -201,7 +216,9 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                     ),
                   ),
                   child: Text(
-                    selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
+                    selectedStatus == 'Assigned'
+                        ? 'View Details'
+                        : 'View Report',
                     style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
                   ),
                 ),
@@ -214,25 +231,25 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   }
 
   Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
-  return Row(
-    children: [
-      Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 14,
-            color: textColor ?? Colors.grey.shade700,
-            fontWeight: FontWeight.w500,
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              color: textColor ?? Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

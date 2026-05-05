@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_users.dart';
 import '../pages/main_menu.dart';
-import 'package:flutter_application_1/supabase_client.dart';
+import 'package:kkhazardscan/supabase_client.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -52,7 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
             : UserRole.user;
 
         final user = AppUser(
-          id: data['id'] as int, 
+          id: data['id'] as int,
           email: data['email'].toString(),
           password: data['password'].toString(),
           role: role,
