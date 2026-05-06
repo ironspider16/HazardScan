@@ -319,7 +319,7 @@ void _showDetailsDialog(String details) {
                 ],
               ),
 
-              const SizedBox(height: 85),
+              const SizedBox(height: 30),
 
               Row(
                 children: [

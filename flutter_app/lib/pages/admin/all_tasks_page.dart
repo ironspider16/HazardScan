@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'edit_task_page.dart';
 
 class AllTasksPage extends StatefulWidget {
   const AllTasksPage({super.key});
@@ -60,6 +61,28 @@ class _AllTasksPageState extends State<AllTasksPage> {
       ).showSnackBar(SnackBar(content: Text('Error loading tasks: $e')));
     }
   }
+
+    void _confirmDelete(int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Task?'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              deleteTask(id);
+            }, 
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   Future<void> deleteTask(int id) async {
     try {
@@ -204,7 +227,11 @@ class _AllTasksPageState extends State<AllTasksPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () => Navigator.push(context,
+                    MaterialPageRoute(
+                      builder: (context) => EditTaskPage(task: task),
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.grey),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -215,7 +242,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => deleteTask(task['id']),
+                  onPressed: () => _confirmDelete(task['id']),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.redAccent),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -255,7 +282,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
 }
 
 
-
   @override
   Widget build(BuildContext context) {
     final int ongoingCount = selectedStatus == 'Assigned' ? tasks.length : 0;
@@ -289,7 +315,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
                 ],
               ),
 
-              const SizedBox(height: 85),
+              const SizedBox(height: 30),
 
               // Inside build() -> Column -> children:
               Row(
@@ -319,9 +345,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   ),
                 ],
               ),
-
-
-
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())

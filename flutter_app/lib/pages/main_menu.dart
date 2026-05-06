@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
 import 'package:flutter_application_1/pages/work_activity_page.dart';
-import 'package:flutter_application_1/pages/assign_task_page.dart';
-import 'package:flutter_application_1/pages/all_tasks_page.dart';
+import 'package:flutter_application_1/pages/admin/assign_task_page.dart';
+import 'package:flutter_application_1/pages/admin/all_tasks_page.dart';
 import 'package:flutter_application_1/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
