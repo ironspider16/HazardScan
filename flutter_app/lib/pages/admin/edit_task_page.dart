@@ -474,6 +474,19 @@ void _showSWPSelectionDialog() {
   );
 }
 
+  Widget _buildResponsiveRow({required bool isMobile, required List<Widget> children}) {
+  if (isMobile) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: children,
+    );
+  } else {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    );
+  }
+}
 
   @override
   void dispose() {
@@ -487,103 +500,126 @@ void _showSWPSelectionDialog() {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding (
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            children: [
-              // Header
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(Icons.arrow_back),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Edit Task',
-                        style: TextStyle(fontSize: 16),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            bool isMobile = constraints.maxWidth < 420;
+
+            return SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  children: [
+                    // Header
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Icon(Icons.arrow_back),
+                        ),
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'Edit Task',
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                      ],
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // Row 1
+                    _buildResponsiveRow(
+                      isMobile: isMobile,
+                      children: [
+                        isMobile
+                            ? _technicianMultiSelect()
+                            : Expanded(child: _technicianMultiSelect()),
+                        SizedBox(width: isMobile ? 0 : 20, height: isMobile ? 25 : 0),
+                        isMobile
+                            ? _textField(
+                                label: 'Location',
+                                hint: 'Ward 2B → Bed 12',
+                                controller: locationCtrl,
+                              )
+                            : Expanded(
+                                child: _textField(
+                                  label: 'Location',
+                                  hint: 'Ward 2B → Bed 12',
+                                  controller: locationCtrl,
+                                ),
+                              ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    // Row 2
+                    _buildResponsiveRow(
+                      isMobile: isMobile,
+                      children: [
+                        isMobile
+                            ? _textField(
+                                label: 'Work Order ID',
+                                hint: 'WO-xxxx',
+                                controller: workOrderCtrl,
+                              )
+                            : Expanded(
+                                child: _textField(
+                                  label: 'Work Order ID',
+                                  hint: 'WO-xxxx',
+                                  controller: workOrderCtrl,
+                                ),
+                              ),
+                        SizedBox(width: isMobile ? 0 : 20, height: isMobile ? 25 : 0),
+                        isMobile
+                            ? _taskTypeDropdown()
+                            : Expanded(child: _taskTypeDropdown()),
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    _swpMultiSelect(),
+
+                    const SizedBox(height: 25),
+
+                    _textField(
+                      label: 'Work Task Activity Details',
+                      hint: 'Describe task...',
+                      controller: detailsCtrl,
+                      maxLines: 4,
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    SizedBox(
+                      width: double.infinity,
+                      height: 45,
+                      child: ElevatedButton(
+                        onPressed: isSubmitting ? null : assignTask,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: isSubmitting
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('Save Changes'),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 24),
-                ],
-              ),
-
-              const SizedBox(height: 40),
-
-              // Row 1
-              Row(
-                children: [
-                  Expanded(child: _technicianMultiSelect()),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: _textField(
-                      label: 'Location',
-                      hint: 'Ward 2B → Bed 12',
-                      controller: locationCtrl,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              // Row 2
-              Row(
-                children: [
-                  Expanded(
-                    child: _textField(
-                      label: 'Work Order ID',
-                      hint: 'WO-xxxx',
-                      controller: workOrderCtrl,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(child: _taskTypeDropdown()),
-                ],
-              ),
-
-              const SizedBox(height: 25),
-
-              _swpMultiSelect(),
-
-              const SizedBox(height: 25),
-
-              _textField(
-                label: 'Work Task Activity Details',
-                hint: 'Describe task...',
-                controller: detailsCtrl,
-                maxLines: 4,
-              ),
-
-              const SizedBox(height: 25),
-
-              SizedBox(
-                width: double.infinity,
-                height: 45,
-                child: ElevatedButton(
-                  onPressed: isSubmitting ? null : assignTask,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB), // blue button
-                    foregroundColor: Colors.white, // ✅ text = white
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: isSubmitting
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Save Changes')
+                  ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
-    ),
     );
   }
 }
