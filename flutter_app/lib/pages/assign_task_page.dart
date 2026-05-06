@@ -15,7 +15,6 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
   final locationCtrl = TextEditingController();
   final workOrderCtrl = TextEditingController();
   final detailsCtrl = TextEditingController();
-  final remarksCtrl = TextEditingController();
 
   // Safe work procedure template data
   List<Map<String, dynamic>> swpTemplates = [];
@@ -96,15 +95,14 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
 
     setState(() => isSubmitting = true);
 
-    try {
+   try {
       final taskResponse = await supabase.from('tasks').insert({
         'status': 'Assigned',
         'location': locationCtrl.text,
         'workorder_id': workOrderCtrl.text,
         'task_type': selectedTaskType,
         'task_details': detailsCtrl.text,
-        'remarks_notes': remarksCtrl.text,
-      }).select().single();  
+      }).select().single();   
 
       final newTaskId = taskResponse['id'];
 
@@ -442,7 +440,6 @@ void _showSWPSelectionDialog() {
     locationCtrl.dispose();
     workOrderCtrl.dispose();
     detailsCtrl.dispose();
-    remarksCtrl.dispose();
     super.dispose();
   }
 
@@ -523,15 +520,6 @@ void _showSWPSelectionDialog() {
               ),
 
               const SizedBox(height: 25),
-
-              _textField(
-                label: 'Remarks/Notes',
-                hint: 'Optional notes...',
-                controller: remarksCtrl,
-                maxLines: 4,
-              ),
-
-              const Spacer(),
 
               SizedBox(
                 width: double.infinity,

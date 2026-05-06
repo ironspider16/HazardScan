@@ -141,6 +141,8 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
     swpDisplay += ' | ' + swpTitles.join(' · ');
   }
 
+  final String details = task['task_details'] ?? 'No additional details provided.';
+
   return Container(
     margin: const EdgeInsets.only(top: 16),
     padding: const EdgeInsets.all(16),
@@ -204,7 +206,11 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
           width: double.infinity, // Makes button fill the card width
           height: 40,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () {
+              if (selectedStatus == 'Assigned') {
+                _showDetailsDialog(details);
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563EB),
               foregroundColor: Colors.white,
@@ -244,6 +250,41 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
     ],
   );
 }
+
+void _showDetailsDialog(String details) {
+  showDialog(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+            backgroundColor: Color.fromARGB(255, 235, 237, 242),
+            title: const Text("Task details", style : TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    details,
+                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'), 
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: const Color(0xFF2563EB),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ],
+          );
+        }
+      );
+    }
 
   @override
   Widget build(BuildContext context) {
