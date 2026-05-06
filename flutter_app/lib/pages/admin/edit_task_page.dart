@@ -167,12 +167,8 @@ class _EditTaskPageState extends State<EditTaskPage> {
         const SnackBar(content: Text('Task edited successfully')),
       );
 
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AllTasksPage(), // Refresh page with updated data
-        ),
-      );
+      Navigator.pop(context, true); // Go back after saving
+
     } catch (e) {
       ScaffoldMessenger.of(
         context,

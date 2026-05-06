@@ -227,11 +227,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(
-                      builder: (context) => EditTaskPage(task: task),
-                    ),
-                  ),
+                  onPressed: () => _goToEditTask(task),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.grey),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -279,6 +275,21 @@ class _AllTasksPageState extends State<AllTasksPage> {
       ),
     ],
   );
+}
+
+  void _goToEditTask(Map<String, dynamic> task) async {
+  // Capture the result (the 'true' we sent in Navigator.pop)
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => EditTaskPage(task: task),
+    ),
+  );
+
+  // If the result is true, it means a task was edited successfully
+  if (result == true) {
+    loadTasks(); // Call your existing function that fetches tasks from Supabase
+  }
 }
 
 
