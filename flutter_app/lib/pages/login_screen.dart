@@ -103,16 +103,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.5;
+    final width = (MediaQuery.of(context).size.width * 0.75).clamp(300, 500).toDouble();
 
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: SafeArea(
-        child: Center(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            child: IntrinsicHeight(
+              child: Center(
+                child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // 🔷 ICON
                 Container(
@@ -238,6 +242,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    ),
+        )
+      )
     );
   }
 }
