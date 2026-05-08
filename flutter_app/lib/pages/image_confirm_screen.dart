@@ -1,7 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../services/yolo_service.dart';
+// 1. Change the import from YoloService to GeminiService
+import '../services/gemini_service.dart'; 
 import 'result_screen.dart';
+
 
 class ImageConfirmScreen extends StatelessWidget {
   final String imagePath;
@@ -11,7 +13,8 @@ class ImageConfirmScreen extends StatelessWidget {
     required this.imagePath,
   });
 
-  Future<void> _runYolo(BuildContext context) async {
+  // 2. Rename the method to reflect the new service
+  Future<void> _runAnalysis(BuildContext context) async {
     // Loading dialog
     showDialog(
       context: context,
@@ -20,15 +23,9 @@ class ImageConfirmScreen extends StatelessWidget {
     );
 
     try {
-      final yolo = YoloService();
-final detections = await yolo.detectOnImageWithLadderCrop(
-  imagePath,
-  ladderConf: 0.25,
-  hazardConf: 0.08,   // small hazards
-  iouThreshold: 0.35,
-  cropPadding: 0.25,
-);
-
+      // 3. Call GeminiService instead of YoloService
+      // Notice how we don't need all the threshold and padding parameters anymore!
+      final detections = await GeminiService.detectHazards(imagePath);
 
       if (context.mounted) Navigator.pop(context); // close loading
 
@@ -49,7 +46,7 @@ final detections = await yolo.detectOnImageWithLadderCrop(
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('YOLO failed: $e')),
+          SnackBar(content: Text('Analysis failed: $e')),
         );
       }
     }
@@ -98,7 +95,8 @@ final detections = await yolo.detectOnImageWithLadderCrop(
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    onPressed: () => _runYolo(context),
+                    // 4. Update the function call here
+                    onPressed: () => _runAnalysis(context),
                     child: const Text("Analyze", style: TextStyle(fontSize: 16)),
                   ),
                 ),

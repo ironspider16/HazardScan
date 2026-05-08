@@ -23,17 +23,16 @@ class _ResultScreenState extends State<ResultScreen> {
   Size? _imageSize;
 
   // IDs based on your trained YAML order:
-  // 0 broken steps, 1 ladder, 2 locked, 3 scaffolding, 4 unlocked
- static const int idBrokenSteps = 0;
-static const int idLadder = 1;
-static const int idLocked = 2;        // hide only
-static const int idScaffolding = 3;
-static const int idUnlocked = 4;
+  static const int idBrokenSteps = 0;
+  static const int idLadder = 1;
+  static const int idLocked = 2; // hide only
+  static const int idScaffolding = 3;
+  static const int idUnlocked = 4;
 
   static const Set<int> hazardIds = {
-  idBrokenSteps,
-  idUnlocked,   // ← THIS was missing
-};
+    idBrokenSteps,
+    idUnlocked, 
+  };
 
   static const Set<int> nonHazardDetectedIds = {idLadder, idScaffolding};
 
@@ -53,54 +52,81 @@ static const int idUnlocked = 4;
   }
 
   String _safeLabel(int classId) {
-    // Hide "locked" from display completely
     if (classId == idLocked) return '';
 
+    // Prevent crashes if Gemini returns a classId outside the YOLO list
     if (classId < 0 || classId >= YoloService.classNames.length) {
-      return 'unknown($classId)';
+      return 'Object';
     }
     return YoloService.classNames[classId];
+  }
+
+  // Helper to determine what text to show in the bounding box
+  String _getBoxLabel(Detection d) {
+    if (d.label.isNotEmpty) {
+      // If it's a Gemini label, just show the Object Name and Status in the box
+      // e.g., "[Ladder] HAZARD" instead of the whole paragraph
+      return d.label.split(':').first; 
+    }
+    return _safeLabel(d.classId);
+  }
+
+  // Helper to check if a detection is considered a hazard
+  bool _isHazard(Detection d) {
+    if (d.label.isNotEmpty) {
+      final upperLabel = d.label.toUpperCase();
+      return upperLabel.contains("HAZARD") || upperLabel.contains("UNLOCKED");
+    }
+    return hazardIds.contains(d.classId);
   }
 
   @override
   Widget build(BuildContext context) {
     final imgSize = _imageSize;
 
-    // 🔎 DEBUG: raw detections coming from YOLO (before UI filtering)
-  for (final d in widget.detections) {
-    debugPrint(
-      'RAW DETECTION → '
-      'id=${d.classId} '
-      'label=${YoloService.classNames[d.classId]} '
-      'conf=${d.confidence.toStringAsFixed(2)}',
-    );
-  }
-
     // Remove locked detections from everything shown
     final visibleDetections =
-    widget.detections.where((d) => d.classId != idLocked).toList();
+        widget.detections.where((d) => d.classId != idLocked).toList();
 
+    // Check if we are using Gemini (by checking if any detection has a label)
+    final bool isGeminiMode = visibleDetections.any((d) => d.label.isNotEmpty);
 
-    // Hazards list (for hazards panel)
-    final hazards =
-        visibleDetections.where((d) => hazardIds.contains(d.classId)).toList();
+    String hazardsText = "";
+    String detectedText = "";
 
-    // Non-hazard detections list (ladder/scaffolding)
-    final detectedObjects = visibleDetections
-        .where((d) => nonHazardDetectedIds.contains(d.classId))
-        .toList();
+    if (isGeminiMode) {
+      // --- GEMINI LOGIC ---
+      final aiDetection = visibleDetections.firstWhere((d) => d.label.isNotEmpty);
+      bool aiFoundHazard = _isHazard(aiDetection);
 
-    final hazardsText = hazards.isEmpty
-        ? 'No hazards detected. Tip: move closer to the lock/steps and retake.'
-        : hazards.map((d) => _safeLabel(d.classId)).where((s) => s.isNotEmpty).toSet().join(', ');
+      if (aiFoundHazard) {
+        hazardsText = aiDetection.label;
+        detectedText = "Object analyzed by AI";
+      } else {
+        hazardsText = "None";
+        detectedText = aiDetection.label;
+      }
+    } else {
+      // --- YOLO LOGIC (Fallback) ---
+      final hazards =
+          visibleDetections.where((d) => hazardIds.contains(d.classId)).toList();
 
-    final detectedText = detectedObjects.isEmpty
-        ? 'None'
-        : detectedObjects
-            .map((d) => _safeLabel(d.classId))
-            .where((s) => s.isNotEmpty)
-            .toSet()
-            .join(', ');
+      final detectedObjects = visibleDetections
+          .where((d) => nonHazardDetectedIds.contains(d.classId))
+          .toList();
+
+      hazardsText = hazards.isEmpty
+          ? 'No hazards detected. Tip: move closer to the lock/steps and retake.'
+          : hazards.map((d) => _safeLabel(d.classId)).where((s) => s.isNotEmpty).toSet().join(', ');
+
+      detectedText = detectedObjects.isEmpty
+          ? 'None'
+          : detectedObjects
+              .map((d) => _safeLabel(d.classId))
+              .where((s) => s.isNotEmpty)
+              .toSet()
+              .join(', ');
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Analysis Result')),
@@ -122,16 +148,15 @@ static const int idUnlocked = 4;
                       ),
                     ),
 
-                    // ✅ Draw boxes for ladder + scaffolding + hazards (locked hidden)
+                    // Draw boxes
                     Positioned.fill(
                       child: CustomPaint(
                         painter: BoundingBoxPainter(
                           detections: visibleDetections,
                           imageSize: imgSize,
                           widgetSize: widgetSize,
-                          labelOf: _safeLabel,
-                          // Colour hazards red, others blue
-                          isHazard: (id) => hazardIds.contains(id),
+                          labelResolver: _getBoxLabel,
+                          hazardChecker: _isHazard,
                         ),
                       ),
                     ),
@@ -142,7 +167,7 @@ static const int idUnlocked = 4;
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
-                        color: Colors.black54,
+                        color: Colors.black87, // Slightly darker for readability
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,12 +179,16 @@ static const int idUnlocked = 4;
                                 fontSize: 15,
                               ),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 10),
                             Text(
-                              'Hazards detected: $hazardsText',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              'Hazards: $hazardsText',
+                              style: TextStyle(
+                                // Highlight red if a hazard is found
+                                color: hazardsText != "None" && !hazardsText.startsWith("No hazards") 
+                                    ? Colors.redAccent 
+                                    : Colors.white,
                                 fontSize: 15,
+                                fontWeight: hazardsText != "None" ? FontWeight.bold : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -179,15 +208,15 @@ class BoundingBoxPainter extends CustomPainter {
   final Size imageSize;
   final Size widgetSize;
 
-  final String Function(int classId) labelOf;
-  final bool Function(int classId) isHazard;
+  final String Function(Detection d) labelResolver;
+  final bool Function(Detection d) hazardChecker;
 
   BoundingBoxPainter({
     required this.detections,
     required this.imageSize,
     required this.widgetSize,
-    required this.labelOf,
-    required this.isHazard,
+    required this.labelResolver,
+    required this.hazardChecker,
   });
 
   @override
@@ -211,11 +240,13 @@ class BoundingBoxPainter extends CustomPainter {
       ..strokeWidth = 3;
 
     for (final d in detections) {
-      final label = labelOf(d.classId);
-      if (label.isEmpty) continue; // hides locked + anything you choose
+      final labelText = labelResolver(d);
+      if (labelText.isEmpty) continue;
+
+      final isHazard = hazardChecker(d);
 
       // Colors: hazards red, objects blue
-      paint.color = isHazard(d.classId) ? Colors.redAccent : Colors.lightBlueAccent;
+      paint.color = isHazard ? Colors.redAccent : Colors.lightBlueAccent;
 
       final left = dx + d.left * scale;
       final top = dy + d.top * scale;
@@ -225,7 +256,8 @@ class BoundingBoxPainter extends CustomPainter {
       final rect = Rect.fromLTRB(left, top, right, bottom);
       canvas.drawRect(rect, paint);
 
-      final text = '$label (${d.confidence.toStringAsFixed(2)})';
+      // We only show the short name + confidence in the box to save space
+      final text = '$labelText (${d.confidence.toStringAsFixed(2)})';
       final tp = TextPainter(
         text: TextSpan(
           text: text,
@@ -233,7 +265,7 @@ class BoundingBoxPainter extends CustomPainter {
             color: Colors.white,
             fontSize: 14,
             backgroundColor:
-                isHazard(d.classId) ? Colors.redAccent : Colors.lightBlueAccent,
+                isHazard ? Colors.redAccent : Colors.lightBlueAccent,
           ),
         ),
         textDirection: TextDirection.ltr,

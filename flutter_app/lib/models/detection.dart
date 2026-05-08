@@ -5,6 +5,7 @@ class Detection {
   final double bottom;
   final int classId;
   final double confidence;
+  final String label;
 
   Detection({
     required this.left,
@@ -13,5 +14,6 @@ class Detection {
     required this.bottom,
     required this.classId,
     required this.confidence,
+    this.label= "", //optional parameter
   });
 }

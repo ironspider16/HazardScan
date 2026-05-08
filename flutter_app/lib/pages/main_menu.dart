@@ -8,8 +8,11 @@ import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'admin/add_accounts_page.dart';
 import '../pages/reports_list_page.dart';
+import '../pages/camera_screen.dart';
+import '../pages/image_confirm_screen.dart';
 
 class MainMenu extends StatelessWidget {
+
   final AppUser user;
 
   const MainMenu({super.key, required this.user});
@@ -29,7 +32,35 @@ class MainMenu extends StatelessWidget {
     final roleText = isAdmin ? "Admin" : "Technician";
 
     return Scaffold(
-      backgroundColor: Colors.white,
+    backgroundColor: Colors.white,
+
+    floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF2563EB),
+        onPressed: () async {
+          final imagePath = await Navigator.push<String?>(
+            context,
+            MaterialPageRoute(builder: (_) => const CameraScreen()),
+          );
+
+          if (imagePath == null) return;
+
+          // Ensure the widget is still in the tree before navigating
+          if (context.mounted) {
+            final confirmed = await Navigator.push<bool>(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ImageConfirmScreen(imagePath: imagePath),
+              ),
+            );
+
+            if (confirmed == true) {
+              debugPrint("Hazard scan confirmed and path saved: $imagePath");
+            }
+          }
+        },
+        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
         child: Stack(
           children: [
