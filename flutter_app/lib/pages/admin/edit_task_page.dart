@@ -93,12 +93,12 @@ class _EditTaskPageState extends State<EditTaskPage> {
       final techData = await supabase
         .from('task_assignments')
         .select('technician_id')
-        .eq('task_id', widget.task?['id']);
+        .eq('task_id', widget.task['id']);
 
       final swpData = await supabase
         .from('task_swp_assignments')
         .select('swp_template_id')
-        .eq('task_id', widget.task?['id']);
+        .eq('task_id', widget.task['id']);
       
       setState(() {
         selectedTechnicianIds = techData.map((t) => t['technician_id'].toString()).toList();
@@ -134,7 +134,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
 
 
     setState(() => isSubmitting = true);
-    final taskId = widget.task?['id'];
+    final taskId = widget.task['id'];
 
    try {
       await supabase.from('tasks').update({
@@ -345,7 +345,7 @@ void _showTechSelectionDialog() {
       children: [
         _label('Task Type'),
         DropdownButtonFormField<String>(
-          value: selectedTaskType,
+          initialValue: selectedTaskType,
           decoration: _inputDecoration('Select type'),
           items: taskTypes.map((type) {
             return DropdownMenuItem(value: type, child: Text(type));
@@ -460,11 +460,11 @@ void _showSWPSelectionDialog() {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Done"),
                 style: TextButton.styleFrom(
                   foregroundColor:Colors.white,
                   backgroundColor: const Color(0xFF2563EB)
                 ),
+                child: const Text("Done"),
               ),
             ],
           );

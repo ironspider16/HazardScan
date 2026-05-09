@@ -164,7 +164,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
     String swpDisplay = task['task_type'] ?? 'General Task';
 
     if (swpTitles.isNotEmpty) {
-      swpDisplay += ' | ' + swpTitles.join(' · ');
+      swpDisplay += ' | ${swpTitles.join(' · ')}';
     }
 
     return Container(

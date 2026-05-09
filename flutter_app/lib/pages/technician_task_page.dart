@@ -138,7 +138,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   String swpDisplay = task['task_type'] ?? 'General Task';
 
   if (swpTitles.isNotEmpty) {
-    swpDisplay += ' | ' + swpTitles.join(' · ');
+    swpDisplay += ' | ${swpTitles.join(' · ')}';
   }
 
   final String details = task['task_details'] ?? 'No additional details provided.';
@@ -271,14 +271,14 @@ void _showDetailsDialog(String details) {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'), 
+                onPressed: () => Navigator.pop(context), 
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: const Color(0xFF2563EB),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                child: const Text('Close'),
               ),
             ],
           );

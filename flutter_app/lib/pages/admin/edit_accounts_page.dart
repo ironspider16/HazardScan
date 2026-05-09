@@ -165,7 +165,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
         SizedBox(
           height: 50,
           child: DropdownButtonFormField<String>(
-            value: _selectedRole,
+            initialValue: _selectedRole,
             decoration: _inputDecoration("Role"),
             icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
             dropdownColor: Colors.white,

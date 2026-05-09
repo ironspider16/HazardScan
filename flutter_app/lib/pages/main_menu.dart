@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
-import 'package:flutter_application_1/pages/work_activity_page.dart';
 import 'package:flutter_application_1/pages/admin/assign_task_page.dart';
 import 'package:flutter_application_1/pages/admin/all_tasks_page.dart';
 import 'package:flutter_application_1/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
-import 'admin/add_accounts_page.dart';
-import '../pages/reports_list_page.dart';
+import 'package:flutter_application_1/pages/technician_checklist_page.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -121,6 +119,15 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
+                      const SizedBox(height: 14),
+                      _MenuButton(label: "SWP Checklist", onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TechnicianChecklistPage(templateId: 1,),
+                          ),
+                        );
+                      }),
                       const SizedBox(height: 14),
                       _MenuButton(label: "Profile", onTap: () {}),
                     ],

@@ -305,7 +305,7 @@ void _showTechSelectionDialog() {
       children: [
         _label('Task Type'),
         DropdownButtonFormField<String>(
-          value: selectedTaskType,
+          initialValue: selectedTaskType,
           decoration: _inputDecoration('Select type'),
           items: taskTypes.map((type) {
             return DropdownMenuItem(value: type, child: Text(type));
@@ -420,11 +420,11 @@ void _showSWPSelectionDialog() {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text("Done"),
                 style: TextButton.styleFrom(
                   foregroundColor:Colors.white,
                   backgroundColor: const Color(0xFF2563EB)
                 ),
+                child: const Text("Done"),
               ),
             ],
           );
