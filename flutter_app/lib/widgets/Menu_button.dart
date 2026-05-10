@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import '../Design/style_constant.dart';
 
 class MenuButton extends StatefulWidget {
   final String label;
   final VoidCallback onTap;
-  final IconData? icon; // Added an optional icon field
+  final bool isPrimary;
+  final IconData? icon;
 
-  const MenuButton({super.key, required this.label, required this.onTap, this.icon});
+  const MenuButton({
+    super.key,
+    required this.label,
+    required this.onTap,
+    this.isPrimary = false,
+    this.icon,
+  });
 
   @override
   State<MenuButton> createState() => _MenuButtonState();
@@ -16,6 +24,19 @@ class _MenuButtonState extends State<MenuButton> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine colors based on isPrimary and _pressed state
+    final Color backgroundColor = widget.isPrimary
+        ? (_pressed ? AppColors.primaryBlue : AppColors.primaryBlueLight)
+        : (_pressed ? AppColors.primaryTint : AppColors.backgroundWhite);
+
+    final Color contentColor = widget.isPrimary 
+        ? Colors.white 
+        : (_pressed ? AppColors.primaryBlue : AppColors.textMain);
+
+    final Color borderColor = widget.isPrimary 
+        ? Colors.transparent 
+        : (_pressed ? AppColors.primaryBlue : AppColors.borderGrey);
+
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) {
@@ -24,37 +45,36 @@ class _MenuButtonState extends State<MenuButton> {
       },
       onTapCancel: () => setState(() => _pressed = false),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 50),
-        width: double.infinity, // Set to fill available width
-        height: 50,
+        duration: const Duration(milliseconds: 100),
+        width: double.infinity,
+        height: 52, // Standardized touch target height
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: _pressed ? const Color(0xFF2563EB) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: const Color.fromARGB(255, 147, 147, 147),
-            width: 1,
-          ),
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium), // 12.0 from your constants
+          border: Border.all(color: borderColor, width: 1.5),
+          boxShadow: widget.isPrimary && !_pressed ? [
+            BoxShadow(
+              color: AppColors.primaryBlue.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ] : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (widget.icon != null) ...[
+              Icon(widget.icon, size: 20, color: contentColor),
+              const SizedBox(width: AppPadding.tight), // 8.0 from your constants
+            ],
             Text(
               widget.label,
-              style: TextStyle(
-                fontSize: 16,
-                color: _pressed ? Colors.white : const Color(0xFF333333),
-                fontWeight: FontWeight.w500,
+              style: AppTypography.body.copyWith( // Using AppTypography
+                color: contentColor,
+                fontWeight: FontWeight.w600,
               ),
             ),
-            if (widget.icon != null) ...[
-              const SizedBox(width: 8),
-              Icon(
-                widget.icon,
-                size: 20,
-                color: _pressed ? Colors.white : const Color(0xFF333333),
-              ),
-            ],
           ],
         ),
       ),

@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../widgets/App_Textfield.dart';
+import '../../widgets/Menu_button.dart';
+import '../../Design/style_constant.dart';
+import '../../main.dart';
 
 class AssignTaskPage extends StatefulWidget {
   const AssignTaskPage({super.key});
@@ -138,85 +143,34 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
     setState(() => isSubmitting = false);
   }
 
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF9E9E9E)),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(7),
-        borderSide: const BorderSide(color: Color(0xFF555555)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(7),
-        borderSide: const BorderSide(color: Color(0xFF2563EB), width: 1.4),
-      ),
-    );
-  }
-
-  Widget _label(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(text, style: const TextStyle(fontSize: 14)),
-    );
-  }
-
-  Widget _textField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    int maxLines = 1,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label(label),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          decoration: _inputDecoration(hint),
-        ),
-      ],
-    );
-  }
 
   Widget _technicianMultiSelect() {
     if (isLoadingTechs) {
       return const Center(child: CircularProgressIndicator());
     }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label('Assigning Technicians'),
+        Text('Assigning Technicians', style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppPadding.tight),
         GestureDetector(
           onTap:() => _showTechSelectionDialog(),
-          child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(7),
-            border: Border.all(color: const Color(0xFF555555)),
+          child: InputDecorator(
+          decoration : InputDecoration(
+            prefixIcon: Icon(Icons.person_add_alt_1_outlined, size:20),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
-          child: Row(
-            children: [
-              Expanded(
                 child: Text(
                   selectedTechnicianIds.isEmpty
                       ? 'Select technicians'
                       : '${selectedTechnicianIds.length} selected',
                   style: TextStyle(
-                    color: selectedTechnicianIds.isEmpty ? const Color(0xFF9E9E9E) : Colors.black,
+                    color: selectedTechnicianIds.isEmpty ? AppColors.textSecondary : AppColors.textMain,
                   ),
                 ),
               ),
-              const Icon(Icons.person_add_outlined, size: 20),
-            ],
-          ),
         ),
-      ),
+  
       // Optional: Show "Chips" for selected names below the button
       if (selectedTechnicianIds.isNotEmpty) ...[
         const SizedBox(height: 10),
@@ -225,8 +179,8 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           children: selectedTechnicianIds.map((id) {
             final tech = technicians.firstWhere((t) => t['id'].toString() == id);
             return Chip(
-              label: Text(tech['name'] ?? tech['email'], style: const TextStyle(fontSize: 12, color: Colors.black54)),
-              backgroundColor: Color.fromARGB(22, 37, 100, 235),
+              label: Text(tech['name'] ?? tech['email'], style: AppTypography.body.copyWith(fontSize: 12)),
+              backgroundColor: AppColors.primaryTint,
               deleteIconColor: Colors.red,
               shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),
@@ -250,7 +204,7 @@ void _showTechSelectionDialog() {
       return StatefulBuilder( // Important to allow checkboxes to update inside dialog
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: Color.fromARGB(255, 235, 237, 242),
+            backgroundColor: AppColors.backgroundWhite,
             title: const Text("Select Technicians"),
             content: SizedBox(
               width: double.maxFinite,
@@ -264,7 +218,7 @@ void _showTechSelectionDialog() {
 
                   return CheckboxListTile(
                     title: Text(tech['name'] ?? tech['email']),
-                    activeColor: const Color(0xFF2563EB),
+                    activeColor: AppColors.primaryBlue,
                     value: isSelected,
                     onChanged: (bool? checked) {
                       setDialogState(() {
@@ -286,8 +240,8 @@ void _showTechSelectionDialog() {
                 onPressed: () => Navigator.pop(context),
                 
                 style: TextButton.styleFrom(
-                  foregroundColor:Colors.white,
-                  backgroundColor: const Color(0xFF2563EB)
+                  foregroundColor: AppColors.backgroundWhite,
+                  backgroundColor: AppColors.primaryBlue
                 ),
                 child: const Text("Done")
               ),
@@ -299,26 +253,46 @@ void _showTechSelectionDialog() {
   );
 }
 
-  Widget _taskTypeDropdown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label('Task Type'),
-        DropdownButtonFormField<String>(
-          initialValue: selectedTaskType,
-          decoration: _inputDecoration('Select type'),
-          items: taskTypes.map((type) {
-            return DropdownMenuItem(value: type, child: Text(type));
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              selectedTaskType = value;
-            });
-          },
+Widget _taskTypeDropdown() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text("Task Type", style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+      const SizedBox(height: AppPadding.tight),
+      DropdownButtonFormField<String>(
+        initialValue: selectedTaskType, // Use 'value' instead of initialValue for better state tracking
+        
+        // 1. ADD THIS: This styles the text BEFORE a selection is made
+        hint: Text(
+          'Select type',
+          style: AppTypography.body.copyWith(color: AppColors.textSecondary),
         ),
-      ],
-    );
-  }
+
+        // 2. This styles the text AFTER a selection is made
+        style: AppTypography.body.copyWith(color: AppColors.textMain),
+        
+        decoration: const InputDecoration(
+          // Leave hintText empty here if you are using the 'hint' property above
+          // to avoid double-rendering or layout shifts.
+          prefixIcon: Icon(Icons.category_outlined, size: 20),
+        ),
+        
+        items: taskTypes.map((type) {
+          return DropdownMenuItem(
+            value: type, 
+            child: Text(type, style: AppTypography.body), // Ensure items match body style
+          );
+        }).toList(),
+        
+        onChanged: (value) {
+          setState(() {
+            selectedTaskType = value;
+          });
+        },
+      ),
+    ],
+  );
+}
 
   Widget _swpMultiSelect() {
   if (isLoadingSWPs) return const Center(child: CircularProgressIndicator());
@@ -326,30 +300,27 @@ void _showTechSelectionDialog() {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _label('Safe Work Procedures'),
+      Text('Safe Work Procedures', style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+      const SizedBox(height: AppPadding.tight),
       GestureDetector(
         onTap: () => _showSWPSelectionDialog(),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(7),
-            border: Border.all(color: const Color(0xFF555555)),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            // Use prefixIcon to match the AppTextField look
+            prefixIcon: const Icon(Icons.list_alt_outlined, size: 20),
+            // We use the contentPadding to match your other fields
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  selectedSWPIds.isEmpty
-                      ? 'Select SWP templates'
-                      : '${selectedSWPIds.length} procedures selected',
-                  style: TextStyle(
-                    color: selectedSWPIds.isEmpty ? const Color(0xFF9E9E9E) : Colors.black,
-                  ),
-                ),
-              ),
-              const Icon(Icons.list_alt_outlined, size: 20),
-            ],
+          child: Text(
+            selectedSWPIds.isEmpty
+                ? 'Select SWP templates' // This acts as your "hint"
+                : '${selectedSWPIds.length} procedures selected',
+            style: AppTypography.body.copyWith(
+              // Match hint color logic
+              color: selectedSWPIds.isEmpty 
+                  ? AppColors.textSecondary 
+                  : AppColors.textMain,
+            ),
           ),
         ),
       ),
@@ -362,10 +333,10 @@ void _showTechSelectionDialog() {
             final swp = swpTemplates.firstWhere((s) => s['id'].toString() == id);
             return Chip(
               label: Text('${swp['category']}: ${swp['title']}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
-              backgroundColor: Color.fromARGB(22, 37, 100, 235),
+              backgroundColor: AppColors.primaryTint,
               deleteIconColor: Colors.red,
               shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
               side: const BorderSide(color: Colors.transparent), // Removes the default border
             ),
               onDeleted: () {
@@ -386,7 +357,7 @@ void _showSWPSelectionDialog() {
       return StatefulBuilder(
         builder: (context, setDialogState) {
           return AlertDialog(
-            backgroundColor: Color.fromARGB(255, 235, 237, 242),
+            backgroundColor: AppColors.backgroundWhite,
             title: const Text("Select SWP Templates"),
             content: SizedBox(
               width: double.maxFinite,
@@ -401,7 +372,7 @@ void _showSWPSelectionDialog() {
                   return CheckboxListTile(
                     title: Text(swp['category']),
                     subtitle: Text(swp['title']),
-                    activeColor: const Color(0xFF2563EB),
+                    activeColor: AppColors.primaryBlue,
                     value: isSelected,
                     onChanged: (bool? checked) {
                       setDialogState(() {
@@ -421,8 +392,8 @@ void _showSWPSelectionDialog() {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(
-                  foregroundColor:Colors.white,
-                  backgroundColor: const Color(0xFF2563EB)
+                  foregroundColor: AppColors.backgroundWhite,
+                  backgroundColor: AppColors.primaryBlue
                 ),
                 child: const Text("Done"),
               ),
@@ -460,7 +431,7 @@ void _showSWPSelectionDialog() {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundWhite,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -468,7 +439,7 @@ void _showSWPSelectionDialog() {
 
             return SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                padding: const EdgeInsets.all(AppPadding.page),
                 child: Column(
                   children: [
                     // Header
@@ -482,15 +453,14 @@ void _showSWPSelectionDialog() {
                           child: Center(
                             child: Text(
                               'Assign Tasks',
-                              style: TextStyle(fontSize: 16),
+                              style: AppTypography.Bluesubheading,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 24),
                       ],
                     ),
 
-                    const SizedBox(height: 40),
+                    const SizedBox(height: AppPadding.Largest),
 
                     // Row 1
                     _buildResponsiveRow(
@@ -499,18 +469,20 @@ void _showSWPSelectionDialog() {
                         isMobile
                             ? _technicianMultiSelect()
                             : Expanded(child: _technicianMultiSelect()),
-                        SizedBox(width: isMobile ? 0 : 20, height: isMobile ? 25 : 0),
+                        SizedBox(width: isMobile ? 0 : AppPadding.medium, height: isMobile ? AppPadding.medium : 0),
                         isMobile
-                            ? _textField(
+                            ? AppTextfield(
                                 label: 'Location',
                                 hint: 'Ward 2B → Bed 12',
                                 controller: locationCtrl,
+                                prefixIcon: Icons.location_on_outlined,
                               )
                             : Expanded(
-                                child: _textField(
+                                child: AppTextfield(
                                   label: 'Location',
                                   hint: 'Ward 2B → Bed 12',
                                   controller: locationCtrl,
+                                  prefixIcon: Icons.location_on_outlined,
                                 ),
                               ),
                       ],
@@ -523,56 +495,50 @@ void _showSWPSelectionDialog() {
                       isMobile: isMobile,
                       children: [
                         isMobile
-                            ? _textField(
+                            ? AppTextfield(
                                 label: 'Work Order ID',
                                 hint: 'WO-xxxx',
                                 controller: workOrderCtrl,
+                                prefixIcon: Icons.badge_outlined,
                               )
                             : Expanded(
-                                child: _textField(
+                                child: AppTextfield(
                                   label: 'Work Order ID',
                                   hint: 'WO-xxxx',
                                   controller: workOrderCtrl,
+                                  prefixIcon: Icons.badge_outlined,
                                 ),
                               ),
-                        SizedBox(width: isMobile ? 0 : 20, height: isMobile ? 25 : 0),
+                        SizedBox(width: isMobile ? 0 : AppPadding.medium, height: isMobile ? AppPadding.medium : 0),
                         isMobile
                             ? _taskTypeDropdown()
                             : Expanded(child: _taskTypeDropdown()),
                       ],
                     ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: AppPadding.large),
 
                     _swpMultiSelect(),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: AppPadding.large),
 
-                    _textField(
+                    AppTextfield(
                       label: 'Work Task Activity Details',
                       hint: 'Describe task...',
+                      Maxlines: 4,
                       controller: detailsCtrl,
-                      maxLines: 4,
                     ),
 
-                    const SizedBox(height: 25),
+                    const SizedBox(height: AppPadding.large),
 
                     SizedBox(
                       width: double.infinity,
-                      height: 45,
-                      child: ElevatedButton(
-                        onPressed: isSubmitting ? null : assignTask,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: isSubmitting
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('Assign'),
-                      ),
+                      child: MenuButton(
+                      label: "Assign",
+                      onTap: isSubmitting ? () {} : assignTask,
+                      isPrimary: true,
+                      icon: isSubmitting ? Icons.hourglass_empty : Icons.task,
+                    ),
                     ),
                   ],
                 ),

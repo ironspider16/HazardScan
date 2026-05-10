@@ -6,6 +6,9 @@ import 'package:flutter_application_1/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'package:flutter_application_1/pages/technician_checklist_page.dart';
+import '../Design/style_constant.dart';
+import '../main.dart';
+import '../widgets/Menu_button.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -27,12 +30,13 @@ class MainMenu extends StatelessWidget {
     final roleText = isAdmin ? "Admin" : "Technician";
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundWhite,
       body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: ConstrainedBox(
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppPadding.page),
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -42,8 +46,8 @@ class MainMenu extends StatelessWidget {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF2563EB),
-                        borderRadius: BorderRadius.circular(20),
+                        color: AppColors.primaryBlue,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                       ),
                       child: const Icon(
                         Icons.local_hospital, // or Icons.medical_services
@@ -52,29 +56,22 @@ class MainMenu extends StatelessWidget {
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppPadding.medium),
                     const Text(
                       "HazardScan",
-                      style: TextStyle(
-                        fontSize: 35,
-                        fontWeight: FontWeight.w400,
-                        color: Color(0xFF4A4A4A),
-                      ),
+                      style: AppTypography.Blueheading,
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppPadding.tight),
 
                     Text(
                       "Hi, $roleText",
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Color(0xFF333333),
-                      ),
+                      style: AppTypography.Bluesubheading,
                     ),
 
-                    const SizedBox(height: 45),
+                    const SizedBox(height: AppPadding.extraLarge),
                     if (isAdmin) ...[
-                      _MenuButton(
+                      MenuButton(
                         label: "Assign Tasks",
                         onTap: () {
                           Navigator.push(
@@ -83,9 +80,9 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppPadding.medium),
 
-                      _MenuButton(
+                      MenuButton(
                         label: "All Tasks",
                         onTap: () {
                           Navigator.push(
@@ -94,9 +91,9 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppPadding.medium),
 
-                      _MenuButton(
+                      MenuButton(
                         label: "Manage Worker Accounts",
                         onTap: () {
                           Navigator.push(
@@ -108,7 +105,7 @@ class MainMenu extends StatelessWidget {
                         },
                       ),
                     ] else ...[
-                      _MenuButton(
+                      MenuButton(
                         label: "My Tasks",
                         onTap: () {
                           Navigator.push(
@@ -119,8 +116,8 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: 14),
-                      _MenuButton(label: "SWP Checklist", onTap: () {
+                      const SizedBox(height: AppPadding.medium),
+                      MenuButton(label: "SWP Checklist", onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -128,8 +125,8 @@ class MainMenu extends StatelessWidget {
                           ),
                         );
                       }),
-                      const SizedBox(height: 14),
-                      _MenuButton(label: "Profile", onTap: () {}),
+                      const SizedBox(height: AppPadding.medium),
+                      MenuButton(label: "Profile", onTap: () {}),
                     ],
                   ],
                 ),
@@ -137,81 +134,26 @@ class MainMenu extends StatelessWidget {
             ),
 
             Positioned(
-              right: 28,
-              bottom: 45,
+              right: AppPadding.medium,
+              bottom: AppPadding.Largest,
               child: GestureDetector(
                 onTap: () => _logout(context),
                 child: Container(
-                  width: 48,
-                  height: 48,
+                  width: AppPadding.Largest,
+                  height: AppPadding.Largest,
                   decoration: BoxDecoration(
                     color: const Color.fromARGB(255, 253, 27, 27),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                   child: const Icon(
                     Icons.logout,
-                    color: Color.fromARGB(221, 255, 255, 255),
+                    color: AppColors.backgroundWhite,
                     size: 28,
                   ),
                 ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MenuButton extends StatefulWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _MenuButton({required this.label, required this.onTap});
-
-  @override
-  State<_MenuButton> createState() => _MenuButtonState();
-}
-
-class _MenuButtonState extends State<_MenuButton> {
-  bool _pressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _pressed = true),
-      onTapUp: (_) {
-        setState(() => _pressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _pressed = false),
-
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 50),
-        width: 500, // 🔥 wider
-        height: 50, // 🔥 bigger
-        alignment: Alignment.center,
-
-        decoration: BoxDecoration(
-          color: _pressed
-              ? const Color(0xFF2563EB) // 🔵 pressed
-              : Colors.white, // ⚪ normal
-
-          borderRadius: BorderRadius.circular(8),
-
-          border: Border.all(
-            color: const Color.fromARGB(255, 147, 147, 147), // outline
-            width: 1,
-          ),
-        ),
-
-        child: Text(
-          widget.label,
-          style: TextStyle(
-            fontSize: 16,
-            color: _pressed ? Colors.white : const Color(0xFF333333),
-            fontWeight: FontWeight.w500,
-          ),
         ),
       ),
     );
