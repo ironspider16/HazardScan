@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../widgets/App_Textfield.dart';
 import '../../widgets/Menu_button.dart';
+import '../../widgets/App_Textfield.dart';
 import '../../Design/style_constant.dart';
-import '../../main.dart';
 
 class AssignTaskPage extends StatefulWidget {
   const AssignTaskPage({super.key});
@@ -183,7 +182,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
               backgroundColor: AppColors.primaryTint,
               deleteIconColor: Colors.red,
               shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
               side: const BorderSide(color: Colors.transparent), // Removes the default border
             ),
               onDeleted: () {
@@ -332,7 +331,7 @@ Widget _taskTypeDropdown() {
           children: selectedSWPIds.map((id) {
             final swp = swpTemplates.firstWhere((s) => s['id'].toString() == id);
             return Chip(
-              label: Text('${swp['category']}: ${swp['title']}', style: const TextStyle(fontSize: 12, color: Colors.black54)),
+              label: Text('${swp['category']}: ${swp['title']}', style: AppTypography.body.copyWith(fontSize: 12)),
               backgroundColor: AppColors.primaryTint,
               deleteIconColor: Colors.red,
               shape: RoundedRectangleBorder(
