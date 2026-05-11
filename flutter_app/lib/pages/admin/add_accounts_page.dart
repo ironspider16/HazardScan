@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
-import 'package:flutter_application_1/supabase_client.dart';
+import 'package:kkhazardscan/supabase_client.dart';
 
 class AddAccountsPage extends StatefulWidget {
   const AddAccountsPage({super.key});
@@ -33,13 +33,12 @@ class _AddAccountsPageState extends State<AddAccountsPage> {
     setState(() => _saving = true);
 
     try {
-
       await supabase.from('accounts').insert({
         'email': email,
         'password': password,
         'role': role,
         'name': name,
-      }, );
+      });
 
       if (!mounted) return;
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/pages/admin/manage_accounts_page.dart';
-import 'package:flutter_application_1/pages/work_activity_page.dart';
-import 'package:flutter_application_1/pages/admin/assign_task_page.dart';
-import 'package:flutter_application_1/pages/admin/all_tasks_page.dart';
-import 'package:flutter_application_1/pages/technician_task_page.dart';
+import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
+import 'package:kkhazardscan/pages/work_activity_page.dart';
+import 'package:kkhazardscan/pages/admin/assign_task_page.dart';
+import 'package:kkhazardscan/pages/admin/all_tasks_page.dart';
+import 'package:kkhazardscan/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import 'admin/add_accounts_page.dart';
@@ -12,7 +12,6 @@ import '../pages/camera_screen.dart';
 import '../pages/image_confirm_screen.dart';
 
 class MainMenu extends StatelessWidget {
-
   final AppUser user;
 
   const MainMenu({super.key, required this.user});
@@ -32,9 +31,9 @@ class MainMenu extends StatelessWidget {
     final roleText = isAdmin ? "Admin" : "Technician";
 
     return Scaffold(
-    backgroundColor: Colors.white,
+      backgroundColor: Colors.white,
 
-    floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF2563EB),
         onPressed: () async {
           final imagePath = await Navigator.push<String?>(
@@ -45,18 +44,18 @@ class MainMenu extends StatelessWidget {
           if (imagePath == null) return;
 
           // Ensure the widget is still in the tree before navigating
-          if (context.mounted) {
-            final confirmed = await Navigator.push<bool>(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ImageConfirmScreen(imagePath: imagePath),
-              ),
-            );
+          // if (context.mounted) {
+          //   final confirmed = await Navigator.push<bool>(
+          //     context,
+          //     MaterialPageRoute(
+          //       builder: (_) => ImageConfirmScreen(imagePath: imagePath),
+          //     ),
+          //   );
 
-            if (confirmed == true) {
-              debugPrint("Hazard scan confirmed and path saved: $imagePath");
-            }
-          }
+          //   if (confirmed == true) {
+          //     debugPrint("Hazard scan confirmed and path saved: $imagePath");
+          //   }
+          // }
         },
         child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
       ),
@@ -147,7 +146,7 @@ class MainMenu extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => TechnicianTaskPage(user:user)
+                              builder: (_) => TechnicianTaskPage(user: user),
                             ),
                           );
                         },

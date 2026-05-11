@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/pages/admin/edit_accounts_page.dart';
-import 'package:flutter_application_1/supabase_client.dart';
-import 'add_accounts_page.dart'; 
+import 'package:kkhazardscan/pages/admin/edit_accounts_page.dart';
+import 'package:kkhazardscan/supabase_client.dart';
+import 'add_accounts_page.dart';
 import '../../widgets/Menu_button.dart';
 
 class ManageAccountsPage extends StatefulWidget {
@@ -45,7 +45,10 @@ class _ManageAccountsPageState extends State<ManageAccountsPage> {
         title: const Text("Delete Account"),
         content: Text("Are you sure you want to delete ${account['name']}?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Cancel"),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text("Delete", style: TextStyle(color: Colors.red)),
@@ -73,7 +76,11 @@ class _ManageAccountsPageState extends State<ManageAccountsPage> {
         ),
         title: const Text(
           "Manage Worker Accounts",
-          style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w400),
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
         ),
         centerTitle: true,
       ),
@@ -108,18 +115,26 @@ class _ManageAccountsPageState extends State<ManageAccountsPage> {
                       },
                     ),
                   ),
-                  
-                  const Divider(height: 40, thickness: 1, color: Color(0xFFE0E0E0)),
+
+                  const Divider(
+                    height: 40,
+                    thickness: 1,
+                    color: Color(0xFFE0E0E0),
+                  ),
 
                   // Add Users Button
-                  _AddUserButton(onTap: () async {
-                    // Navigate to your existing Add User page
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AddAccountsPage()),
-                    );
-                    _fetchAccounts(); // Refresh when coming back
-                  }),
+                  _AddUserButton(
+                    onTap: () async {
+                      // Navigate to your existing Add User page
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AddAccountsPage(),
+                        ),
+                      );
+                      _fetchAccounts(); // Refresh when coming back
+                    },
+                  ),
                   const SizedBox(height: 40),
                 ],
               ),
@@ -155,7 +170,10 @@ class _AccountRow extends StatelessWidget {
           Expanded(
             child: Text(
               "$name | $role",
-              style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 16),
+              style: const TextStyle(
+                color: Color.fromARGB(255, 0, 0, 0),
+                fontSize: 16,
+              ),
             ),
           ),
           IconButton(

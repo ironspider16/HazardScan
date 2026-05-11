@@ -1,17 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 // 1. Change the import from YoloService to GeminiService
-import '../services/gemini_service.dart'; 
+import '../services/gemini_service.dart';
 import 'result_screen.dart';
-
 
 class ImageConfirmScreen extends StatelessWidget {
   final String imagePath;
 
-  const ImageConfirmScreen({
-    super.key,
-    required this.imagePath,
-  });
+  const ImageConfirmScreen({super.key, required this.imagePath});
 
   // 2. Rename the method to reflect the new service
   Future<void> _runAnalysis(BuildContext context) async {
@@ -34,10 +30,8 @@ class ImageConfirmScreen extends StatelessWidget {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => ResultScreen(
-              imagePath: imagePath,
-              detections: detections,
-            ),
+            builder: (_) =>
+                ResultScreen(imagePath: imagePath, detections: detections),
           ),
         );
       }
@@ -45,9 +39,9 @@ class ImageConfirmScreen extends StatelessWidget {
       if (context.mounted) Navigator.pop(context); // close loading
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Analysis failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Analysis failed: $e')));
       }
     }
   }
@@ -97,7 +91,10 @@ class ImageConfirmScreen extends StatelessWidget {
                     ),
                     // 4. Update the function call here
                     onPressed: () => _runAnalysis(context),
-                    child: const Text("Analyze", style: TextStyle(fontSize: 16)),
+                    child: const Text(
+                      "Analyze",
+                      style: TextStyle(fontSize: 16),
+                    ),
                   ),
                 ),
               ],

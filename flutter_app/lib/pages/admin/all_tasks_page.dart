@@ -62,27 +62,28 @@ class _AllTasksPageState extends State<AllTasksPage> {
     }
   }
 
-    void _confirmDelete(int id) {
+  void _confirmDelete(int id) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Task?'),
         content: const Text('This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               deleteTask(id);
-            }, 
+            },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
   }
-
-
 
   Future<void> deleteTask(int id) async {
     try {
@@ -142,7 +143,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
   }
 
   Widget _taskCard(Map<String, dynamic> task) {
-
     double screenwidth = MediaQuery.of(context).size.width;
     bool showIcon = screenwidth > 380; // Show icon only on wider screens
     final List assignments = task['task_assignments'] ?? [];
@@ -152,15 +152,17 @@ class _AllTasksPageState extends State<AllTasksPage> {
       return (account['name'] ?? account['email'] ?? 'Unknown').toString();
     }).toList();
 
-    final String displayNames = techNames.isEmpty ? 'Unassigned' : techNames.join(', ');
+    final String displayNames = techNames.isEmpty
+        ? 'Unassigned'
+        : techNames.join(', ');
     final List swpAssignments = task['task_swp_assignments'] ?? [];
-    
+
     final List<String> swpTitles = swpAssignments.map((assignment) {
-    final template = assignment['swp_templates'];
-    if (template == null) return 'Unknown Template';
-    return '${template['category']} - ${template['title']}';
+      final template = assignment['swp_templates'];
+      if (template == null) return 'Unknown Template';
+      return '${template['category']} - ${template['title']}';
     }).toList();
-    
+
     String swpDisplay = task['task_type'] ?? 'General Task';
 
     if (swpTitles.isNotEmpty) {
@@ -175,22 +177,27 @@ class _AllTasksPageState extends State<AllTasksPage> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column( // Changed to Column to allow vertical stacking
+      child: Column(
+        // Changed to Column to allow vertical stacking
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (showIcon) ...[
-              // Icon Box
-              Container(
-                width: 50, // Reduced slightly for better fit
-                height: 50,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(26, 37, 100, 235),
-                  borderRadius: BorderRadius.circular(12),
+                // Icon Box
+                Container(
+                  width: 50, // Reduced slightly for better fit
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(26, 37, 100, 235),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.assignment,
+                    size: 24,
+                    color: Color(0xFF2563EB),
+                  ),
                 ),
-                child: const Icon(Icons.assignment, size: 24, color: Color(0xFF2563EB)),
-              ),
               ],
               const SizedBox(width: 16),
               // Text Content
@@ -209,10 +216,16 @@ class _AllTasksPageState extends State<AllTasksPage> {
                     const SizedBox(height: 8),
                     _buildInfoRow(Icons.settings_outlined, swpDisplay),
                     const SizedBox(height: 6),
-                    _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Field'),
+                    _buildInfoRow(
+                      Icons.location_on_outlined,
+                      task['location'] ?? 'Field',
+                    ),
                     const SizedBox(height: 6),
-                    _buildInfoRow(Icons.people_alt_outlined, displayNames, 
-                        textColor: Colors.blueGrey.shade600),
+                    _buildInfoRow(
+                      Icons.people_alt_outlined,
+                      displayNames,
+                      textColor: Colors.blueGrey.shade600,
+                    ),
                   ],
                 ),
               ),
@@ -227,16 +240,22 @@ class _AllTasksPageState extends State<AllTasksPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => Navigator.push(context,
+                  onPressed: () => Navigator.push(
+                    context,
                     MaterialPageRoute(
                       builder: (context) => EditTaskPage(task: task),
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.grey),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text('Edit', style: TextStyle(color: Colors.black54)),
+                  child: const Text(
+                    'Edit',
+                    style: TextStyle(color: Colors.black54),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -245,9 +264,14 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   onPressed: () => _confirmDelete(task['id']),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.redAccent),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
                 ),
               ),
             ],
@@ -258,29 +282,32 @@ class _AllTasksPageState extends State<AllTasksPage> {
   }
 
   Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 14,
-            color: textColor ?? Colors.grey.shade700,
-            fontWeight: FontWeight.w500,
-            height: 1.3,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            icon,
+            size: 16,
+            color: const Color(0xFF2563EB).withOpacity(0.7),
           ),
         ),
-      ),
-    ],
-  );
-}
-
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 14,
+              color: textColor ?? Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+              height: 1.3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -320,9 +347,11 @@ class _AllTasksPageState extends State<AllTasksPage> {
               // Inside build() -> Column -> children:
               Row(
                 children: [
-                  Expanded( // Wrap tabs in Expanded + FittedBox
+                  Expanded(
+                    // Wrap tabs in Expanded + FittedBox
                     child: FittedBox(
-                      fit: BoxFit.scaleDown, // This shrinks the text if it's too wide
+                      fit: BoxFit
+                          .scaleDown, // This shrinks the text if it's too wide
                       alignment: Alignment.centerLeft,
                       child: Row(
                         children: [
@@ -340,7 +369,10 @@ class _AllTasksPageState extends State<AllTasksPage> {
                     children: const [
                       Icon(Icons.filter_alt_outlined, size: 18),
                       SizedBox(width: 4),
-                      Text('Filter', style: TextStyle(fontSize: 16)), // Slightly smaller font
+                      Text(
+                        'Filter',
+                        style: TextStyle(fontSize: 16),
+                      ), // Slightly smaller font
                     ],
                   ),
                 ],
