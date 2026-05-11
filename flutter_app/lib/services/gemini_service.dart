@@ -1,50 +1,31 @@
 import 'dart:io';
-import 'package:google_generative_ai/google_generative_ai.dart';
+// import 'package:google_generative_ai/google_generative_ai.dart'; This should no longer be used when AI is moved to server side. 
 import '../models/detection.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'dart:convert'; // For base64 encoding
 
 class GeminiService {
-  // Note: For production, consider using environment variables for the API Key
-  static const String _apiKey = 'AIzaSyCwxc_KRyLrA2KzplT_XBGuqTjldw9iHas';
-
   static Future<List<Detection>> detectHazards(String imagePath) async {
     try {
-      final model = GenerativeModel(
-        model: 'gemini-3-flash-preview', // Using the stable flash model
-        apiKey: _apiKey,
-      );
+      // Convert image to base64 for the server
+      final bytes = await File(imagePath).readAsBytes();
+      final base64Image = base64Encode(bytes);
 
-      final imageBytes = await File(imagePath).readAsBytes();
+      // Call your new Supabase Edge Function
+final response = await Supabase.instance.client.functions.invoke(
+  'analyze-hazard',
+  body: {'imageBase64': base64Image},
+);
 
-      // IMPROVED PROMPT:
-      // We explicitly tell it to be descriptive and avoid generic excuses.
-      final prompt = TextPart(
-          "Analyze this image for safety hazards. "
-          "If the object is a ladder, inspect the spreader bar/hinge, steps, and stability. "
-          "If the object is NOT a ladder, identify it clearly. "
-          "Provide a specific reason for your status assessment based on visual evidence. "
-          "Avoid generic responses like 'take a closer photo' unless the image is completely unrecognizable.\n\n"
-          "Return ONLY this format:\n"
-          "OBJECT: [Name of object]\n"
-          "STATUS: [NOT_APPLICABLE/LOCKED/UNLOCKED/HAZARD]\n"
-          "REASON: [Detailed explanation of what you see]"
-      );
-
-      final content = [
-        Content.multi([
-          prompt,
-          DataPart('image/jpeg', imageBytes),
-        ])
-      ];
-
-      final response = await model.generateContent(content);
-      final text = response.text ?? "";
-      print("Gemini Analysis Raw: $text");
-
-      return _parseGeminiResponse(text);
-    } catch (e) {
-      print("Gemini Error: $e");
-      return [];
-    }
+// Safely check if 'result' exists
+if (response.data != null && response.data['result'] != null) {
+  final aiText = response.data['result'].toString(); // Use .toString() instead of 'as String'
+  return _parseGeminiResponse(aiText);
+} else {
+  // Log the actual response to see what Supabase is saying
+  debugPrint("Full Supabase Response: ${response.data}");
+  return []; 
+}
   }
 
   /// Parses the "OBJECT/STATUS/REASON" text into a Detection object

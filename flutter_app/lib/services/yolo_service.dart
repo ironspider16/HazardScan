@@ -5,7 +5,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
-import 'package:onnxruntime/onnxruntime.dart';
+//import 'package:onnxruntime/onnxruntime.dart';
 
 import '../models/detection.dart';
 
