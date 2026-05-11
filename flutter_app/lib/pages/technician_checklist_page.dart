@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/design/style_constant.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/WAH_Permit.dart';
 import '../../widgets/swp_checklist.dart';
+import '../../widgets/Image_upload.dart';
 
 class TechnicianChecklistPage extends StatefulWidget {
   final int templateId;
@@ -17,6 +20,7 @@ class _TechnicianChecklistPageState extends State<TechnicianChecklistPage> {
   bool isPtwCleared = false;
   String ptwNumber = '';
   String? categoryName;
+  final List<File> _imageFiles = [];
   List<String> currentSWPItems = [];
 
   Future<void> fetchSWPItems(int templateId) async {
@@ -89,7 +93,6 @@ class _TechnicianChecklistPageState extends State<TechnicianChecklistPage> {
                                   },
                                 ),
                               
-
                           SWPChecklistWidget(
                             isMobile : isMobile,
                             items: currentSWPItems,
@@ -99,30 +102,44 @@ class _TechnicianChecklistPageState extends State<TechnicianChecklistPage> {
                               });
                             },
                           ),
-                          ]
+                          const SizedBox(height:AppPadding.medium),
+                          AppImageUpload(
+                          label: "Capture Site Condition",
+                          onImageSelected: (file) {
+                            setState(() => _imageFiles.add(file));
+                          },
                         ),
-                        ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 45,
-                        child: ElevatedButton(
-                          onPressed: (isSubmitting || !isSafetyCleared || !isPtwCleared) ? null : submitTask,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF007AFF),
-                            foregroundColor: Colors.white,
+
+                        const SizedBox(height: AppPadding.medium),
+
+                        if (_imageFiles.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text('${_imageFiles.length} Compressed Photos Ready'),
                           ),
-                          child: Text(isSafetyCleared && isPtwCleared ? 'Submit Task' : 'Complete Checklist First'),
-                        ),
+                        ]
                       ),
-                    ],
+                    ),
+                    SizedBox(
+                    width: double.infinity,
+                    height: 45,
+                    child: ElevatedButton(
+                      onPressed: (isSubmitting || !isSafetyCleared || !isPtwCleared) ? null : submitTask,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF007AFF),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(isSafetyCleared && isPtwCleared ? 'Submit Task' : 'Complete Checklist First'),
+                    ),
                   ),
-                ),
+                ],
               ),
-            );
-          },
-        ),
-      ),
-    );
-  }
+            ),
+          ),
+        );
+      },
+    ),
+  ),
+);
+}
 }
