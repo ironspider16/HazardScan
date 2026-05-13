@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_task_page.dart';
+import '../../widgets/Menu_button.dart';
+import '../../design/style_constant.dart';
 
 class AllTasksPage extends StatefulWidget {
   const AllTasksPage({super.key});
@@ -114,25 +116,26 @@ class _AllTasksPageState extends State<AllTasksPage> {
         children: [
           Text(
             text,
-            style: TextStyle(
-              fontSize: 20,
+            style: AppTypography.Blacksubheading.copyWith(
               color: selected
-                  ? Color.fromARGB(255, 0, 119, 255)
-                  : const Color.fromARGB(255, 68, 68, 68),
+                  ? null
+                  : AppColors.textSecondary,
             ),
           ),
 
           // ONLY show count when this tab is selected
           if (selected) ...[
-            const SizedBox(width: 4),
+            const SizedBox(width: AppPadding.tight),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                color: AppColors.primaryTint,
               ),
               child: Text(
                 tasks.length.toString(),
-                style: const TextStyle(fontSize: 20),
+                style: (AppTypography.Blacksubheading.copyWith(height: 1.5))
               ),
             ),
           ],
@@ -144,7 +147,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
   Widget _taskCard(Map<String, dynamic> task) {
 
     double screenwidth = MediaQuery.of(context).size.width;
-    bool showIcon = screenwidth > 380; // Show icon only on wider screens
+    bool showIcon = screenwidth > 420; // Show icon only on wider screens
     final List assignments = task['task_assignments'] ?? [];
     final List<String> techNames = assignments.map((a) {
       final account = a['accounts'];
@@ -164,17 +167,16 @@ class _AllTasksPageState extends State<AllTasksPage> {
     String swpDisplay = task['task_type'] ?? 'General Task';
 
     if (swpTitles.isNotEmpty) {
-      swpDisplay += ' | ' + swpTitles.join(' · ');
+      swpDisplay += ' | ${swpTitles.join(' · ')}';
     }
 
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: AppPadding.medium),
+      padding: const EdgeInsets.all(AppPadding.medium),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+        color: AppColors.backgroundWhite,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.borderGrey.withAlpha(75))),
       child: Column( // Changed to Column to allow vertical stacking
         children: [
           Row(
@@ -183,16 +185,16 @@ class _AllTasksPageState extends State<AllTasksPage> {
               if (showIcon) ...[
               // Icon Box
               Container(
-                width: 50, // Reduced slightly for better fit
-                height: 50,
+                width: AppPadding.Largest + AppPadding.tight, // Reduced slightly for better fit
+                height: AppPadding.Largest + AppPadding.tight,
                 decoration: BoxDecoration(
-                  color: const Color.fromARGB(26, 37, 100, 235),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.primaryTint,
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                 ),
-                child: const Icon(Icons.assignment, size: 24, color: Color(0xFF2563EB)),
+                child: const Icon(Icons.assignment, size: AppPadding.large, color: AppColors.primaryBlue),
               ),
               ],
-              const SizedBox(width: 16),
+              const SizedBox(width: AppPadding.medium),
               // Text Content
               Expanded(
                 child: Column(
@@ -200,26 +202,21 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   children: [
                     Text(
                       task['workorder_id']?.toUpperCase() ?? 'NO ID',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
+                      style: AppTypography.Blacksubheading
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppPadding.tight),
                     _buildInfoRow(Icons.settings_outlined, swpDisplay),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppPadding.tight),
                     _buildInfoRow(Icons.location_on_outlined, task['location'] ?? 'Field'),
-                    const SizedBox(height: 6),
-                    _buildInfoRow(Icons.people_alt_outlined, displayNames, 
-                        textColor: Colors.blueGrey.shade600),
+                    const SizedBox(height: AppPadding.tight),
+                    _buildInfoRow(Icons.people_alt_outlined, displayNames)
                   ],
                 ),
               ),
             ],
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
+            padding: EdgeInsets.symmetric(vertical: AppPadding.medium),
             child: Divider(height: 1), // Optional: adds a nice separator
           ),
           // Action Buttons - Now Full Width at the bottom
@@ -227,11 +224,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => Navigator.push(context,
-                    MaterialPageRoute(
-                      builder: (context) => EditTaskPage(task: task),
-                    ),
-                  ),
+                  onPressed: () => _goToEditTask(task),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.grey),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -259,26 +252,36 @@ class _AllTasksPageState extends State<AllTasksPage> {
 
   Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
   return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
+    crossAxisAlignment: CrossAxisAlignment.center,
     children: [
       Padding(
-        padding: const EdgeInsets.only(top: 2),
-        child: Icon(icon, size: 16, color: const Color(0xFF2563EB).withOpacity(0.7)),
+        padding: const EdgeInsets.all(AppPadding.tight/4),
+        child: Icon(icon, size: AppPadding.medium, color: AppColors.primaryBlue),
       ),
-      const SizedBox(width: 8),
+      const SizedBox(width: AppPadding.tight),
       Expanded(
         child: Text(
           text,
-          style: TextStyle(
-            fontSize: 14,
-            color: textColor ?? Colors.grey.shade700,
-            fontWeight: FontWeight.w500,
-            height: 1.3,
+          style: AppTypography.body
           ),
         ),
-      ),
     ],
   );
+}
+
+  void _goToEditTask(Map<String, dynamic> task) async {
+  // Capture the result (the 'true' we sent in Navigator.pop)
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => EditTaskPage(task: task),
+    ),
+  );
+
+  // If the result is true, it means a task was edited successfully
+  if (result == true) {
+    loadTasks(); // Call your existing function that fetches tasks from Supabase
+  }
 }
 
 
@@ -287,10 +290,10 @@ class _AllTasksPageState extends State<AllTasksPage> {
     final int ongoingCount = selectedStatus == 'Assigned' ? tasks.length : 0;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundWhite,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(30, 18, 30, 20),
+          padding: const EdgeInsets.all(AppPadding.page),
           child: Column(
             children: [
               Row(
@@ -307,44 +310,63 @@ class _AllTasksPageState extends State<AllTasksPage> {
                     child: Center(
                       child: Text(
                         'All Tasks',
-                        style: TextStyle(fontSize: 17, color: Colors.black),
+                        style: AppTypography.Bluesubheading,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 31),
                 ],
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: AppPadding.Largest),
 
               // Inside build() -> Column -> children:
               Row(
                 children: [
-                  Expanded( // Wrap tabs in Expanded + FittedBox
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown, // This shrinks the text if it's too wide
+                  Expanded(
+                    child: 
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
-                      child: Row(
-                        children: [
-                          _tabButton('Ongoing Tasks', 'Assigned'),
-                          const SizedBox(width: 15),
-                          _tabButton('Completed Tasks', 'Completed'),
-                        ],
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: MediaQuery.of(context).size.width - (AppPadding.page * 2),
+                        ),
+                        // We give the scaling box a "target" width of the screen
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween, // Pushes items to opposite sides
+                          children: [
+                            // Left Side: Tab Buttons
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _tabButton('Ongoing Tasks', 'Assigned'),
+                                const SizedBox(width: AppPadding.medium),
+                                _tabButton('Completed Tasks', 'Completed'),
+                              ],
+                            ),
+
+                            const SizedBox(width: AppPadding.medium),
+
+                            // Right Side: Filter Button
+                            GestureDetector(
+                              onTap: () => print("Filter tapped"),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.filter_alt_outlined, size: AppPadding.medium),
+                                  SizedBox(width: AppPadding.medium / 4),
+                                  Text('Filter', style: AppTypography.Blacksubheading),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Filter Button
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.filter_alt_outlined, size: 18),
-                      SizedBox(width: 4),
-                      Text('Filter', style: TextStyle(fontSize: 16)), // Slightly smaller font
-                    ],
+                    )
                   ),
                 ],
               ),
+
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())

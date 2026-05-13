@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
 import 'package:flutter_application_1/supabase_client.dart';
+import '../../widgets/Menu_button.dart';
+import '../../Design/style_constant.dart';
+import '../../main.dart';
+import '../../widgets/App_Textfield.dart';
 
 class EditAccountsPage extends StatefulWidget {
   final Map<String, dynamic> account;
@@ -84,91 +88,20 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     super.dispose();
   }
 
-  Widget _label(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10, bottom: 6),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 15,
-          color: Color(0xFF333333),
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 15),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-
-      // 👇 DEFAULT BORDER
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
-          color: Color.fromARGB(255, 136, 136, 136), // dark grey
-          width: 1,
-        ),
-      ),
-
-      // 👇 WHEN CLICKED (FOCUSED)
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
-          color: Color.fromARGB(255, 77, 77, 77), // darker when active
-          width: 2,
-        ),
-      ),
-
-      // 👇 ERROR STATE (optional)
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red, width: 1),
-      ),
-    );
-  }
-
-  Widget _textField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    bool obscureText = false,
-    bool enabled = true,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label(label),
-        SizedBox(
-          height: 50,
-          child: TextField(
-            controller: controller,
-            enabled : enabled,
-            obscureText: obscureText,
-            style: const TextStyle(fontSize: 15, color: Colors.black87),
-            decoration: _inputDecoration(hint),
-          ),
-        ),
-      ],
-    );
-  }
-
   Widget _roleDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label("Role"),
+        Text("Role", style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppPadding.tight),
         SizedBox(
-          height: 50,
           child: DropdownButtonFormField<String>(
-            value: _selectedRole,
-            decoration: _inputDecoration("Role"),
-            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
-            dropdownColor: Colors.white,
+            initialValue: _selectedRole,
+            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMain),
+            style: AppTypography.body,
+            decoration: const InputDecoration(
+              hintText: "Select Role",
+            ),
             items: const [
               DropdownMenuItem(value: "Technician", child: Text("Technician")),
               DropdownMenuItem(value: "Administrator", child: Text("Admin")),
@@ -187,103 +120,69 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     final canSubmit = !_saving;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundWhite,
+      // Using a standard AppBar for coherence with the previous page
+      appBar: AppBar(
+        backgroundColor: AppColors.backgroundWhite,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textMain),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text("Edit User", style: AppTypography.Bluesubheading),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(23, 16, 23, 30),
+          padding: const EdgeInsets.all(AppPadding.page),
           child: Column(
             children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Center(
-                    child: Text(
-                      "Edit User",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w400,
+              Expanded( // Use Expanded + SingleChildScrollView to prevent keyboard overflow
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: AppPadding.large),
+                      
+                      AppTextfield(
+                        label: "Technician Email",
+                        hint: "worker1@example.com",
+                        controller: _emailCtrl,
+                        enabled: true, 
                       ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        size: 28,
-                        color: Colors.black,
+
+                      const SizedBox(height: AppPadding.medium),
+
+                      AppTextfield(
+                        label: "Password",
+                        hint: "Enter new password",
+                        controller: _passwordCtrl,
+                        enabled: true,
                       ),
-                    ),
+
+                      const SizedBox(height: AppPadding.medium),
+
+                      AppTextfield(
+                        label: "Full Name",
+                        hint: "e.g. Johnathan Doe",
+                        controller: _nameCtrl,
+                        enabled: true,
+                      ),
+
+                      const SizedBox(height: AppPadding.medium),
+
+                      _roleDropdown(),
+                    ],
                   ),
-                ],
-              ),
-
-              const SizedBox(height: 82),
-
-              _textField(
-                label: "Technician Email",
-                hint: "worker1@example.com",
-                controller: _emailCtrl,
-                enabled : true, // Email should not be editable
-              ),
-
-              const SizedBox(height: 28),
-
-              _textField(
-                label: "Password",
-                hint: "********",
-                controller: _passwordCtrl,
-                obscureText: false,
-              ),
-
-              const SizedBox(height: 28),
-
-              _textField(
-                label: "Name",
-                hint: "Johnathan",
-                controller: _nameCtrl,
-              ),
-
-              const SizedBox(height: 28),
-
-              _roleDropdown(),
-
-              const Spacer(),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: canSubmit ? _updateUser : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    disabledBackgroundColor: const Color.fromARGB(
-                      255,
-                      135,
-                      166,
-                      233,
-                    ),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          "Update User",
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 255, 255, 255),
-                            fontSize: 15,
-                          ),
-                        ),
                 ),
+              ),
+
+              // Submit Button stays at the bottom
+              const SizedBox(height: AppPadding.medium),
+              MenuButton(
+                label: _saving ? "Updating..." : "Update User",
+                onTap: _saving ? () {} : _updateUser,
+                isPrimary: true,
+                icon: Icons.update, // Save icon for update action
               ),
             ],
           ),

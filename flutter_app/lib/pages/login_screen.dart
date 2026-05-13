@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../config/app_users.dart';
 import '../pages/main_menu.dart';
 import 'package:flutter_application_1/supabase_client.dart';
+import '../Design/style_constant.dart'; 
+import '../main.dart';
+import '../widgets/Menu_button.dart';
+import '../widgets/App_Textfield.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -77,167 +81,101 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  InputDecoration _inputStyle({
-    required String hint,
-    required IconData icon,
-    Widget? suffix,
-  }) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(fontSize: 15, color: Colors.grey),
-      prefixIcon: Icon(icon, size: 20, color: Colors.grey),
-      suffixIcon: suffix,
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFBDBDBD)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFF3366CC), width: 2),
-      ),
-    );
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width * 0.5;
+  // login_screen.dart
+@override
+Widget build(BuildContext context) {
+  // Use your standardized padding/dimensions
+  final double fieldWidth = (MediaQuery.of(context).size.width * 0.85).clamp(300.0, 450.0);
 
-    return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-      body: SafeArea(
-        child: Center(
+  return Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppPadding.page),
           child: Form(
             key: _formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 🔷 ICON
+                // 🔷 BRAND ICON
                 Container(
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2563EB),
-                    borderRadius: BorderRadius.circular(20),
+                    color: AppColors.primaryBlue,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                   ),
-                  child: const Icon(
-                    Icons.local_hospital, // or Icons.medical_services
-                    color: Colors.white,
-                    size: 36,
-                  ),
+                  child: const Icon(Icons.local_hospital, color: AppColors.backgroundWhite, size: AppPadding.Largest),
                 ),
 
-                const SizedBox(height: 20),
-                // 🔥 TITLE
-                const Text(
-                  "HazardScan",
-                  style: TextStyle(
-                    fontSize: 35,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF4A4A4A),
-                  ),
+                const SizedBox(height: AppPadding.medium),
+
+                // 🔥 TITLE (Using Typography Class)
+                Text("HazardScan", style: AppTypography.Blueheading),
+                
+                const SizedBox(height: AppPadding.tight),
+                
+                Text(
+                  "Sign in to continue", 
+                  style: AppTypography.faintbody
                 ),
 
-                const SizedBox(height: 6),
+                const SizedBox(height: AppPadding.extraLarge),
 
-                const Text(
-                  "Sign in to continue",
-                  style: TextStyle(fontSize: 15, color: Color(0xFF333333)),
-                ),
-
-                const SizedBox(height: 50),
-
-                // EMAIL
+                // EMAIL FIELD
                 SizedBox(
-                  width: width,
-                  height: 70,
-                  child: TextFormField(
+                  width: fieldWidth,
+                  child: AppTextfield(
                     controller: _emailCtrl,
-                    style: const TextStyle(fontSize: 15),
-                    decoration: _inputStyle(
-                      hint: "Enter your email",
-                      icon: Icons.email_outlined,
-                    ),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return "Email is required";
-                      }
-                      return null;
-                    },
+                    label: "Email",
+                    hint: "Email Address",
+                    prefixIcon: Icons.email_outlined, 
+                    validator: (v) => (v == null || v.isEmpty) ? "Email is required" : null,
+                    ), 
                   ),
-                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: AppPadding.medium),
 
-                // PASSWORD
+                // PASSWORD FIELD
                 SizedBox(
-                  width: width,
-                  height: 70,
-                  child: TextFormField(
+                  width: fieldWidth,
+                  child: AppTextfield(
                     controller: _passwordCtrl,
+                    label: "Password",
+                    hint: "Password",
                     obscureText: !_showPassword,
-                    style: const TextStyle(fontSize: 15),
-                    decoration: _inputStyle(
-                      hint: "Enter your password",
-                      icon: Icons.lock_outline,
-                      suffix: IconButton(
-                        icon: Icon(
-                          _showPassword
-                              ? Icons.visibility
-                              : Icons.visibility_off,
-                          size: 20,
-                          color: const Color.fromARGB(255, 81, 81, 81),
-                        ),
-                        onPressed: () {
-                          setState(() => _showPassword = !_showPassword);
-                        },
+                    prefixIcon: Icons.lock_outline,
+                    suffixIcon: IconButton(
+                        icon: Icon(_showPassword ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _showPassword = !_showPassword),
                       ),
+                    validator: (v) => (v == null || v.isEmpty) ? "Password is required" : null,
                     ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return "Password is required";
-                      }
-                      return null;
-                    },
+                    
                   ),
+
+                const SizedBox(height: AppPadding.large),
+
+                // LOGIN BUTTON
+                SizedBox(    
+                  width: fieldWidth,
+                  child:            
+                  MenuButton(
+                  label: _loading ? "Logging in..." : "Login",
+                  onTap: _loading ? () => {} : _handleLogin,
+                  isPrimary: true,
+                  icon: Icons.login,
+                ),
                 ),
 
-                const SizedBox(height: 30),
-
-                // BUTTON
-                SizedBox(
-                  width: width,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _handleLogin,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: _loading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : const Text(
-                            "Sign In",
-                            style: TextStyle(fontSize: 15, color: Colors.white),
-                          ),
-                  ),
-                ),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
+}
+

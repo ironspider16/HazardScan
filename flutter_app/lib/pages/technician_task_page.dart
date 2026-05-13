@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/config/app_users.dart';
+import 'package:flutter_application_1/pages/technician_swp_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../widgets/Menu_button.dart';
+import '../design/style_constant.dart';
 
 class TechnicianTaskPage extends StatefulWidget {
 
@@ -49,6 +52,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
           *,
           task_swp_assignments (
              swp_templates (
+              id,
               category,
               title
             )
@@ -138,7 +142,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   String swpDisplay = task['task_type'] ?? 'General Task';
 
   if (swpTitles.isNotEmpty) {
-    swpDisplay += ' | ' + swpTitles.join(' · ');
+    swpDisplay += ' | ${swpTitles.join(' · ')}';
   }
 
   final String details = task['task_details'] ?? 'No additional details provided.';
@@ -202,26 +206,42 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
           child: Divider(height: 1, color: Color(0xFFF1F5F9)),
         ),
         // Action Button - Now full width at the bottom
-        SizedBox(
-          width: double.infinity, // Makes button fill the card width
-          height: 40,
-          child: ElevatedButton(
-            onPressed: () {
-              if (selectedStatus == 'Assigned') {
-                _showDetailsDialog(details);
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+
+        MenuButton(
+          label: selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
+          onTap: selectedStatus == 'Assigned' ? () => _showDetailsDialog(details) : () {},
+          isPrimary: false,
+          icon: Icons.remove_red_eye_sharp,
+        ),
+
+        const SizedBox(height: AppPadding.medium),
+        Row(
+          children: [
+            Expanded(
+              child: MenuButton ( 
+                  label: selectedStatus == 'Assigned' ? 'Complete SWP' : 'View Report',
+                  onTap: selectedStatus == 'Assigned' ? () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TechnicianSWPPage(task: task),
+                    ),
+                  ) : () {},
+                  isPrimary: true,
+                  icon: Icons.checklist_outlined,
+                  isMini: true,
+              )
             ),
-            child: Text(
-              selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+            const SizedBox(width: 12),
+            Expanded(
+              child: MenuButton (
+                  label: selectedStatus == 'Assigned' ? 'Complete Task' : 'View Report',
+                  onTap: selectedStatus == 'Assigned' ? () => _showDetailsDialog(details) : () {},
+                  isPrimary: true,
+                  icon: Icons.check,
+                  isMini: true
+              )  
             ),
-          ),
+          ],
         ),
       ],
     ),
@@ -271,14 +291,14 @@ void _showDetailsDialog(String details) {
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'), 
+                onPressed: () => Navigator.pop(context), 
                 style: TextButton.styleFrom(
                   foregroundColor: Colors.white,
                   backgroundColor: const Color(0xFF2563EB),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
+                child: const Text('Close'),
               ),
             ],
           );
