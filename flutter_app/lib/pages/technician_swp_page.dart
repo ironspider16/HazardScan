@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/config/app_users.dart';
+import 'package:kkhazardscan/config/app_users.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/Menu_button.dart';
 import '../design/style_constant.dart';
@@ -55,7 +55,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                   return const ListTile(title: Text("Template data missing"));
                 }
 
-                final int templateId = templateData['id'] ?? 0; // Use 0 or -1 as a flag
+                final int templateId =
+                    templateData['id'] ?? 0; // Use 0 or -1 as a flag
                 final String title = templateData['title'] ?? 'Untitled SWP';
                 final String category = templateData['category'] ?? 'General';
 
@@ -74,14 +75,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                     subtitle: Text(category),
                     children: [
                       if (templateId != 0)
-                      TechnicianSwpSection(
-                        templateId: templateId,
-                        categoryName: category,
-                      ) else
-                      const Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Text("Error: Valid Template ID not Found")
-                      )
+                        TechnicianSwpSection(
+                          templateId: templateId,
+                          categoryName: category,
+                        )
+                      else
+                        const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text("Error: Valid Template ID not Found"),
+                        ),
                     ],
                   ),
                 );

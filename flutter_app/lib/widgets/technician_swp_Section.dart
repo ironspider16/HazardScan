@@ -1,6 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/widgets/swp_checklist.dart';
+import 'package:kkhazardscan/widgets/swp_checklist.dart';
 import '../Design/style_constant.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/WAH_Permit.dart';
@@ -18,22 +18,22 @@ class TechnicianSwpSection extends StatefulWidget {
 
   @override
   State<TechnicianSwpSection> createState() => _TechnicianSwpSectionState();
-  }
+}
 
-  class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
-    final supabase = Supabase.instance.client;
-    List<String> items = [];
-    bool isSafetyCleared = false;
-    bool isPtwCleared = true; 
-    bool isLoading = true;
-  
-
+class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
+  final supabase = Supabase.instance.client;
+  List<String> items = [];
+  bool isSafetyCleared = false;
+  bool isPtwCleared = true;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadItems();
-    isPtwCleared = !widget.categoryName.toLowerCase().contains("work at height");
+    isPtwCleared = !widget.categoryName.toLowerCase().contains(
+      "work at height",
+    );
   }
 
   Future<void> _loadItems() async {
@@ -50,7 +50,11 @@ class TechnicianSwpSection extends StatefulWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) return const Padding(padding: EdgeInsets.all(20), child: LinearProgressIndicator());
+    if (isLoading)
+      return const Padding(
+        padding: EdgeInsets.all(20),
+        child: LinearProgressIndicator(),
+      );
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -79,18 +83,23 @@ class TechnicianSwpSection extends StatefulWidget {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: (isSafetyCleared && isPtwCleared) ? () {
-              // Save only this specific SWP progress
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("SWP Progress Saved Locally"))
-              );
-            } : null,
-            style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 40)),
+            onPressed: (isSafetyCleared && isPtwCleared)
+                ? () {
+                    // Save only this specific SWP progress
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("SWP Progress Saved Locally"),
+                      ),
+                    );
+                  }
+                : null,
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 40),
+            ),
             child: const Text("Save SWP Progress"),
-          )
+          ),
         ],
       ),
     );
   }
 }
- 

@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
-<<<<<<< HEAD
 import 'package:kkhazardscan/supabase_client.dart';
-=======
-import 'package:flutter_application_1/supabase_client.dart';
 import '../../widgets/Menu_button.dart';
 import '../../Design/style_constant.dart';
 import '../../main.dart';
 import '../../widgets/App_Textfield.dart';
->>>>>>> Gemini_API_testing_backend
 
 class EditAccountsPage extends StatefulWidget {
   final Map<String, dynamic> account;
@@ -89,96 +85,24 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     super.dispose();
   }
 
-<<<<<<< HEAD
-  Widget _label(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 10, bottom: 6),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 15,
-          color: Color(0xFF333333),
-          fontWeight: FontWeight.w400,
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: const TextStyle(color: Color(0xFF8A8A8A), fontSize: 15),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-
-      // 👇 DEFAULT BORDER
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
-          color: Color.fromARGB(255, 136, 136, 136), // dark grey
-          width: 1,
-        ),
-      ),
-
-      // 👇 WHEN CLICKED (FOCUSED)
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
-          color: Color.fromARGB(255, 77, 77, 77), // darker when active
-          width: 2,
-        ),
-      ),
-
-      // 👇 ERROR STATE (optional)
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red, width: 1),
-      ),
-    );
-  }
-
-  Widget _textField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    bool obscureText = false,
-    bool enabled = true,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _label(label),
-        SizedBox(
-          height: 50,
-          child: TextField(
-            controller: controller,
-            enabled: enabled,
-            obscureText: obscureText,
-            style: const TextStyle(fontSize: 15, color: Colors.black87),
-            decoration: _inputDecoration(hint),
-          ),
-        ),
-      ],
-    );
-  }
-
-=======
->>>>>>> Gemini_API_testing_backend
   Widget _roleDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Role", style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+        Text(
+          "Role",
+          style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+        ),
         const SizedBox(height: AppPadding.tight),
         SizedBox(
           child: DropdownButtonFormField<String>(
             initialValue: _selectedRole,
-            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMain),
-            style: AppTypography.body,
-            decoration: const InputDecoration(
-              hintText: "Select Role",
+            icon: const Icon(
+              Icons.keyboard_arrow_down,
+              color: AppColors.textMain,
             ),
+            style: AppTypography.body,
+            decoration: const InputDecoration(hintText: "Select Role"),
             items: const [
               DropdownMenuItem(value: "Technician", child: Text("Technician")),
               DropdownMenuItem(value: "Administrator", child: Text("Admin")),
@@ -214,17 +138,18 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
           padding: const EdgeInsets.all(AppPadding.page),
           child: Column(
             children: [
-              Expanded( // Use Expanded + SingleChildScrollView to prevent keyboard overflow
+              Expanded(
+                // Use Expanded + SingleChildScrollView to prevent keyboard overflow
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
                       const SizedBox(height: AppPadding.large),
-                      
+
                       AppTextfield(
                         label: "Technician Email",
                         hint: "worker1@example.com",
                         controller: _emailCtrl,
-                        enabled: true, 
+                        enabled: true,
                       ),
 
                       const SizedBox(height: AppPadding.medium),
@@ -250,75 +175,6 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                       _roleDropdown(),
                     ],
                   ),
-<<<<<<< HEAD
-                ],
-              ),
-
-              const SizedBox(height: 82),
-
-              _textField(
-                label: "Technician Email",
-                hint: "worker1@example.com",
-                controller: _emailCtrl,
-                enabled: true, // Email should not be editable
-              ),
-
-              const SizedBox(height: 28),
-
-              _textField(
-                label: "Password",
-                hint: "********",
-                controller: _passwordCtrl,
-                obscureText: false,
-              ),
-
-              const SizedBox(height: 28),
-
-              _textField(
-                label: "Name",
-                hint: "Johnathan",
-                controller: _nameCtrl,
-              ),
-
-              const SizedBox(height: 28),
-
-              _roleDropdown(),
-
-              const Spacer(),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: canSubmit ? _updateUser : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2563EB),
-                    disabledBackgroundColor: const Color.fromARGB(
-                      255,
-                      135,
-                      166,
-                      233,
-                    ),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text(
-                          "Update User",
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 255, 255, 255),
-                            fontSize: 15,
-                          ),
-                        ),
-=======
->>>>>>> Gemini_API_testing_backend
                 ),
               ),
 
