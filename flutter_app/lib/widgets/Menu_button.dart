@@ -6,12 +6,14 @@ class MenuButton extends StatefulWidget {
   final VoidCallback onTap;
   final bool isPrimary;
   final IconData? icon;
+  final bool isMini;
 
   const MenuButton({
     super.key,
     required this.label,
     required this.onTap,
     this.isPrimary = false,
+    this.isMini = false,
     this.icon,
   });
 
@@ -47,7 +49,7 @@ class _MenuButtonState extends State<MenuButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         width: double.infinity,
-        height: 52, // Standardized touch target height
+        height: widget.isMini? 40 : 52, // Standardized touch target height
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: backgroundColor,
@@ -73,6 +75,7 @@ class _MenuButtonState extends State<MenuButton> {
               style: AppTypography.body.copyWith( // Using AppTypography
                 color: contentColor,
                 fontWeight: FontWeight.w600,
+                fontSize: widget.isMini? 13 : null
               ),
             ),
           ],
