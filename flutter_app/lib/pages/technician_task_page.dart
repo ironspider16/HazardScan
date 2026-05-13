@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/config/app_users.dart';
+import 'package:kkhazardscan/pages/technician_swp_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../widgets/Menu_button.dart';
+import '../design/style_constant.dart';
 
 class TechnicianTaskPage extends StatefulWidget {
-  final AppUser user; // Pass the user object to this page
+  final AppUser user;
   const TechnicianTaskPage({super.key, required this.user});
 
   @override
@@ -14,7 +17,6 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> tasks = [];
-
   bool isLoading = true;
   String selectedStatus = 'Assigned';
 
@@ -37,20 +39,29 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
         assignedTaskData.map((row) => row['task_id']),
       );
 
+      if (myTaskIds.isEmpty) {
+        setState(() {
+          tasks = [];
+          isLoading = false;
+        });
+        return;
+      }
+
       final taskResponse = await supabase
           .from('tasks')
           .select('''
-          *,
-          task_swp_assignments (
-             swp_templates (
-              category,
-              title
+            *,
+            task_swp_assignments (
+               swp_templates (
+                id,
+                category,
+                title
+              )
+            ),
+            task_assignments (
+              accounts (id, name, email)
             )
-          ),
-          task_assignments (
-            accounts (id, name, email)
-          )
-        ''')
+          ''')
           .inFilter('id', myTaskIds)
           .eq('status', selectedStatus)
           .order('id', ascending: false);
@@ -61,7 +72,6 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
       });
     } catch (e) {
       setState(() => isLoading = false);
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error loading tasks: $e')));
@@ -85,19 +95,14 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
             style: TextStyle(
               fontSize: 20,
               color: selected
-                  ? Color.fromARGB(255, 0, 119, 255)
+                  ? const Color.fromARGB(255, 0, 119, 255)
                   : const Color.fromARGB(255, 68, 68, 68),
             ),
           ),
-
-          // ONLY show count when this tab is selected
           if (selected) ...[
             const SizedBox(width: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-              ),
               child: Text(
                 tasks.length.toString(),
                 style: const TextStyle(fontSize: 20),
@@ -130,10 +135,10 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
       if (template == null) return 'Unknown Template';
       return '${template['category']} - ${template['title']}';
     }).toList();
-    String swpDisplay = task['task_type'] ?? 'General Task';
 
+    String swpDisplay = task['task_type'] ?? 'General Task';
     if (swpTitles.isNotEmpty) {
-      swpDisplay += ' | ' + swpTitles.join(' · ');
+      swpDisplay += ' | ${swpTitles.join(' · ')}';
     }
 
     final String details =
@@ -155,7 +160,6 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
         ],
       ),
       child: Column(
-        // Changed main wrapper to Column
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -177,7 +181,6 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                 ),
                 const SizedBox(width: 16),
               ],
-              // Text Content - Now has full width minus icon
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -212,29 +215,49 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
             padding: EdgeInsets.symmetric(vertical: 12),
             child: Divider(height: 1, color: Color(0xFFF1F5F9)),
           ),
-          // Action Button - Now full width at the bottom
-          SizedBox(
-            width: double.infinity, // Makes button fill the card width
-            height: 40,
-            child: ElevatedButton(
-              onPressed: () {
-                if (selectedStatus == 'Assigned') {
-                  _showDetailsDialog(details);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          // Actions
+          MenuButton(
+            label: selectedStatus == 'Assigned'
+                ? 'View Details'
+                : 'View Report',
+            onTap: () => _showDetailsDialog(details),
+            isPrimary: false,
+            icon: Icons.remove_red_eye_sharp,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: MenuButton(
+                  label: selectedStatus == 'Assigned'
+                      ? 'Complete SWP'
+                      : 'View Report',
+                  onTap: selectedStatus == 'Assigned'
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => TechnicianSWPPage(task: task),
+                          ),
+                        )
+                      : () {},
+                  isPrimary: true,
+                  icon: Icons.checklist_outlined,
+                  isMini: true,
                 ),
               ),
-              child: Text(
-                selectedStatus == 'Assigned' ? 'View Details' : 'View Report',
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              const SizedBox(width: 12),
+              Expanded(
+                child: MenuButton(
+                  label: selectedStatus == 'Assigned'
+                      ? 'Complete Task'
+                      : 'View Report',
+                  onTap: selectedStatus == 'Assigned' ? () {} : () {},
+                  isPrimary: true,
+                  icon: Icons.check,
+                  isMini: true,
+                ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -274,26 +297,20 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: Color.fromARGB(255, 235, 237, 242),
+          backgroundColor: const Color.fromARGB(255, 235, 237, 242),
           title: const Text(
             "Task details",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  details,
-                  style: TextStyle(fontSize: 14, color: Colors.black87),
-                ),
-              ],
+            child: Text(
+              details,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
               style: TextButton.styleFrom(
                 foregroundColor: Colors.white,
                 backgroundColor: const Color(0xFF2563EB),
@@ -305,6 +322,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
+              child: const Text('Close'),
             ),
           ],
         );
@@ -314,8 +332,6 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
 
   @override
   Widget build(BuildContext context) {
-    final int ongoingCount = selectedStatus == 'Assigned' ? tasks.length : 0;
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -344,9 +360,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   const SizedBox(width: 31),
                 ],
               ),
-
               const SizedBox(height: 30),
-
               Row(
                 children: [
                   Expanded(
@@ -362,10 +376,8 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 8),
-
-                  Row(
+                  const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.filter_alt_outlined, size: 18),
@@ -375,7 +387,6 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   ),
                 ],
               ),
-
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
@@ -389,9 +400,8 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                       )
                     : ListView.builder(
                         itemCount: tasks.length,
-                        itemBuilder: (context, index) {
-                          return _taskCard(tasks[index]);
-                        },
+                        itemBuilder: (context, index) =>
+                            _taskCard(tasks[index]),
                       ),
               ),
             ],

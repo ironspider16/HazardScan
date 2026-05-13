@@ -1,6 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../services/accounts_file_service.dart';
+<<<<<<< HEAD
 import 'package:kkhazardscan/supabase_client.dart';
+=======
+import 'package:flutter_application_1/supabase_client.dart';
+import '../../widgets/Menu_button.dart';
+import '../../Design/style_constant.dart';
+import '../../main.dart';
+import '../../widgets/App_Textfield.dart';
+>>>>>>> Gemini_API_testing_backend
 
 class EditAccountsPage extends StatefulWidget {
   final Map<String, dynamic> account;
@@ -81,6 +89,7 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     super.dispose();
   }
 
+<<<<<<< HEAD
   Widget _label(String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 10, bottom: 6),
@@ -154,18 +163,22 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     );
   }
 
+=======
+>>>>>>> Gemini_API_testing_backend
   Widget _roleDropdown() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _label("Role"),
+        Text("Role", style: AppTypography.body.copyWith(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppPadding.tight),
         SizedBox(
-          height: 50,
           child: DropdownButtonFormField<String>(
-            value: _selectedRole,
-            decoration: _inputDecoration("Role"),
-            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
-            dropdownColor: Colors.white,
+            initialValue: _selectedRole,
+            icon: const Icon(Icons.keyboard_arrow_down, color: AppColors.textMain),
+            style: AppTypography.body,
+            decoration: const InputDecoration(
+              hintText: "Select Role",
+            ),
             items: const [
               DropdownMenuItem(value: "Technician", child: Text("Technician")),
               DropdownMenuItem(value: "Administrator", child: Text("Admin")),
@@ -184,36 +197,60 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
     final canSubmit = !_saving;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.backgroundWhite,
+      // Using a standard AppBar for coherence with the previous page
+      appBar: AppBar(
+        backgroundColor: AppColors.backgroundWhite,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textMain),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text("Edit User", style: AppTypography.Bluesubheading),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(23, 16, 23, 30),
+          padding: const EdgeInsets.all(AppPadding.page),
           child: Column(
             children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Center(
-                    child: Text(
-                      "Edit User",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w400,
+              Expanded( // Use Expanded + SingleChildScrollView to prevent keyboard overflow
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: AppPadding.large),
+                      
+                      AppTextfield(
+                        label: "Technician Email",
+                        hint: "worker1@example.com",
+                        controller: _emailCtrl,
+                        enabled: true, 
                       ),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: const Icon(
-                        Icons.arrow_back,
-                        size: 28,
-                        color: Colors.black,
+
+                      const SizedBox(height: AppPadding.medium),
+
+                      AppTextfield(
+                        label: "Password",
+                        hint: "Enter new password",
+                        controller: _passwordCtrl,
+                        enabled: true,
                       ),
-                    ),
+
+                      const SizedBox(height: AppPadding.medium),
+
+                      AppTextfield(
+                        label: "Full Name",
+                        hint: "e.g. Johnathan Doe",
+                        controller: _nameCtrl,
+                        enabled: true,
+                      ),
+
+                      const SizedBox(height: AppPadding.medium),
+
+                      _roleDropdown(),
+                    ],
                   ),
+<<<<<<< HEAD
                 ],
               ),
 
@@ -280,7 +317,18 @@ class _EditAccountsPageState extends State<EditAccountsPage> {
                             fontSize: 15,
                           ),
                         ),
+=======
+>>>>>>> Gemini_API_testing_backend
                 ),
+              ),
+
+              // Submit Button stays at the bottom
+              const SizedBox(height: AppPadding.medium),
+              MenuButton(
+                label: _saving ? "Updating..." : "Update User",
+                onTap: _saving ? () {} : _updateUser,
+                isPrimary: true,
+                icon: Icons.update, // Save icon for update action
               ),
             ],
           ),

@@ -1,32 +1,63 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// FIXED IMPORT BELOW
+import { GoogleGenerativeAI } from "npm:@google/generative-ai@0.11.0"
 
-// Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts"
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
-console.log("Hello from Functions!")
-
-Deno.serve(async (req) => {
-  const { name } = await req.json()
-  const data = {
-    message: `Hello ${name}!`,
+serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
+172
+  try {
+    const { imageBase64 } = await req.json()
+    const keysString = Deno.env.get('GEMINI_API_KEY') || ""
+    const apiKeys = keysString.split(',').map(k => k.trim())
 
-  return new Response(
-    JSON.stringify(data),
-    { headers: { "Content-Type": "application/json" } },
-  )
+    if (apiKeys.length === 0) throw new Error("No API keys configured.")
+
+const prompt = `Analyze this image for industrial safety hazards (e.g., unlocked ladders, daisy-chaining).
+Return EXACTLY this format and nothing else:
+OBJECT: [Name of object]
+STATUS: [HAZARD or LOCKED or UNLOCKED]
+REASON: [Why is it a hazard?]
+
+If no specific hazard is found, still return the format using OBJECT: None and STATUS: LOCKED.`;
+
+    for (const key of apiKeys) {
+      try {
+        const genAI = new GoogleGenerativeAI(key)
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
+
+        const result = await model.generateContent([
+          prompt,
+          { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
+        ])
+
+        const textResponse = result.response.text()
+
+        return new Response(JSON.stringify({ result: textResponse }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+
+      } catch (err: any) {
+        if (err.message?.includes('429') || err.message?.includes('quota')) {
+          console.log("Key exhausted, trying next one...")
+          continue 
+        }
+        throw err 
+      }
+    }
+
+    throw new Error("All API keys are exhausted.")
+
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
 })
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/analyze-hazard' \
-    --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-    --header 'Content-Type: application/json' \
-    --data '{"name":"Functions"}'
-
-*/

@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
-
 import '../models/detection.dart';
-import '../services/yolo_service.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'camera_page.dart';
@@ -27,16 +26,14 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> {
   Size? _imageSize;
 
-  // IDs based on your trained YAML order:
-  static const int idBrokenSteps = 0;
-  static const int idLadder = 1;
-  static const int idLocked = 2; // hide only
-  static const int idScaffolding = 3;
-  static const int idUnlocked = 4;
-
-  static const Set<int> hazardIds = {idBrokenSteps, idUnlocked};
-
-  static const Set<int> nonHazardDetectedIds = {idLadder, idScaffolding};
+  // Local Class Definitions (No longer relying on YoloService)
+  static const List<String> classNames = [
+    'Broken Steps',
+    'Ladder',
+    'Locked',
+    'Scaffolding',
+    'Unlocked',
+  ];
 
   @override
   void initState() {
@@ -54,55 +51,57 @@ class _ResultScreenState extends State<ResultScreen> {
     });
   }
 
-  // Helper to check if a detection is considered a hazard
-  bool _isHazard(Detection d) {
+  // Helper to determine what text to show in the bounding box
+  String _getBoxLabel(Detection d) {
     if (d.label.isNotEmpty) {
-      final upperLabel = d.label.toUpperCase();
-      return upperLabel.contains("HAZARD") || upperLabel.contains("UNLOCKED");
+      // Takes the first part of Gemini's response for the overlay
+      // e.g. "[Ladder] HAZARD"
+      return d.label.split(':').first;
     }
-    return hazardIds.contains(d.classId);
+    return "Object";
+  }
+
+  // Logic to determine if the AI found a hazard
+  bool _isHazard(Detection d) {
+    final upperLabel = d.label.toUpperCase();
+    return upperLabel.contains("HAZARD") ||
+        upperLabel.contains("UNLOCKED") ||
+        upperLabel.contains("BROKEN");
   }
 
   @override
   Widget build(BuildContext context) {
     final imgSize = _imageSize;
 
-    // Remove locked detections from everything shown
+    // Filter out "LOCKED" (Safe) status to keep UI clean
     final visibleDetections = widget.detections
-        .where((d) => d.classId != idLocked)
+        .where((d) => !d.label.toUpperCase().contains("LOCKED"))
         .toList();
 
-    // Check if we are using Gemini (by checking if any detection has a label)
-    final bool isGeminiMode = visibleDetections.any((d) => d.label.isNotEmpty);
+    String hazardsText = "None";
+    String detectedText = "No objects identified";
 
-    String hazardsText = "";
-    String detectedText = "";
+    if (visibleDetections.isNotEmpty) {
+      final aiResult = visibleDetections.first;
+      bool foundHazard = _isHazard(aiResult);
 
-    if (isGeminiMode) {
-      // --- GEMINI LOGIC ---
-      final aiDetection = visibleDetections.firstWhere(
-        (d) => d.label.isNotEmpty,
-      );
-      bool aiFoundHazard = _isHazard(aiDetection);
-
-      if (aiFoundHazard) {
-        hazardsText = aiDetection.label;
-        detectedText = "Object analyzed by AI";
+      if (foundHazard) {
+        hazardsText = aiResult.label; // Show full Gemini Reason
+        detectedText = "Analysis Complete";
       } else {
         hazardsText = "None";
-        detectedText = aiDetection.label;
+        detectedText = aiResult.label; // Show full Gemini Reason
       }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analysis Result'),
-        backgroundColor: Colors.white,
-        automaticallyImplyLeading: false,
+        title: const Text('AI Analysis Result'),
+        backgroundColor: Colors.black,
       ),
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.black,
       body: imgSize == null
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Colors.white))
           : LayoutBuilder(
               builder: (context, constraints) {
                 final widgetSize = Size(
@@ -112,7 +111,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
                 return Stack(
                   children: [
-                    // Photo
+                    // The Photo
                     Positioned.fill(
                       child: Image.memory(
                         widget.imageBytes,
@@ -120,79 +119,69 @@ class _ResultScreenState extends State<ResultScreen> {
                       ),
                     ),
 
-                    // Draw boxes
-                    // Positioned.fill(
-                    //   child: CustomPaint(
-                    //     painter: BoundingBoxPainter(
-                    //       detections: visibleDetections,
-                    //       imageSize: imgSize,
-                    //       widgetSize: widgetSize,
-                    //       labelResolver: _getBoxLabel,
-                    //       hazardChecker: _isHazard,
-                    //     ),
-                    //   ),
-                    // ),
+                    // Draw AI Overlays
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: BoundingBoxPainter(
+                          detections: visibleDetections,
+                          imageSize: imgSize,
+                          widgetSize: widgetSize,
+                          labelResolver: _getBoxLabel,
+                          hazardChecker: _isHazard,
+                        ),
+                      ),
+                    ),
 
-                    // Bottom panel (Detected vs Hazards)
+                    // Bottom Panel with Detailed AI Reasoning
                     Align(
                       alignment: Alignment.bottomCenter,
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        color:
-                            Colors.black87, // Slightly darker for readability
+                        padding: const EdgeInsets.all(20),
+                        decoration: const BoxDecoration(
+                          color: Colors.black87,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            const Text(
+                              'AI DETECTION LOG',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
                             Text(
-                              'Detected: $detectedText',
+                              'Status: $detectedText',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const Divider(color: Colors.white24, height: 20),
+                            Text(
+                              'Safety Analysis:',
+                              style: TextStyle(
+                                color: hazardsText != "None"
+                                    ? Colors.redAccent
+                                    : Colors.greenAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              hazardsText,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Hazards: $hazardsText',
-                              style: TextStyle(
-                                // Highlight red if a hazard is found
-                                color:
-                                    hazardsText != "None" &&
-                                        !hazardsText.startsWith("No hazards")
-                                    ? Colors.redAccent
-                                    : Colors.white,
-                                fontSize: 15,
-                                fontWeight: hazardsText != "None"
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            SizedBox(
-                              width: double.infinity,
-
-                              height: 45,
-
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF2563EB),
-
-                                  foregroundColor: Colors.white,
-                                ),
-
-                                onPressed: () {
-                                  Navigator.pushReplacement(
-                                    context,
-
-                                    MaterialPageRoute(
-                                      builder: (_) => const CameraPage(),
-                                    ),
-                                  );
-                                },
-
-                                child: const Text("Continue"),
+                                height: 1.4,
                               ),
                             ),
                           ],
@@ -211,7 +200,6 @@ class BoundingBoxPainter extends CustomPainter {
   final List<Detection> detections;
   final Size imageSize;
   final Size widgetSize;
-
   final String Function(Detection d) labelResolver;
   final bool Function(Detection d) hazardChecker;
 
@@ -227,71 +215,35 @@ class BoundingBoxPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (imageSize.width <= 0 || imageSize.height <= 0) return;
 
-    // BoxFit.contain mapping
     final scale = min(
       widgetSize.width / imageSize.width,
       widgetSize.height / imageSize.height,
     );
-
-    final displayW = imageSize.width * scale;
-    final displayH = imageSize.height * scale;
-
-    final dx = (widgetSize.width - displayW) / 2;
-    final dy = (widgetSize.height - displayH) / 2;
+    final dx = (widgetSize.width - imageSize.width * scale) / 2;
+    final dy = (widgetSize.height - imageSize.height * scale) / 2;
 
     final paint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
     for (final d in detections) {
-      final labelText = labelResolver(d);
-      if (labelText.isEmpty) continue;
+      // Logic: If Gemini provides a full-screen analysis (0,0 to 1,1),
+      // we don't draw a box because it blocks the view.
+      if (d.left == 0.0 && d.top == 0.0 && d.right == 1.0) continue;
 
       final isHazard = hazardChecker(d);
-
-      // Colors: hazards red, objects blue
       paint.color = isHazard ? Colors.redAccent : Colors.lightBlueAccent;
 
-      final left = dx + d.left * scale;
-      final top = dy + d.top * scale;
-      final right = dx + d.right * scale;
-      final bottom = dy + d.bottom * scale;
-
-      final rect = Rect.fromLTRB(left, top, right, bottom);
-      canvas.drawRect(rect, paint);
-
-      // We only show the short name + confidence in the box to save space
-      final text = '$labelText (${d.confidence.toStringAsFixed(2)})';
-      final tp = TextPainter(
-        text: TextSpan(
-          text: text,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 14,
-            backgroundColor: isHazard
-                ? Colors.redAccent
-                : Colors.lightBlueAccent,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-        maxLines: 1,
-        ellipsis: '…',
-      )..layout(maxWidth: widgetSize.width);
-
-      final labelX = rect.left.clamp(0.0, widgetSize.width - tp.width);
-      final labelY = (rect.top - tp.height - 2).clamp(
-        0.0,
-        widgetSize.height - tp.height,
+      final rect = Rect.fromLTRB(
+        dx + d.left * scale,
+        dy + d.top * scale,
+        dx + d.right * scale,
+        dy + d.bottom * scale,
       );
-
-      tp.paint(canvas, Offset(labelX, labelY));
+      canvas.drawRect(rect, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant BoundingBoxPainter oldDelegate) {
-    return oldDelegate.detections != detections ||
-        oldDelegate.imageSize != imageSize ||
-        oldDelegate.widgetSize != widgetSize;
-  }
+  bool shouldRepaint(covariant BoundingBoxPainter oldDelegate) => true;
 }
