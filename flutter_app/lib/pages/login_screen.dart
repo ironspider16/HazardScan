@@ -3,7 +3,6 @@ import '../config/app_users.dart';
 import '../pages/main_menu.dart';
 import 'package:kkhazardscan/supabase_client.dart';
 import '../Design/style_constant.dart';
-import '../main.dart';
 import '../widgets/Menu_button.dart';
 import '../widgets/App_Textfield.dart';
 
