@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
+import 'package:kkhazardscan/pages/camera_page.dart';
 import 'package:kkhazardscan/pages/work_activity_page.dart';
 import 'package:kkhazardscan/pages/admin/assign_task_page.dart';
 import 'package:kkhazardscan/pages/admin/all_tasks_page.dart';
@@ -10,6 +11,7 @@ import 'admin/add_accounts_page.dart';
 import '../pages/reports_list_page.dart';
 import '../pages/camera_screen.dart';
 import '../pages/image_confirm_screen.dart';
+import 'dart:typed_data';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -36,26 +38,31 @@ class MainMenu extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF2563EB),
         onPressed: () async {
-          final imagePath = await Navigator.push<String?>(
+          final result = await Navigator.push<Map<String, dynamic>?>(
             context,
-            MaterialPageRoute(builder: (_) => const CameraScreen()),
+            MaterialPageRoute(builder: (_) => const CameraPage()),
           );
 
-          if (imagePath == null) return;
+          if (result == null) return;
+
+          final imagePath = result['imagePath'] as String;
+          final imageBytes = result['imageBytes'] as Uint8List;
 
           // Ensure the widget is still in the tree before navigating
-          // if (context.mounted) {
-          //   final confirmed = await Navigator.push<bool>(
-          //     context,
-          //     MaterialPageRoute(
-          //       builder: (_) => ImageConfirmScreen(imagePath: imagePath),
-          //     ),
-          //   );
-
-          //   if (confirmed == true) {
-          //     debugPrint("Hazard scan confirmed and path saved: $imagePath");
-          //   }
-          // }
+          if (context.mounted) {
+            final confirmed = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ImageConfirmScreen(
+                  imagePath: imagePath,
+                  imageBytes: imageBytes,
+                ),
+              ),
+            );
+            if (confirmed == true) {
+              debugPrint("Hazard scan confirmed and path saved: $imagePath");
+            }
+          }
         },
         child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
       ),

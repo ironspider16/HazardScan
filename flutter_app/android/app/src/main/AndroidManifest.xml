@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Add camera permission here -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    
     <application
         android:label="flutter_application_1"
         android:name="${applicationName}"

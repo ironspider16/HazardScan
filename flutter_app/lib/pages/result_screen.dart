@@ -4,15 +4,20 @@ import 'package:flutter/material.dart';
 
 import '../models/detection.dart';
 import '../services/yolo_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'camera_page.dart';
 
 class ResultScreen extends StatefulWidget {
   final String imagePath;
+  final Uint8List imageBytes;
   final List<Detection> detections;
 
   const ResultScreen({
     super.key,
     required this.imagePath,
     required this.detections,
+    required this.imageBytes,
   });
 
   @override
@@ -40,33 +45,14 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   Future<void> _loadImageSize() async {
-    final bytes = await File(widget.imagePath).readAsBytes();
-    final decoded = await decodeImageFromList(bytes);
+    final decoded = await decodeImageFromList(widget.imageBytes);
+
     if (!mounted) return;
+
     setState(() {
       _imageSize = Size(decoded.width.toDouble(), decoded.height.toDouble());
     });
   }
-
-  // String _safeLabel(int classId) {
-  //   if (classId == idLocked) return '';
-
-  //   // Prevent crashes if Gemini returns a classId outside the YOLO list
-  //   if (classId < 0 || classId >= YoloService.classNames.length) {
-  //     return 'Object';
-  //   }
-  //   return YoloService.classNames[classId];
-  // }
-
-  // Helper to determine what text to show in the bounding box
-  // String _getBoxLabel(Detection d) {
-  //   if (d.label.isNotEmpty) {
-  //     // If it's a Gemini label, just show the Object Name and Status in the box
-  //     // e.g., "[Ladder] HAZARD" instead of the whole paragraph
-  //     return d.label.split(':').first;
-  //   }
-  //   return _safeLabel(d.classId);
-  // }
 
   // Helper to check if a detection is considered a hazard
   bool _isHazard(Detection d) {
@@ -106,36 +92,15 @@ class _ResultScreenState extends State<ResultScreen> {
         hazardsText = "None";
         detectedText = aiDetection.label;
       }
-    } else {
-      // --- YOLO LOGIC (Fallback) ---
-      final hazards = visibleDetections
-          .where((d) => hazardIds.contains(d.classId))
-          .toList();
-
-      final detectedObjects = visibleDetections
-          .where((d) => nonHazardDetectedIds.contains(d.classId))
-          .toList();
-
-      // hazardsText = hazards.isEmpty
-      //     ? 'No hazards detected. Tip: move closer to the lock/steps and retake.'
-      //     : hazards
-      //           .map((d) => _safeLabel(d.classId))
-      //           .where((s) => s.isNotEmpty)
-      //           .toSet()
-      //           .join(', ');
-
-      // detectedText = detectedObjects.isEmpty
-      //     ? 'None'
-      //     : detectedObjects
-      //           .map((d) => _safeLabel(d.classId))
-      //           .where((s) => s.isNotEmpty)
-      //           .toSet()
-      //           .join(', ');
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Analysis Result')),
-      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: const Text('Analysis Result'),
+        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+      ),
+      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       body: imgSize == null
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
@@ -149,8 +114,8 @@ class _ResultScreenState extends State<ResultScreen> {
                   children: [
                     // Photo
                     Positioned.fill(
-                      child: Image.file(
-                        File(widget.imagePath),
+                      child: Image.memory(
+                        widget.imageBytes,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -201,6 +166,33 @@ class _ResultScreenState extends State<ResultScreen> {
                                 fontWeight: hazardsText != "None"
                                     ? FontWeight.bold
                                     : FontWeight.normal,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            SizedBox(
+                              width: double.infinity,
+
+                              height: 45,
+
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF2563EB),
+
+                                  foregroundColor: Colors.white,
+                                ),
+
+                                onPressed: () {
+                                  Navigator.pushReplacement(
+                                    context,
+
+                                    MaterialPageRoute(
+                                      builder: (_) => const CameraPage(),
+                                    ),
+                                  );
+                                },
+
+                                child: const Text("Continue"),
                               ),
                             ),
                           ],

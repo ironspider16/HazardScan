@@ -1,13 +1,19 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 // 1. Change the import from YoloService to GeminiService
 import '../services/gemini_service.dart';
 import 'result_screen.dart';
+import 'dart:typed_data';
+import 'package:http/http.dart' as http;
 
 class ImageConfirmScreen extends StatelessWidget {
   final String imagePath;
+  final Uint8List imageBytes;
 
-  const ImageConfirmScreen({super.key, required this.imagePath});
+  const ImageConfirmScreen({
+    super.key,
+    required this.imagePath,
+    required this.imageBytes,
+  });
 
   // 2. Rename the method to reflect the new service
   Future<void> _runAnalysis(BuildContext context) async {
@@ -21,7 +27,12 @@ class ImageConfirmScreen extends StatelessWidget {
     try {
       // 3. Call GeminiService instead of YoloService
       // Notice how we don't need all the threshold and padding parameters anymore!
-      final detections = await GeminiService.detectHazards(imagePath);
+      // final detections = await GeminiService.detectHazards(imagePath);
+
+      final response = await http.get(Uri.parse(imagePath));
+      Uint8List imageBytes = response.bodyBytes;
+
+      final detections = await GeminiService.detectHazards(imageBytes);
 
       if (context.mounted) Navigator.pop(context); // close loading
 
@@ -30,8 +41,11 @@ class ImageConfirmScreen extends StatelessWidget {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                ResultScreen(imagePath: imagePath, detections: detections),
+            builder: (_) => ResultScreen(
+              imagePath: imagePath,
+              imageBytes: imageBytes,
+              detections: detections,
+            ),
           ),
         );
       }
@@ -48,8 +62,6 @@ class ImageConfirmScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final file = File(imagePath);
-
     return Scaffold(
       appBar: AppBar(title: const Text("Confirm Image")),
       backgroundColor: Colors.black,
@@ -61,7 +73,7 @@ class ImageConfirmScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(file, fit: BoxFit.contain),
+                child: Image.network(imagePath, fit: BoxFit.contain),
               ),
             ),
           ),
