@@ -89,45 +89,75 @@ class _CameraPageState extends State<CameraPage> {
           },
         ),
       ),
-      body: Center(
-        child: Column(
-          children: [
-            SizedBox(
-              height: 600,
-              width: 600,
-              child: image != null
-                  ?
-                    // Image selected
-                    Image.network(image!.path, fit: BoxFit.cover)
-                  :
-                    // No image selected
-                    const Center(child: Text("No image selected")),
-            ),
-            const SizedBox(height: 20),
-            // Buttons
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Camera button
-                ElevatedButton(
-                  onPressed: () => pickImage(ImageSource.camera),
-                  child: const Text("Take a Photo"),
-                ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 1000;
 
-                // Gallery button
-                // ElevatedButton(
-                //   onPressed: () => pickImage(ImageSource.gallery),
-                //   child: const Text("Gallery"),
-                // ),
-                ElevatedButton(
-                  onPressed: image == null ? null : () => _runAnalysis(context),
-                  child: const Text("Analysis Hazard"),
+          final imageSize = isMobile
+              ? constraints.maxWidth * 0.9
+              : constraints.maxWidth * 0.6;
+
+          return Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: imageSize,
+                      width: imageSize,
+                      child: image != null
+                          ? Image.network(image!.path, fit: BoxFit.cover)
+                          : const Center(child: Text("No image selected")),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    isMobile
+                        ? Column(
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () =>
+                                      pickImage(ImageSource.camera),
+                                  child: const Text("Take a Photo"),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: image == null
+                                      ? null
+                                      : () => _runAnalysis(context),
+                                  child: const Text("Analysis Hazard"),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                onPressed: () => pickImage(ImageSource.camera),
+                                child: const Text("Take a Photo"),
+                              ),
+                              const SizedBox(width: 20),
+                              ElevatedButton(
+                                onPressed: image == null
+                                    ? null
+                                    : () => _runAnalysis(context),
+                                child: const Text("Analysis Hazard"),
+                              ),
+                            ],
+                          ),
+                  ],
                 ),
-              ],
+              ),
             ),
-            // const SizedBox(height: 20),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

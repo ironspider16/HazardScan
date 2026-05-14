@@ -6,6 +6,7 @@ import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import '../widgets/App_Textfield.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'camera_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,6 +92,18 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF2563EB),
+        onPressed: () async {
+          final result = await Navigator.push<Map<String, dynamic>?>(
+            context,
+            MaterialPageRoute(builder: (_) => const CameraPage()),
+          );
+
+          if (result == null) return;
+        },
+        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
