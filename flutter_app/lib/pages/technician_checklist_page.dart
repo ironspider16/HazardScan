@@ -97,7 +97,7 @@ class _TechnicianChecklistPageState extends State<TechnicianChecklistPage> {
                                   isMobile: isMobile,
                                   onValidityChanged: (isAbove3m, ptwNum) {
                                     setState(() {
-                                      this.ptwNumber = ptwNum;
+                                      ptwNumber = ptwNum;
                                       isPtwCleared =
                                           !isAbove3m || ptwNum.isNotEmpty;
                                     });

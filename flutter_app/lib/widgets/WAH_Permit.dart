@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class WAHPermitWidget extends StatefulWidget{
+class WAHPermitWidget extends StatefulWidget {
   final Function(bool isAbove3m, String ptwNumber) onValidityChanged;
   final bool isMobile;
 
@@ -26,19 +26,16 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
   void dispose() {
     _ptwCtrl.dispose();
     super.dispose();
-}
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children : [
+      children: [
         const Text(
           'Work at height above 3 metres?',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
         Row(
@@ -51,7 +48,7 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
                   setState(() => _above3m = false);
                   _notifyParent();
                 },
-              )
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -62,23 +59,26 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
                   setState(() => _above3m = true);
                   _notifyParent();
                 },
-              )
-            )
-          ]
+              ),
+            ),
+          ],
         ),
         SizedBox(height: _above3m == false ? 20 : 0),
         if (_above3m == true) ...[
           const SizedBox(height: 12),
           Text(
             "Enter Permit To Work Number (Required):",
-            style: TextStyle(color: Color.fromARGB(255, 64, 64, 64), fontSize: widget.isMobile? 13 : 16),
+            style: TextStyle(
+              color: Color.fromARGB(255, 64, 64, 64),
+              fontSize: widget.isMobile ? 13 : 16,
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
             controller: _ptwCtrl,
             decoration: InputDecoration(
               hintText: 'Enter PTW number',
-              hintStyle:  TextStyle(fontSize: 16, color: Colors.grey),
+              hintStyle: TextStyle(fontSize: 16, color: Colors.grey),
               filled: true,
               fillColor: const Color.fromARGB(22, 37, 100, 235),
               enabledBorder: OutlineInputBorder(
@@ -90,19 +90,22 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
                 borderSide: const BorderSide(color: Color(0xFF2563EB)),
               ),
             ),
-    
+
             onChanged: (value) => _notifyParent(),
           ),
           const SizedBox(height: 14),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE0E0E0)),
-          const SizedBox(height: 12)
-
-        ]
-      ]
+          const SizedBox(height: 12),
+        ],
+      ],
     );
   }
-  
-    Widget _pill({required String label, required bool selected, required VoidCallback onTap}) {
+
+  Widget _pill({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: onTap,
@@ -123,5 +126,4 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
       ),
     );
   }
-  }
-
+}

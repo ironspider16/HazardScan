@@ -3,7 +3,6 @@ import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/technician_swp_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/Menu_button.dart';
-import '../design/style_constant.dart';
 
 class TechnicianTaskPage extends StatefulWidget {
   final AppUser user;

@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
 import 'package:kkhazardscan/pages/camera_page.dart';
-import 'package:kkhazardscan/pages/work_activity_page.dart';
 import 'package:kkhazardscan/pages/admin/assign_task_page.dart';
 import 'package:kkhazardscan/pages/admin/all_tasks_page.dart';
 import 'package:kkhazardscan/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
-import 'admin/add_accounts_page.dart';
-import '../pages/reports_list_page.dart';
-import '../pages/camera_screen.dart';
 import '../pages/image_confirm_screen.dart';
 import 'dart:typed_data';
 import 'package:kkhazardscan/pages/technician_checklist_page.dart';
 import '../Design/style_constant.dart';
-import '../main.dart';
 import '../widgets/Menu_button.dart';
 
 class MainMenu extends StatelessWidget {

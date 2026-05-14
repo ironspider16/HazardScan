@@ -22,7 +22,7 @@ class AppTextfield extends StatelessWidget {
     this.prefixIcon,
     this.suffixIcon,
     this.validator,
-    this.Maxlines
+    this.Maxlines,
   });
 
   @override
@@ -39,22 +39,23 @@ class AppTextfield extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppPadding.tight),
-        TextFormField( // Using TextFormField for better integration with Forms
+        TextFormField(
+          // Using TextFormField for better integration with Forms
           controller: controller,
           enabled: enabled,
           obscureText: obscureText,
-          maxLines: Maxlines != null ? Maxlines : 1,
+          maxLines: Maxlines ?? 1,
           style: AppTypography.body.copyWith(
             color: enabled ? AppColors.textMain : AppColors.textSecondary,
           ),
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: prefixIcon != null 
-                ? Icon(prefixIcon, size: 20) 
-                : null,
+            prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
             suffixIcon: suffixIcon,
             // If disabled, we can subtly change the fill color
-            fillColor: enabled ? AppColors.backgroundWhite : AppColors.borderGrey.withValues(alpha: 0.5),
+            fillColor: enabled
+                ? AppColors.backgroundWhite
+                : AppColors.borderGrey.withValues(alpha: 0.5),
           ),
           validator: validator,
         ),
@@ -62,4 +63,3 @@ class AppTextfield extends StatelessWidget {
     );
   }
 }
-

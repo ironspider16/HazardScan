@@ -60,7 +60,7 @@ class _CameraScreenState extends State<CameraScreen> {
       ),
 
       // ------------------ CAMERA PREVIEW ------------------
-      body: Stack(  
+      body: Stack(
         children: [
           CameraPreview(controller!),
 

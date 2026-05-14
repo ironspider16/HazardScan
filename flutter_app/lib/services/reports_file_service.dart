@@ -68,13 +68,7 @@ Recommended actions:
         dt = DateTime.now();
       }
 
-      reports.add(
-        Report(
-          title: title,
-          createdAt: dt,
-          body: body,
-        ),
-      );
+      reports.add(Report(title: title, createdAt: dt, body: body));
     }
 
     // Newest first
@@ -108,10 +102,9 @@ Recommended actions:
   }
 
   Future<void> updateReportAt(int index, Report updated) async {
-  final list = await loadReports();
-  if (index < 0 || index >= list.length) return;
-  list[index] = updated;
-  await saveReports(list);
+    final list = await loadReports();
+    if (index < 0 || index >= list.length) return;
+    list[index] = updated;
+    await saveReports(list);
   }
-
 }

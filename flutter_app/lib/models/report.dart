@@ -3,9 +3,5 @@ class Report {
   final DateTime createdAt;
   final String body;
 
-  Report({
-    required this.title,
-    required this.createdAt,
-    required this.body,
-  });
+  Report({required this.title, required this.createdAt, required this.body});
 }

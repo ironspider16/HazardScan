@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kkhazardscan/config/app_users.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../widgets/Menu_button.dart';
 import '../design/style_constant.dart';
-import 'dart:io';
 import '../widgets/technician_swp_Section.dart';
 
 class TechnicianSWPPage extends StatefulWidget {

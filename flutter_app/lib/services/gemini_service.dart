@@ -1,6 +1,3 @@
-import 'dart:typed_data';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'dart:io';
 import 'package:flutter/foundation.dart'; // Added for debugPrint
 import '../models/detection.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

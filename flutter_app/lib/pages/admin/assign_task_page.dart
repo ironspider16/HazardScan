@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:kkhazardscan/pages/camera_page.dart';
 import '../../widgets/Menu_button.dart';
-import '../../widgets/App_Textfield.dart';
 import '../../Design/style_constant.dart';
 
 class AssignTaskPage extends StatefulWidget {

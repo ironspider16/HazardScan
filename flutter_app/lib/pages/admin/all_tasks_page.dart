@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_task_page.dart';
-import '../../widgets/Menu_button.dart';
 import '../../design/style_constant.dart';
 
 class AllTasksPage extends StatefulWidget {
@@ -273,7 +272,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
+  Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [

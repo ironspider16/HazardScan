@@ -3,10 +3,7 @@ import 'package:kkhazardscan/pages/admin/edit_accounts_page.dart';
 import 'package:kkhazardscan/supabase_client.dart';
 import 'add_accounts_page.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
-import 'package:kkhazardscan/pages/admin/edit_accounts_page.dart';
-import 'add_accounts_page.dart';
 import '../../widgets/Menu_button.dart';
-import '../../Design/style_constant.dart';
 
 class ManageAccountsPage extends StatefulWidget {
   const ManageAccountsPage({super.key});

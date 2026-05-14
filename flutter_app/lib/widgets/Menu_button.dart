@@ -31,12 +31,12 @@ class _MenuButtonState extends State<MenuButton> {
         ? (_pressed ? AppColors.primaryBlue : AppColors.primaryBlueLight)
         : (_pressed ? AppColors.primaryTint : AppColors.backgroundWhite);
 
-    final Color contentColor = widget.isPrimary 
-        ? Colors.white 
+    final Color contentColor = widget.isPrimary
+        ? Colors.white
         : (_pressed ? AppColors.primaryBlue : AppColors.textMain);
 
-    final Color borderColor = widget.isPrimary 
-        ? Colors.transparent 
+    final Color borderColor = widget.isPrimary
+        ? Colors.transparent
         : (_pressed ? AppColors.primaryBlue : AppColors.borderGrey);
 
     return GestureDetector(
@@ -49,33 +49,40 @@ class _MenuButtonState extends State<MenuButton> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
         width: double.infinity,
-        height: widget.isMini? 40 : 52, // Standardized touch target height
+        height: widget.isMini ? 40 : 52, // Standardized touch target height
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: backgroundColor,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium), // 12.0 from your constants
+          borderRadius: BorderRadius.circular(
+            AppDimensions.radiusMedium,
+          ), // 12.0 from your constants
           border: Border.all(color: borderColor, width: 1.5),
-          boxShadow: widget.isPrimary && !_pressed ? [
-            BoxShadow(
-              color: AppColors.primaryBlue.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ] : null,
+          boxShadow: widget.isPrimary && !_pressed
+              ? [
+                  BoxShadow(
+                    color: AppColors.primaryBlue.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (widget.icon != null) ...[
               Icon(widget.icon, size: 20, color: contentColor),
-              const SizedBox(width: AppPadding.tight), // 8.0 from your constants
+              const SizedBox(
+                width: AppPadding.tight,
+              ), // 8.0 from your constants
             ],
             Text(
               widget.label,
-              style: AppTypography.body.copyWith( // Using AppTypography
+              style: AppTypography.body.copyWith(
+                // Using AppTypography
                 color: contentColor,
                 fontWeight: FontWeight.w600,
-                fontSize: widget.isMini? 13 : null
+                fontSize: widget.isMini ? 13 : null,
               ),
             ),
           ],

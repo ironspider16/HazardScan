@@ -13,15 +13,15 @@ class SWPChecklistWidget extends StatefulWidget {
   });
 
   @override
-  State<SWPChecklistWidget> createState() => _SWPChecklistWidgetState();  
-
+  State<SWPChecklistWidget> createState() => _SWPChecklistWidgetState();
 }
 
 class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
   late Map<String, bool> _checklistState;
 
   @override
-  void initState() { //Initialize unchecked for list items
+  void initState() {
+    //Initialize unchecked for list items
     super.initState();
     _initCheckList();
     _checklistState = {for (var item in widget.items) item: false};
@@ -58,15 +58,15 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
       children: [
         const Text(
           "Safety Compliance Checklist",
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
         ...widget.items.map((item) {
           return CheckboxListTile(
-            title: Text(item, style: TextStyle(fontSize: widget.isMobile ? 13 : 16)),
+            title: Text(
+              item,
+              style: TextStyle(fontSize: widget.isMobile ? 13 : 16),
+            ),
             value: _checklistState[item],
             onChanged: (value) => _updateCheck(item, value),
             controlAffinity: ListTileControlAffinity.leading,

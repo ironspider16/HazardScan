@@ -1,7 +1,5 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/widgets/swp_checklist.dart';
-import '../Design/style_constant.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/WAH_Permit.dart';
 import '../widgets/image_upload.dart';
@@ -50,11 +48,12 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading)
+    if (isLoading) {
       return const Padding(
         padding: EdgeInsets.all(20),
         child: LinearProgressIndicator(),
       );
+    }
 
     return Padding(
       padding: const EdgeInsets.all(16.0),

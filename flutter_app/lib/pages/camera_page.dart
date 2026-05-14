@@ -2,7 +2,6 @@ import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
 import '../services/gemini_service.dart';
 import 'result_screen.dart';
-import 'dart:typed_data';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});

@@ -14,6 +14,6 @@ class Detection {
     required this.bottom,
     required this.classId,
     required this.confidence,
-    this.label= "", //optional parameter
+    this.label = "", //optional parameter
   });
 }

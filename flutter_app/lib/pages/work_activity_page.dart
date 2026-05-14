@@ -100,7 +100,10 @@ class _WorkActivityPageState extends State<WorkActivityPage> {
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 16),
+                style: const TextStyle(
+                  color: Color.fromARGB(255, 0, 0, 0),
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
@@ -224,7 +227,10 @@ class _ProcedurePickPage extends StatelessWidget {
                   Expanded(
                     child: Text(
                       t.title,
-                      style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0), fontSize: 16),
+                      style: const TextStyle(
+                        color: Color.fromARGB(255, 0, 0, 0),
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                   const Icon(Icons.chevron_right, color: Colors.white70),
