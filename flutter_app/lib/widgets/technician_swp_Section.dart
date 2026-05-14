@@ -3,6 +3,7 @@ import 'package:kkhazardscan/widgets/swp_checklist.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/WAH_Permit.dart';
 import '../widgets/image_upload.dart';
+import '../Design/style_constant.dart';
 
 class TechnicianSwpSection extends StatefulWidget {
   final int templateId;
@@ -50,13 +51,13 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Padding(
-        padding: EdgeInsets.all(20),
+        padding: EdgeInsets.all(AppPadding.page),
         child: LinearProgressIndicator(),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(AppPadding.medium),
       child: Column(
         children: [
           if (widget.categoryName.toLowerCase().contains("work at height"))
@@ -73,29 +74,11 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
             items: items,
             onAllChecked: (status) => setState(() => isSafetyCleared = status),
           ),
-          const SizedBox(height: 10),
           AppImageUpload(
             label: "Site Photos",
             onImageSelected: (file) {
               // Handle image logic here
             },
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: (isSafetyCleared && isPtwCleared)
-                ? () {
-                    // Save only this specific SWP progress
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("SWP Progress Saved Locally"),
-                      ),
-                    );
-                  }
-                : null,
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 40),
-            ),
-            child: const Text("Save SWP Progress"),
           ),
         ],
       ),

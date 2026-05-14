@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
@@ -35,8 +37,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
       appBar: AppBar(
-        title: Text("Task SWPs: ${widget.task['workorder_id']}"),
-        backgroundColor: AppColors.backgroundWhite,
+        title: Text(
+          "Task SWPs: ${widget.task['workorder_id']}",
+          style: AppTypography.Bluesubheading,
+        ),
         foregroundColor: AppColors.textMain,
         elevation: 0,
       ),
@@ -44,7 +48,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(AppPadding.page),
               itemCount: swpTemplates.length,
               itemBuilder: (context, index) {
                 final templateData = swpTemplates[index]['swp_templates'];
@@ -58,18 +62,21 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                 final String category = templateData['category'] ?? 'General';
 
                 return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
+                  color: const Color.fromARGB(255, 239, 244, 255),
+                  // color: const Color.fromARGB(255, 226, 235, 255),
+                  margin: const EdgeInsets.only(bottom: AppPadding.tight),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: ExpansionTile(
-                    backgroundColor: Colors.grey.shade50,
+                    backgroundColor: const Color.fromARGB(255, 239, 244, 255),
                     title: Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: Text(category),
+                    subtitle: Text(category, style: AppTypography.body),
                     children: [
                       if (templateId != 0)
                         TechnicianSwpSection(
@@ -78,7 +85,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         )
                       else
                         const Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: EdgeInsets.all(AppPadding.medium),
                           child: Text("Error: Valid Template ID not Found"),
                         ),
                     ],

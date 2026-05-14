@@ -10,6 +10,7 @@ class AppTextfield extends StatelessWidget {
   final bool enabled;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
+  final ValueChanged<String>? onChanged;
   final int? Maxlines;
 
   const AppTextfield({
@@ -23,6 +24,7 @@ class AppTextfield extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.Maxlines,
+    this.onChanged,
   });
 
   @override
@@ -58,6 +60,11 @@ class AppTextfield extends StatelessWidget {
                 : AppColors.borderGrey.withValues(alpha: 0.5),
           ),
           validator: validator,
+          onChanged: (value) {
+            if (onChanged != null) {
+              onChanged!(value);
+            }
+          },
         ),
       ],
     );

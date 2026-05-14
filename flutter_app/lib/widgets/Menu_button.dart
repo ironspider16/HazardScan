@@ -7,6 +7,7 @@ class MenuButton extends StatefulWidget {
   final bool isPrimary;
   final IconData? icon;
   final bool isMini;
+  final bool isDelete;
 
   const MenuButton({
     super.key,
@@ -14,6 +15,7 @@ class MenuButton extends StatefulWidget {
     required this.onTap,
     this.isPrimary = false,
     this.isMini = false,
+    this.isDelete = false,
     this.icon,
   });
 
@@ -27,17 +29,36 @@ class _MenuButtonState extends State<MenuButton> {
   @override
   Widget build(BuildContext context) {
     // Determine colors based on isPrimary and _pressed state
-    final Color backgroundColor = widget.isPrimary
-        ? (_pressed ? AppColors.primaryBlue : AppColors.primaryBlueLight)
-        : (_pressed ? AppColors.primaryTint : AppColors.backgroundWhite);
 
-    final Color contentColor = widget.isPrimary
-        ? Colors.white
-        : (_pressed ? AppColors.primaryBlue : AppColors.textMain);
+    final Color backgroundColor = widget.isDelete
+        ? (_pressed ? Colors.red[100]! : Colors.red[50]!)
+        : (widget.isPrimary
+              ? (_pressed ? AppColors.primaryBlue : AppColors.primaryBlueLight)
+              :  (_pressed ? AppColors.primaryTint : AppColors.backgroundWhite));
 
-    final Color borderColor = widget.isPrimary
-        ? Colors.transparent
-        : (_pressed ? AppColors.primaryBlue : AppColors.borderGrey);
+    final Color contentColor = widget.isDelete
+        ? (_pressed ? Colors.red[700]! : Colors.red)
+        : (widget.isPrimary
+              ? Colors.white
+              : (_pressed ? AppColors.primaryBlue : AppColors.textMain));
+
+    final Color borderColor = widget.isDelete
+        ? (_pressed ? Colors.red : Colors.red[300]!)
+        : (widget.isPrimary
+              ? Colors.transparent
+              : (_pressed ? AppColors.primaryBlue : AppColors.borderGrey));
+
+    // Color backgroundColor = widget.isPrimary
+    //     ? (_pressed ? AppColors.primaryBlue : AppColors.primaryBlueLight)
+    //     : (_pressed ? AppColors.primaryTint : AppColors.backgroundWhite);
+
+    // final Color contentColor = widget.isPrimary
+    //     ? Colors.white
+    //     : (_pressed ? AppColors.primaryBlue : AppColors.textMain);
+
+    // final Color borderColor = widget.isPrimary
+    //     ? Colors.transparent
+    //     : (_pressed ? AppColors.primaryBlue : AppColors.borderGrey);
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
@@ -82,7 +103,7 @@ class _MenuButtonState extends State<MenuButton> {
                 // Using AppTypography
                 color: contentColor,
                 fontWeight: FontWeight.w600,
-                fontSize: widget.isMini ? 13 : null,
+                fontSize: widget.isMini ? 12 : null,
               ),
             ),
           ],

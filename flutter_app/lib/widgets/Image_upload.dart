@@ -62,6 +62,7 @@ class _AppImageUploadState extends State<AppImageUpload> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const SizedBox(height: AppPadding.tight),
         const Text(
           'Attachments required',
           style: AppTypography.Blacksubheading,

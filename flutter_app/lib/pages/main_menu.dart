@@ -8,7 +8,6 @@ import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import '../pages/image_confirm_screen.dart';
 import 'dart:typed_data';
-import 'package:kkhazardscan/pages/technician_checklist_page.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 
@@ -145,19 +144,6 @@ class MainMenu extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (_) => TechnicianTaskPage(user: user),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppPadding.medium),
-                      MenuButton(
-                        label: "SWP Checklist",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  TechnicianChecklistPage(templateId: 1),
                             ),
                           );
                         },

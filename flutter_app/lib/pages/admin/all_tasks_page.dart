@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'edit_task_page.dart';
 import '../../design/style_constant.dart';
+import '../../widgets/Menu_button.dart';
 
 class AllTasksPage extends StatefulWidget {
   const AllTasksPage({super.key});
@@ -235,36 +236,22 @@ class _AllTasksPageState extends State<AllTasksPage> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _goToEditTask(task),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.grey),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Edit',
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
+                child: MenuButton(
+                  label: "Edit",
+                  isMini: true,
+                  onTap: () => _goToEditTask(task),
+                  icon: Icons.edit_outlined,
+                )
+              ),             
+              const SizedBox(width: AppPadding.tight),
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _confirmDelete(task['id']),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Colors.redAccent),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text(
-                    'Delete',
-                    style: TextStyle(color: Colors.redAccent),
-                  ),
-                ),
-              ),
+                child: MenuButton(
+                  label: "Delete",
+                  isDelete: true,
+                  isMini: true,
+                  icon: Icons.delete_outlined,
+                  onTap: () => _confirmDelete(task['id']),
+                ))
             ],
           ),
         ],
@@ -359,9 +346,9 @@ class _AllTasksPageState extends State<AllTasksPage> {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                _tabButton('Ongoing Tasks', 'Assigned'),
+                                _tabButton('Ongoing', 'Assigned'),
                                 const SizedBox(width: AppPadding.medium),
-                                _tabButton('Completed Tasks', 'Completed'),
+                                _tabButton('Completed', 'Completed'),
                               ],
                             ),
 

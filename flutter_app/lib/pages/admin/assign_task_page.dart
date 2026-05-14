@@ -173,20 +173,18 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
               selectedTechnicianIds.isEmpty
                   ? 'Select technicians'
                   : '${selectedTechnicianIds.length} selected',
-              style: TextStyle(
-                color: selectedTechnicianIds.isEmpty
+              style: AppTypography.body.copyWith(color: selectedTechnicianIds.isEmpty
                     ? AppColors.textSecondary
-                    : AppColors.textMain,
+                    : AppColors.textMain,)
               ),
-            ),
           ),
         ),
 
         // Optional: Show "Chips" for selected names below the button
         if (selectedTechnicianIds.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: AppPadding.tight),
           Wrap(
-            spacing: 8,
+            spacing: AppPadding.tight,
             children: selectedTechnicianIds.map((id) {
               final tech = technicians.firstWhere(
                 (t) => t['id'].toString() == id,
@@ -226,7 +224,9 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: AppColors.backgroundWhite,
-              title: const Text("Select Technicians"),
+              title: const Text(
+                "Select Technicians",
+                style: AppTypography.Blacksubheading),
               content: SizedBox(
                 width: double.maxFinite,
                 child: ListView.builder(
@@ -261,8 +261,8 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
                   onPressed: () => Navigator.pop(context),
 
                   style: TextButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: AppColors.backgroundWhite,
+                    backgroundColor: AppColors.primaryBlue,
                   ),
                   child: const Text("Done"),
                 ),
@@ -285,19 +285,14 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
         const SizedBox(height: AppPadding.tight),
         DropdownButtonFormField<String>(
           initialValue:
-              selectedTaskType, // Use 'value' instead of initialValue for better state tracking
-          // 1. ADD THIS: This styles the text BEFORE a selection is made
+              selectedTaskType, 
           hint: Text(
             'Select type',
             style: AppTypography.body.copyWith(color: AppColors.textSecondary),
           ),
-
-          // 2. This styles the text AFTER a selection is made
           style: AppTypography.body.copyWith(color: AppColors.textMain),
 
           decoration: const InputDecoration(
-            // Leave hintText empty here if you are using the 'hint' property above
-            // to avoid double-rendering or layout shifts.
             prefixIcon: Icon(Icons.category_outlined, size: 20),
           ),
 
@@ -307,7 +302,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
               child: Text(
                 type,
                 style: AppTypography.body,
-              ), // Ensure items match body style
+              ), 
             );
           }).toList(),
 
@@ -336,9 +331,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           onTap: () => _showSWPSelectionDialog(),
           child: InputDecorator(
             decoration: InputDecoration(
-              // Use prefixIcon to match the AppTextField look
               prefixIcon: const Icon(Icons.list_alt_outlined, size: 20),
-              // We use the contentPadding to match your other fields
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 12,
@@ -346,10 +339,9 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
             ),
             child: Text(
               selectedSWPIds.isEmpty
-                  ? 'Select SWP templates' // This acts as your "hint"
+                  ? 'Select SWP templates' 
                   : '${selectedSWPIds.length} procedures selected',
               style: AppTypography.body.copyWith(
-                // Match hint color logic
                 color: selectedSWPIds.isEmpty
                     ? AppColors.textSecondary
                     : AppColors.textMain,
@@ -359,9 +351,9 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
         ),
         //label: Text('${swp['category']}: ${swp['title']}',
         if (selectedSWPIds.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: AppPadding.tight),
           Wrap(
-            spacing: 8,
+            spacing: AppPadding.tight,
             children: selectedSWPIds.map((id) {
               final swp = swpTemplates.firstWhere(
                 (s) => s['id'].toString() == id,
@@ -400,7 +392,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: AppColors.backgroundWhite,
-              title: const Text("Select SWP Templates"),
+              title: const Text("Select SWP Templates", style: AppTypography.Blacksubheading,),
               content: SizedBox(
                 width: double.maxFinite,
                 child: ListView.builder(

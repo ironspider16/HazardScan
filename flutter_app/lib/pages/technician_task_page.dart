@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/technician_swp_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -77,7 +78,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
     }
   }
 
-  Widget _tabButton(String text, String status) {
+    Widget _tabButton(String text, String status) {
     final bool selected = selectedStatus == status;
 
     return GestureDetector(
@@ -91,20 +92,24 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
         children: [
           Text(
             text,
-            style: TextStyle(
-              fontSize: 20,
-              color: selected
-                  ? const Color.fromARGB(255, 0, 119, 255)
-                  : const Color.fromARGB(255, 68, 68, 68),
+            style: AppTypography.Blacksubheading.copyWith(
+              color: selected ? null : AppColors.textSecondary,
             ),
           ),
+
+          // ONLY show count when this tab is selected
           if (selected) ...[
-            const SizedBox(width: 4),
+            const SizedBox(width: AppPadding.tight),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                color: AppColors.primaryTint,
+              ),
               child: Text(
                 tasks.length.toString(),
-                style: const TextStyle(fontSize: 20),
+                style: (AppTypography.Blacksubheading.copyWith(height: 1.5)),
               ),
             ),
           ],
@@ -115,7 +120,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
 
   Widget _taskCard(Map<String, dynamic> task) {
     double screenwidth = MediaQuery.of(context).size.width;
-    bool showIcon = screenwidth > 380;
+    bool showIcon = screenwidth > 420;
 
     final List assignments = task['task_assignments'] ?? [];
     final List<String> techNames = assignments.map((a) {
@@ -144,76 +149,68 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
         task['task_details'] ?? 'No additional details provided.';
 
     return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: AppPadding.medium),
+      padding: const EdgeInsets.all(AppPadding.medium),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: AppColors.backgroundWhite,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+        border: Border.all(color: AppColors.borderGrey.withAlpha(75)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // Changed to Column to allow vertical stacking
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (showIcon) ...[
+                // Icon Box
                 Container(
-                  width: 50,
-                  height: 50,
+                  width:
+                      AppPadding.Largest +
+                      AppPadding.tight, // Reduced slightly for better fit
+                  height: AppPadding.Largest + AppPadding.tight,
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(26, 37, 100, 235),
-                    borderRadius: BorderRadius.circular(12),
+                    color: AppColors.primaryTint,
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.radiusSmall,
+                    ),
                   ),
                   child: const Icon(
                     Icons.assignment,
-                    size: 24,
-                    color: Color(0xFF2563EB),
+                    size: AppPadding.large,
+                    color: AppColors.primaryBlue,
                   ),
                 ),
-                const SizedBox(width: 16),
               ],
+              const SizedBox(width: AppPadding.medium),
+              // Text Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       task['workorder_id']?.toUpperCase() ?? 'NO ID',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E293B),
-                      ),
+                      style: AppTypography.Blacksubheading,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppPadding.tight),
                     _buildInfoRow(Icons.settings_outlined, swpDisplay),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: AppPadding.tight),
                     _buildInfoRow(
                       Icons.location_on_outlined,
                       task['location'] ?? 'Field',
                     ),
-                    const SizedBox(height: 6),
-                    _buildInfoRow(
-                      Icons.people_alt_outlined,
-                      displayNames,
-                      textColor: Colors.blueGrey.shade600,
-                    ),
+                    const SizedBox(height: AppPadding.tight),
+                    _buildInfoRow(Icons.people_alt_outlined, displayNames),
                   ],
                 ),
               ),
             ],
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12),
-            child: Divider(height: 1, color: Color(0xFFF1F5F9)),
+            padding: EdgeInsets.symmetric(vertical: AppPadding.medium),
+            child: Divider(height: 1), // Optional: adds a nice separator
           ),
+
           // Actions
           MenuButton(
             label: selectedStatus == 'Assigned'
@@ -223,7 +220,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
             isPrimary: false,
             icon: Icons.remove_red_eye_sharp,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppPadding.medium),
           Row(
             children: [
               Expanded(
@@ -244,7 +241,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   isMini: true,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppPadding.tight),
               Expanded(
                 child: MenuButton(
                   label: selectedStatus == 'Assigned'
@@ -263,30 +260,20 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text, {Color? textColor}) {
+    Widget _buildInfoRow(IconData icon, String text) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 2),
+          padding: const EdgeInsets.all(AppPadding.tight / 4),
           child: Icon(
             icon,
-            size: 16,
-            color: const Color(0xFF2563EB).withOpacity(0.7),
+            size: AppPadding.medium,
+            color: AppColors.primaryBlue,
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              color: textColor ?? Colors.grey.shade700,
-              fontWeight: FontWeight.w500,
-              height: 1.3,
-            ),
-          ),
-        ),
+        const SizedBox(width: AppPadding.tight),
+        Expanded(child: Text(text, style: AppTypography.body)),
       ],
     );
   }
@@ -296,15 +283,15 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color.fromARGB(255, 235, 237, 242),
+          backgroundColor: AppColors.backgroundWhite,
           title: const Text(
             "Task details",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: AppTypography.Blacksubheading,
           ),
           content: SingleChildScrollView(
             child: Text(
               details,
-              style: const TextStyle(fontSize: 14, color: Colors.black87),
+              style: AppTypography.body
             ),
           ),
           actions: [
@@ -352,7 +339,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                     child: Center(
                       child: Text(
                         'My Tasks',
-                        style: TextStyle(fontSize: 17, color: Colors.black),
+                        style: AppTypography.Bluesubheading,
                       ),
                     ),
                   ),
@@ -366,26 +353,55 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.centerLeft,
-                      child: Row(
-                        children: [
-                          _tabButton('Ongoing Tasks', 'Assigned'),
-                          const SizedBox(width: 15),
-                          _tabButton('Completed Tasks', 'Completed'),
-                        ],
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth:
+                              MediaQuery.of(context).size.width -
+                              (AppPadding.page * 2),
+                        ),
+                        // We give the scaling box a "target" width of the screen
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment
+                              .spaceBetween, // Pushes items to opposite sides
+                          children: [
+                            // Left Side: Tab Buttons
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _tabButton('Ongoing', 'Assigned'),
+                                const SizedBox(width: AppPadding.medium),
+                                _tabButton('Completed', 'Completed'),
+                              ],
+                            ),
+
+                            const SizedBox(width: AppPadding.medium),
+
+                            // Right Side: Filter Button
+                            GestureDetector(
+                              onTap: () => print("Filter tapped"),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(
+                                    Icons.filter_alt_outlined,
+                                    size: AppPadding.medium,
+                                  ),
+                                  SizedBox(width: AppPadding.medium / 4),
+                                  Text(
+                                    'Filter',
+                                    style: AppTypography.Blacksubheading,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.filter_alt_outlined, size: 18),
-                      SizedBox(width: 4),
-                      Text('Filter', style: TextStyle(fontSize: 16)),
-                    ],
-                  ),
                 ],
               ),
+
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())

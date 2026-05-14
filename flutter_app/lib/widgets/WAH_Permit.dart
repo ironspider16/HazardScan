@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/widgets/App_Textfield.dart';
+import '../Design/style_constant.dart';
 
 class WAHPermitWidget extends StatefulWidget {
   final Function(bool isAbove3m, String ptwNumber) onValidityChanged;
@@ -35,9 +37,9 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
       children: [
         const Text(
           'Work at height above 3 metres?',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: AppTypography.Blacksubheading,
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: AppPadding.medium),
         Row(
           children: [
             Expanded(
@@ -50,7 +52,7 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
                 },
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppPadding.tight),
             Expanded(
               child: _pill(
                 label: 'Yes',
@@ -63,34 +65,13 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
             ),
           ],
         ),
-        SizedBox(height: _above3m == false ? 20 : 0),
+        SizedBox(height: _above3m == false ? AppPadding.medium : 0),
         if (_above3m == true) ...[
-          const SizedBox(height: 12),
-          Text(
-            "Enter Permit To Work Number (Required):",
-            style: TextStyle(
-              color: Color.fromARGB(255, 64, 64, 64),
-              fontSize: widget.isMobile ? 13 : 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
+          const SizedBox(height: AppPadding.medium),
+          AppTextfield(
+            label: "Enter Permit To Work Number (Required)", 
+            hint: "Enter PTW number",
             controller: _ptwCtrl,
-            decoration: InputDecoration(
-              hintText: 'Enter PTW number',
-              hintStyle: TextStyle(fontSize: 16, color: Colors.grey),
-              filled: true,
-              fillColor: const Color.fromARGB(22, 37, 100, 235),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Colors.white24),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: Color(0xFF2563EB)),
-              ),
-            ),
-
             onChanged: (value) => _notifyParent(),
           ),
           const SizedBox(height: 14),
@@ -107,21 +88,17 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
     required VoidCallback onTap,
   }) {
     return InkWell(
-      borderRadius: BorderRadius.circular(12),
       onTap: onTap,
       child: Container(
-        height: 30,
+        height: AppPadding.extraLarge,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2563EB) : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? AppColors.primaryBlue : AppColors.borderGrey.withAlpha(95),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            color: selected ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTypography.body.copyWith(color: AppColors.backgroundWhite),
         ),
       ),
     );

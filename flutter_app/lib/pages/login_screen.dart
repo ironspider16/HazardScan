@@ -5,6 +5,7 @@ import 'package:kkhazardscan/supabase_client.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import '../widgets/App_Textfield.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -99,21 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 🔷 BRAND ICON
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBlue,
-                      borderRadius: BorderRadius.circular(
-                        AppDimensions.radiusLarge,
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.local_hospital,
-                      color: AppColors.backgroundWhite,
-                      size: AppPadding.Largest,
-                    ),
+                  SvgPicture.asset(
+                    'assets/images/KKHlogo.svg',
+                    width: 100,
+                    height: 100,
+                    semanticsLabel: 'Company Logo',
                   ),
 
                   const SizedBox(height: AppPadding.medium),

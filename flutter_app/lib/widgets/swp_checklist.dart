@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/Design/style_constant.dart';
 
 class SWPChecklistWidget extends StatefulWidget {
   final List<String> items;
@@ -58,19 +59,19 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
       children: [
         const Text(
           "Safety Compliance Checklist",
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: AppTypography.Blacksubheading,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppPadding.tight),
         ...widget.items.map((item) {
           return CheckboxListTile(
             title: Text(
               item,
-              style: TextStyle(fontSize: widget.isMobile ? 13 : 16),
+              style: AppTypography.body.copyWith(fontSize: 14),
             ),
             value: _checklistState[item],
             onChanged: (value) => _updateCheck(item, value),
             controlAffinity: ListTileControlAffinity.leading,
-            activeColor: const Color(0xFF007AFF),
+            activeColor: AppColors.primaryBlue,
           );
         }),
       ],
