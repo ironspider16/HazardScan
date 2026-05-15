@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
-import 'package:kkhazardscan/pages/admin/assign_task_page.dart';
-import 'package:kkhazardscan/pages/admin/all_tasks_page.dart';
 import 'package:kkhazardscan/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
+import 'admin/dashboard.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -69,22 +68,11 @@ class MainMenu extends StatelessWidget {
                     const SizedBox(height: AppPadding.extraLarge),
                     if (isAdmin) ...[
                       MenuButton(
-                        label: "Assign Tasks",
+                        label: "Dashboard",
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => AssignTaskPage()),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppPadding.medium),
-
-                      MenuButton(
-                        label: "All Tasks",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => AllTasksPage()),
+                            MaterialPageRoute(builder: (_) => DashboardPage()),
                           );
                         },
                       ),

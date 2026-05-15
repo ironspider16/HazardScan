@@ -182,6 +182,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icons.login,
                     ),
                   ),
+                  const SizedBox(height: AppPadding.tight),
+                  SizedBox(
+                    width: fieldWidth,
+                    child: MenuButton(
+                      label: _loading
+                          ? "Logging in..."
+                          : "Continue as Technician",
+                      onTap: _loading ? () => {} : _handleLogin,
+                      isPrimary: true,
+                      icon: Icons.person_3_outlined,
+                    ),
+                  ),
                 ],
               ),
             ),
