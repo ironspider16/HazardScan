@@ -19,13 +19,21 @@ serve(async (req: Request) => {
 
     if (apiKeys.length === 0) throw new Error("No API keys configured.")
 
-const prompt = `Analyze this image for industrial safety hazards (e.g., unlocked ladders, daisy-chaining).
-Return EXACTLY this format and nothing else:
-OBJECT: [Name of object]
-STATUS: [HAZARD or LOCKED or UNLOCKED]
-REASON: [Why is it a hazard?]
+const prompt = `Analyze this image for industrial safety hazards based on these specific hospital standards:
 
-If no specific hazard is found, still return the format using OBJECT: None and STATUS: LOCKED.`;
+1. LADDERS: Check for damage (broken legs/steps), unspread/unlocked spreaders, missing/unstable steps and broken rungs.
+2. LIFTERS/SCAFFOLDS: Check if outriggers are fully inserted/locked, if the area is cordoned, and if warning signage is displayed.
+3. CONFINED SPACES: Detect unauthorized entry, lack of ventilation, or obstructed access.
+4. PPE: Ensure personnel are wearing safety helmets, safety shoes, and appropriate gear like cryogenic gloves or safety harnesses where required.
+5. CHEMICAL/LN2: Check for obstructed transportation routes or uncordoned refilling areas.
+6. ELECTRICAL: Check for exposed wiring, damaged equipment, or improper grounding.
+
+Return EXACTLY this format:
+OBJECT: [Detected object]
+STATUS: [HAZARD or NOT HAZARD]
+REASON: [Specific NC from the list, e.g., "Ladder spreaders not locked" or "No proper PPE: missing helmet"]
+
+If no hazard is found, return OBJECT: [Object name] and STATUS: No Hazards Detected.`;
 
     for (const key of apiKeys) {
       try {
