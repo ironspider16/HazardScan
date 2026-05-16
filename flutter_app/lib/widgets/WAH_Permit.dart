@@ -19,6 +19,7 @@ class WAHPermitWidget extends StatefulWidget {
 class _WAHPermitWidgetState extends State<WAHPermitWidget> {
   bool? _above3m = false;
   final _ptwCtrl = TextEditingController();
+  
 
   void _notifyParent() {
     widget.onValidityChanged(_above3m ?? false, _ptwCtrl.text.trim());

@@ -8,11 +8,13 @@ import '../Design/style_constant.dart';
 class TechnicianSwpSection extends StatefulWidget {
   final int templateId;
   final String categoryName;
+  final Function(String ptw) onPtwChanged;
 
   const TechnicianSwpSection({
     super.key,
     required this.templateId,
     required this.categoryName,
+    required this.onPtwChanged,
   });
 
   @override
@@ -25,6 +27,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
   bool isSafetyCleared = false;
   bool isPtwCleared = true;
   bool isLoading = true;
+  String _currentPtw = "";
 
   @override
   void initState() {
@@ -66,7 +69,9 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
               onValidityChanged: (isAbove3m, ptwNum) {
                 setState(() {
                   isPtwCleared = !isAbove3m || ptwNum.isNotEmpty;
+                  _currentPtw = isAbove3m ? ptwNum : "";
                 });
+                widget.onPtwChanged(_currentPtw);
               },
             ),
           SWPChecklistWidget(

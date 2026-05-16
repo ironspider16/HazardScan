@@ -17,6 +17,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final supabase = Supabase.instance.client;
 
   List<dynamic> swpTemplates = [];
+  Map<int, String> swpPermitNumbers = {};
 
   bool isLoading = true;
 
@@ -31,6 +32,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     setState(() => swpTemplates = widget.task['task_swp_assignments'] ?? []);
     setState(() => isLoading = false);
   }
+
+  Future<void> submitReport() async {
+    List<String> finalPtwList = swpPermitNumbers.values.where((ptw) => ptw.isNotEmpty)
+        .toSet()
+        .toList();
+
+    await supabase.from('safety_reports').insert({
+      'task_id': widget.task['id'],
+      'wah_permit_numbers' : finalPtwList,
+    });
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +96,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         TechnicianSwpSection(
                           templateId: templateId,
                           categoryName: category,
+                          onPtwChanged: (ptw) {
+                            swpPermitNumbers[templateId] = ptw;
+                          },
+
                         )
                       else
                         const Padding(

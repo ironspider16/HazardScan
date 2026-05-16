@@ -21,7 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
 
   bool _showPassword = false;
-  bool _loading = false;
+  bool _loading_forAdmin = false;
 
   @override
   void dispose() {
@@ -30,10 +30,21 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  void _loginAsTechnician() {
+    final anonymousTechnician = AppUser(
+      id: 0,
+      email: "technician@example.com",
+      password: '',
+      role: UserRole.user
+    );
+
+    Navigator.push(context, MaterialPageRoute(builder: (_) => MainMenu(user: anonymousTechnician)));
+  }
+
+  Future<void> _loginAsAdmin() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    setState(() => _loading = true);
+    setState(() => _loading_forAdmin = true);
 
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
@@ -43,29 +54,24 @@ class _LoginScreenState extends State<LoginScreen> {
           .from('accounts')
           .select()
           .eq('email', email)
-          .eq('password', password)
+          .eq('password', password)  
           .maybeSingle();
 
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() => _loading_forAdmin = false);
 
       if (data != null) {
-        final roleFromDb = data['role'].toString();
 
-        final role = roleFromDb == 'Administrator'
-            ? UserRole.admin
-            : UserRole.user;
-
-        final user = AppUser(
+        final AdminUser = AppUser(
           id: data['id'] as int,
           email: data['email'].toString(),
           password: data['password'].toString(),
-          role: role,
+          role: UserRole.admin,
         );
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => MainMenu(user: user)),
+          MaterialPageRoute(builder: (_) => MainMenu(user: AdminUser)),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -74,12 +80,12 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() => _loading_forAdmin= false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login error: $e"), backgroundColor: Colors.red),
       );
-    }
+  }
   }
 
   // login_screen.dart
@@ -176,20 +182,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: fieldWidth,
                     child: MenuButton(
-                      label: _loading ? "Logging in..." : "Login",
-                      onTap: _loading ? () => {} : _handleLogin,
+                      label: _loading_forAdmin ? "Logging in..." : "Login as Admin",
+                      onTap: _loading_forAdmin ? () => {} : _loginAsAdmin,
                       isPrimary: true,
                       icon: Icons.login,
                     ),
                   ),
-                  const SizedBox(height: AppPadding.tight),
+                  const SizedBox(height: AppPadding.tight / 2),
+                  SizedBox(          
+                    width: fieldWidth,       
+                    child:  Divider(
+                    height: AppPadding.large,
+                    thickness: 2,
+                    color: Color(0xFFE0E0E0),
+                  ),
+                  ),
+
+
+                  const SizedBox(height: AppPadding.tight / 2),
                   SizedBox(
                     width: fieldWidth,
                     child: MenuButton(
-                      label: _loading
-                          ? "Logging in..."
-                          : "Continue as Technician",
-                      onTap: _loading ? () => {} : _handleLogin,
+                      label: "Continue as Technician",
+                      onTap: _loginAsTechnician,
                       isPrimary: true,
                       icon: Icons.person_3_outlined,
                     ),
