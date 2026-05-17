@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
+import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
 import 'package:kkhazardscan/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
@@ -91,12 +92,12 @@ class MainMenu extends StatelessWidget {
                       ),
                     ] else ...[
                       MenuButton(
-                        label: "My Tasks",
+                        label: "Submit Safety Report",
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => TechnicianTaskPage(user: user),
+                              builder: (_) => TechnicianSelectSwp(templateId: 1, categoryName: "1"),
                             ),
                           );
                         },
