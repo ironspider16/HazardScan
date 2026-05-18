@@ -241,8 +241,8 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   isMini: true,
                   onTap: () => _goToEditTask(task),
                   icon: Icons.edit_outlined,
-                )
-              ),             
+                ),
+              ),
               const SizedBox(width: AppPadding.tight),
               Expanded(
                 child: MenuButton(
@@ -251,7 +251,8 @@ class _AllTasksPageState extends State<AllTasksPage> {
                   isMini: true,
                   icon: Icons.delete_outlined,
                   onTap: () => _confirmDelete(task['id']),
-                ))
+                ),
+              ),
             ],
           ),
         ],
@@ -292,8 +293,6 @@ class _AllTasksPageState extends State<AllTasksPage> {
 
   @override
   Widget build(BuildContext context) {
-    final int ongoingCount = selectedStatus == 'Assigned' ? tasks.length : 0;
-
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
       body: SafeArea(

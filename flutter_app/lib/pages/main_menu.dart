@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
-import 'package:kkhazardscan/pages/technician_task_page.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import '../Design/style_constant.dart';
@@ -97,7 +96,10 @@ class MainMenu extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => TechnicianSelectSwp(templateId: 1, categoryName: "1"),
+                              builder: (_) => TechnicianSelectSwp(
+                                templateId: 1,
+                                categoryName: "1",
+                              ),
                             ),
                           );
                         },

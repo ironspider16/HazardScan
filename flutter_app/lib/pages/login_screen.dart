@@ -35,10 +35,13 @@ class _LoginScreenState extends State<LoginScreen> {
       id: 0,
       email: "technician@example.com",
       password: '',
-      role: UserRole.user
+      role: UserRole.user,
     );
 
-    Navigator.push(context, MaterialPageRoute(builder: (_) => MainMenu(user: anonymousTechnician)));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MainMenu(user: anonymousTechnician)),
+    );
   }
 
   Future<void> _loginAsAdmin() async {
@@ -54,14 +57,13 @@ class _LoginScreenState extends State<LoginScreen> {
           .from('accounts')
           .select()
           .eq('email', email)
-          .eq('password', password)  
+          .eq('password', password)
           .maybeSingle();
 
       if (!mounted) return;
       setState(() => _loading_forAdmin = false);
 
       if (data != null) {
-
         final AdminUser = AppUser(
           id: data['id'] as int,
           email: data['email'].toString(),
@@ -80,12 +82,12 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loading_forAdmin= false);
+      setState(() => _loading_forAdmin = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login error: $e"), backgroundColor: Colors.red),
       );
-  }
+    }
   }
 
   // login_screen.dart
@@ -182,22 +184,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: fieldWidth,
                     child: MenuButton(
-                      label: _loading_forAdmin ? "Logging in..." : "Login as Admin",
+                      label: _loading_forAdmin
+                          ? "Logging in..."
+                          : "Login as Admin",
                       onTap: _loading_forAdmin ? () => {} : _loginAsAdmin,
                       isPrimary: true,
                       icon: Icons.login,
                     ),
                   ),
                   const SizedBox(height: AppPadding.tight / 2),
-                  SizedBox(          
-                    width: fieldWidth,       
-                    child:  Divider(
-                    height: AppPadding.large,
-                    thickness: 2,
-                    color: Color(0xFFE0E0E0),
+                  SizedBox(
+                    width: fieldWidth,
+                    child: Divider(
+                      height: AppPadding.large,
+                      thickness: 2,
+                      color: Color(0xFFE0E0E0),
+                    ),
                   ),
-                  ),
-
 
                   const SizedBox(height: AppPadding.tight / 2),
                   SizedBox(

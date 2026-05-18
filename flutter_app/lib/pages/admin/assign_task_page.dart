@@ -173,10 +173,12 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
               selectedTechnicianIds.isEmpty
                   ? 'Select technicians'
                   : '${selectedTechnicianIds.length} selected',
-              style: AppTypography.body.copyWith(color: selectedTechnicianIds.isEmpty
+              style: AppTypography.body.copyWith(
+                color: selectedTechnicianIds.isEmpty
                     ? AppColors.textSecondary
-                    : AppColors.textMain,)
+                    : AppColors.textMain,
               ),
+            ),
           ),
         ),
 
@@ -226,7 +228,8 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
               backgroundColor: AppColors.backgroundWhite,
               title: const Text(
                 "Select Technicians",
-                style: AppTypography.Blacksubheading),
+                style: AppTypography.Blacksubheading,
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: ListView.builder(
@@ -284,8 +287,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
         ),
         const SizedBox(height: AppPadding.tight),
         DropdownButtonFormField<String>(
-          initialValue:
-              selectedTaskType, 
+          initialValue: selectedTaskType,
           hint: Text(
             'Select type',
             style: AppTypography.body.copyWith(color: AppColors.textSecondary),
@@ -299,10 +301,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           items: taskTypes.map((type) {
             return DropdownMenuItem(
               value: type,
-              child: Text(
-                type,
-                style: AppTypography.body,
-              ), 
+              child: Text(type, style: AppTypography.body),
             );
           }).toList(),
 
@@ -339,7 +338,7 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
             ),
             child: Text(
               selectedSWPIds.isEmpty
-                  ? 'Select SWP templates' 
+                  ? 'Select SWP templates'
                   : '${selectedSWPIds.length} procedures selected',
               style: AppTypography.body.copyWith(
                 color: selectedSWPIds.isEmpty
@@ -392,7 +391,10 @@ class _AssignTaskPageState extends State<AssignTaskPage> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: AppColors.backgroundWhite,
-              title: const Text("Select SWP Templates", style: AppTypography.Blacksubheading,),
+              title: const Text(
+                "Select SWP Templates",
+                style: AppTypography.Blacksubheading,
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: ListView.builder(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:kkhazardscan/config/app_users.dart';
-import 'package:kkhazardscan/pages/technician_swp_page.dart';
+import 'package:kkhazardscan/pages/login_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/Menu_button.dart';
 
@@ -78,7 +78,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
     }
   }
 
-    Widget _tabButton(String text, String status) {
+  Widget _tabButton(String text, String status) {
     final bool selected = selectedStatus == status;
 
     return GestureDetector(
@@ -231,9 +231,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   onTap: selectedStatus == 'Assigned'
                       ? () => Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => TechnicianSWPPage(task: task),
-                          ),
+                          MaterialPageRoute(builder: (_) => LoginScreen()),
                         )
                       : () {},
                   isPrimary: true,
@@ -241,26 +239,27 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
                   isMini: true,
                 ),
               ),
-              const SizedBox(width: AppPadding.tight),
-              Expanded(
-                child: MenuButton(
-                  label: selectedStatus == 'Assigned'
-                      ? 'Complete Task'
-                      : 'View Report',
-                  onTap: selectedStatus == 'Assigned' ? () {} : () {},
-                  isPrimary: true,
-                  icon: Icons.check,
-                  isMini: true,
-                ),
-              ),
             ],
+          ),
+
+          const SizedBox(width: AppPadding.tight),
+          Expanded(
+            child: MenuButton(
+              label: selectedStatus == 'Assigned'
+                  ? 'Complete Task'
+                  : 'View Report',
+              onTap: selectedStatus == 'Assigned' ? () {} : () {},
+              isPrimary: true,
+              icon: Icons.check,
+              isMini: true,
+            ),
           ),
         ],
       ),
     );
   }
 
-    Widget _buildInfoRow(IconData icon, String text) {
+  Widget _buildInfoRow(IconData icon, String text) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -289,10 +288,7 @@ class _TechnicianTaskPageState extends State<TechnicianTaskPage> {
             style: AppTypography.Blacksubheading,
           ),
           content: SingleChildScrollView(
-            child: Text(
-              details,
-              style: AppTypography.body
-            ),
+            child: Text(details, style: AppTypography.body),
           ),
           actions: [
             TextButton(

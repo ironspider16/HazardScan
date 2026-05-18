@@ -105,8 +105,6 @@ class _AddAccountsPageState extends State<AddAccountsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final canSubmit = !_saving;
-
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
       // Using a standard AppBar for coherence with the previous page

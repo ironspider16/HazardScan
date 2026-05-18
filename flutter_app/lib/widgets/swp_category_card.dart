@@ -42,7 +42,9 @@ class SwpCategoryCard extends StatelessWidget {
                     color: isSelected
                         ? AppColors.primaryBlue
                         : Colors.transparent,
-                    border: isSelected ? Border.all(color: AppColors.backgroundWhite, width: 2) : Border.all(color: AppColors.textSecondary, width: 1),
+                    border: isSelected
+                        ? Border.all(color: AppColors.backgroundWhite, width: 2)
+                        : Border.all(color: AppColors.textSecondary, width: 1),
                   ),
                 ),
                 const SizedBox(width: AppPadding.tight),

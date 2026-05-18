@@ -5,11 +5,15 @@ import '../Design/style_constant.dart';
 class WAHPermitWidget extends StatefulWidget {
   final Function(bool isAbove3m, String ptwNumber) onValidityChanged;
   final bool isMobile;
+  final String initialPtw;
+  final bool initialAbove3m;
 
-  const WAHPermitWidget({
+  WAHPermitWidget({
     super.key,
     required this.onValidityChanged,
     required this.isMobile,
+    required this.initialPtw,
+    required this.initialAbove3m,
   });
 
   @override
@@ -17,12 +21,32 @@ class WAHPermitWidget extends StatefulWidget {
 }
 
 class _WAHPermitWidgetState extends State<WAHPermitWidget> {
-  bool? _above3m = false;
-  final _ptwCtrl = TextEditingController();
-  
+  late bool _above3m;
+  late final TextEditingController _ptwCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the states from parent variables when opened
+    _above3m = widget.initialAbove3m;
+    _ptwCtrl = TextEditingController(text: widget.initialPtw);
+  }
+
+  @override
+  void didUpdateWidget(covariant WAHPermitWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialPtw != widget.initialPtw) {
+      _ptwCtrl.text = widget.initialPtw;
+    }
+    if (oldWidget.initialAbove3m != widget.initialAbove3m) {
+      setState(() {
+        _above3m = widget.initialAbove3m;
+      });
+    }
+  }
 
   void _notifyParent() {
-    widget.onValidityChanged(_above3m ?? false, _ptwCtrl.text.trim());
+    widget.onValidityChanged(_above3m, _ptwCtrl.text.trim());
   }
 
   @override
@@ -70,7 +94,7 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
         if (_above3m == true) ...[
           const SizedBox(height: AppPadding.medium),
           AppTextfield(
-            label: "Enter Permit To Work Number (Required)", 
+            label: "Enter Permit To Work Number (Required)",
             hint: "Enter PTW number",
             controller: _ptwCtrl,
             onChanged: (value) => _notifyParent(),
@@ -94,7 +118,9 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
         height: AppPadding.extraLarge,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? AppColors.primaryBlue : AppColors.borderGrey.withAlpha(95),
+          color: selected
+              ? AppColors.primaryBlue
+              : AppColors.borderGrey.withAlpha(95),
           borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         ),
         child: Text(

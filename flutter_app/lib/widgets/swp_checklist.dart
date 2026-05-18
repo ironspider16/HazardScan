@@ -3,6 +3,8 @@ import 'package:kkhazardscan/Design/style_constant.dart';
 
 class SWPChecklistWidget extends StatefulWidget {
   final List<String> items;
+  final List<String> initialCheckedItems;
+  final Function(List<String> updatedCheckedList) onChecklistChanged;
   final Function(bool) onAllChecked;
   final bool isMobile;
 
@@ -11,6 +13,8 @@ class SWPChecklistWidget extends StatefulWidget {
     required this.items,
     required this.onAllChecked,
     required this.isMobile,
+    required this.initialCheckedItems,
+    required this.onChecklistChanged,
   });
 
   @override
@@ -22,22 +26,28 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
 
   @override
   void initState() {
-    //Initialize unchecked for list items
     super.initState();
-    _initCheckList();
-    _checklistState = {for (var item in widget.items) item: false};
+    _checklistState = {
+      for (var item in widget.items)
+        item: widget.initialCheckedItems.contains(item),
+    };
+
+    _notifyParentOfCompletion(safely: true);
   }
 
   @override
   void didUpdateWidget(covariant SWPChecklistWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.items != widget.items) {
-      _initCheckList();
+    if (oldWidget.items != widget.items ||
+        oldWidget.initialCheckedItems != widget.initialCheckedItems) {
+      setState(() {
+        _checklistState = {
+          for (var item in widget.items)
+            item: widget.initialCheckedItems.contains(item),
+        };
+      });
+      _notifyParentOfCompletion(safely: true);
     }
-  }
-
-  void _initCheckList() {
-    _checklistState = {for (var item in widget.items) item: false};
   }
 
   void _updateCheck(String item, bool? value) {
@@ -45,8 +55,26 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
       _checklistState[item] = value ?? false;
     });
 
+    List<String> currentlyChecked = _checklistState.entries
+        .where((entry) => entry.value == true)
+        .map((entry) => entry.key)
+        .toList();
+
+    widget.onChecklistChanged(currentlyChecked);
+    _notifyParentOfCompletion(safely: false);
+  }
+
+  void _notifyParentOfCompletion({required bool safely}) {
+    if (widget.items.isEmpty) return;
     bool allDone = _checklistState.values.every((checked) => checked);
-    widget.onAllChecked(allDone);
+
+    if (safely) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onAllChecked(allDone);
+      });
+    } else {
+      widget.onAllChecked(allDone);
+    }
   }
 
   @override
@@ -64,11 +92,8 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
         const SizedBox(height: AppPadding.tight),
         ...widget.items.map((item) {
           return CheckboxListTile(
-            title: Text(
-              item,
-              style: AppTypography.body.copyWith(fontSize: 14),
-            ),
-            value: _checklistState[item],
+            title: Text(item, style: AppTypography.body.copyWith(fontSize: 14)),
+            value: _checklistState[item] ?? false,
             onChanged: (value) => _updateCheck(item, value),
             controlAffinity: ListTileControlAffinity.leading,
             activeColor: AppColors.primaryBlue,

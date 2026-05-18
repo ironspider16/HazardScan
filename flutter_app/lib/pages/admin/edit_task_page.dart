@@ -215,12 +215,14 @@ class _EditTaskPageState extends State<EditTaskPage> {
               selectedTechnicianIds.isEmpty
                   ? 'Select technicians'
                   : '${selectedTechnicianIds.length} selected',
-              style: AppTypography.body.copyWith(color: selectedTechnicianIds.isEmpty
+              style: AppTypography.body.copyWith(
+                color: selectedTechnicianIds.isEmpty
                     ? AppColors.textSecondary
-                    : AppColors.textMain,)
+                    : AppColors.textMain,
               ),
             ),
           ),
+        ),
 
         // Optional: Show "Chips" for selected names below the button
         if (selectedTechnicianIds.isNotEmpty) ...[
@@ -327,14 +329,12 @@ class _EditTaskPageState extends State<EditTaskPage> {
         ),
         const SizedBox(height: AppPadding.tight),
         DropdownButtonFormField<String>(
-          initialValue:
-              selectedTaskType, 
+          initialValue: selectedTaskType,
           hint: Text(
             'Select type',
             style: AppTypography.body.copyWith(color: AppColors.textSecondary),
           ),
 
-  
           style: AppTypography.body.copyWith(color: AppColors.textMain),
 
           decoration: const InputDecoration(
@@ -344,10 +344,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
           items: taskTypes.map((type) {
             return DropdownMenuItem(
               value: type,
-              child: Text(
-                type,
-                style: AppTypography.body,
-              ),
+              child: Text(type, style: AppTypography.body),
             );
           }).toList(),
 
@@ -384,7 +381,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
             ),
             child: Text(
               selectedSWPIds.isEmpty
-                  ? 'Select SWP templates' 
+                  ? 'Select SWP templates'
                   : '${selectedSWPIds.length} procedures selected',
               style: AppTypography.body.copyWith(
                 color: selectedSWPIds.isEmpty
@@ -437,7 +434,10 @@ class _EditTaskPageState extends State<EditTaskPage> {
           builder: (context, setDialogState) {
             return AlertDialog(
               backgroundColor: AppColors.backgroundWhite,
-              title: const Text("Select SWP Templates", style: AppTypography.Blacksubheading,),
+              title: const Text(
+                "Select SWP Templates",
+                style: AppTypography.Blacksubheading,
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: ListView.builder(

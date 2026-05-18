@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:kkhazardscan/pages/technician_swp_page.dart';
 import '../../widgets/swp_category_card.dart';
 import '../../widgets/Menu_button.dart';
 import '../../Design/style_constant.dart';
@@ -171,6 +170,15 @@ class _TechnicianSelectSwpState extends State<TechnicianSelectSwp> {
   }
 
   void _handleContinue() {
-    debugPrint(selectedswpTemplates.toString());
+    if (selectedswpTemplates.isEmpty) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TechnicianSWPPage(
+          selectedCategories: selectedswpTemplates.toList(),
+        ),
+      ),
+    );
   }
 }
