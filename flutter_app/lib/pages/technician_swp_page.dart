@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/main_menu.dart';
+import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
@@ -67,14 +68,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           } else {
             selectedSubCategories[category] = null;
           }
-          debugPrint("matched list: " + matchedList.toString());
         }
         isLoading = false;
-        debugPrint("template list" + templateList.toString());
-        debugPrint("all templates" + allTemplates.toString());
-        debugPrint(
-          "selected sub categories; " + selectedSubCategories.toString(),
-        );
       });
     } catch (e) {
       setState(() => isLoading = false);
@@ -89,29 +84,220 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     }
   }
 
-  Future<void> submitReport() async {
-    // Collect only the active template IDs selected in the dropdown fields
-    final activeSubCategoryIds = selectedSubCategories.values
-        .where((id) => id != null)
-        .cast<int>()
-        .toList();
+  void _showAcknowledgementDialog() {
+    final formKey = GlobalKey<FormState>();
+    final nameCtrl = TextEditingController();
+    final desigCtrl = TextEditingController();
+    final deptCtrl = TextEditingController();
+    bool dialogSubmitting = false;
 
-    // Verify every active selected checklist has returned true inside our status map
-    bool allChecklistsPassed = activeSubCategoryIds.isNotEmpty && 
-        activeSubCategoryIds.every((id) => _checklistCompletionStates[id] == true);
+    const String ackMessage = 
+      "The Safe Work Procedures have been communicated and are understood by all "
+      "relevant personnel. Inspections have been conducted to verify that work is "
+      "carried out in accordance with the established procedures, ensuring a safe "
+      "and compliant working environment.";
 
-    if (!allChecklistsPassed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Cannot submit. Please complete all items across your active checklists first."),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return; // Stop execution
-    }
 
+
+    showDialog(
+      context: context,
+      barrierDismissible:
+          false, // Prevents closing accidentally by clicking outside
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.backgroundWhite,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+              ),
+              title: Text(
+                "Safety Acknowledgement",
+                style: AppTypography.Bluesubheading,
+              ),
+              content: dialogSubmitting
+                  ? const SizedBox(
+                      height: 200,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                    )
+                  : SizedBox(
+                      width: 400, // Fixed layout sizing bounds
+                      child: Form(
+                        key: formKey,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppTextfield(
+                                label: "Name",
+                                controller: nameCtrl,
+                                hint: "Enter your full name",
+                              ),
+                              const SizedBox(height: AppPadding.tight),
+                              AppTextfield(
+                                label: "Designation",
+                                controller: desigCtrl,
+                                hint: "e.g. Senior Technician",
+                              ),
+                              const SizedBox(height: AppPadding.tight),
+                              AppTextfield(
+                                label: "Department",
+                                controller: deptCtrl,
+                                hint: "e.g. Facilities Management",
+                              ),
+                              const SizedBox(height: AppPadding.tight),
+                              Text(
+                                "Declaration Statement",
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: AppPadding.tight),
+                              Container(
+                                padding: const EdgeInsets.all(AppPadding.tight),
+                                decoration: BoxDecoration(
+                                  color: AppColors.borderGrey.withAlpha(10),
+                                  borderRadius: BorderRadius.circular(
+                                    AppDimensions.radiusSmall,
+                                  ),
+                                  border: Border.all(
+                                    color: AppColors.borderGrey.withAlpha(75),
+                                  ),
+                                ),
+                                child: Text(
+                                  ackMessage,
+                                  style: AppTypography.faintbody.copyWith(
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+              actions: dialogSubmitting
+                  ? []
+                  : [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8.0,
+                          vertical: 4.0,
+                        ),
+                        child: Row(
+                          children: [
+                            // 1. Cancel Button
+                            Flexible(
+                              flex:1,
+                              child: MenuButton(
+                                label: "Cancel",
+                                isMini: true,
+                                onTap: () => Navigator.pop(dialogContext),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+
+                            // 2. Your Custom Submit Button
+                            Flexible(
+                              flex: 2,
+                              child: MenuButton(
+                                label: "Submit Report",
+                                isPrimary: true,
+                                isMini: true,
+                                icon: Icons.assignment_turned_in_rounded,
+                                onTap: () async {
+                                  // Check if all fields are valid via Form state
+                                  if (!(formKey.currentState?.validate() ??
+                                      false))
+                                    return;
+
+                                  setDialogState(() => dialogSubmitting = true);
+
+                                  // Executes the database storage transaction via collected parameters
+                                  bool success = await _executeSubmitReport(
+                                    name: nameCtrl.text.trim(),
+                                    designation: desigCtrl.text.trim(),
+                                    department: deptCtrl.text.trim(),
+                                  );
+
+                                  if (success && mounted) {
+                                    Navigator.pop(
+                                      dialogContext,
+                                    ); // Closes active popup framework
+
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "All safety checks successfully submitted!",
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+
+                                    final anonymousTechnician = AppUser(
+                                      id: 0,
+                                      email: "technician@example.com",
+                                      password: '',
+                                      role: UserRole.user,
+                                    );
+
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            MainMenu(user: anonymousTechnician),
+                                      ),
+                                      (route) => false,
+                                    );
+                                  } else {
+                                    setDialogState(
+                                      () => dialogSubmitting = false,
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  /// Handles internal background processing and execution logic for Supabase injection queries
+  Future<bool> _executeSubmitReport({
+    required String name,
+    required String designation,
+    required String department,
+  }) async {
     try {
-      setState(() => isLoading = true);
+      if (name.trim() == "" ||
+          designation.trim() == "" ||
+          department.trim() == "") {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Fill in all fields"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+
+      final activeSubCategoryIds = selectedSubCategories.values
+          .where((id) => id != null)
+          .cast<int>()
+          .toList();
 
       List<Map<String, dynamic>> recordsToInsert = [];
       for (int templateId in activeSubCategoryIds) {
@@ -122,43 +308,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'swp_template_id': templateId,
           'wah_permit_numbers': ptwNumber.isNotEmpty ? ptwNumber : null,
           'Details': detailsText.isNotEmpty ? detailsText : null,
+          // Appends acknowledgment fields collected during modal input screen step
+          'technician_name': name,
+          'designation': designation,
+          'department': department,
         });
       }
 
       await supabase.from('safety_reports').insert(recordsToInsert);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("All safety checks successfully submitted!"),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        final anonymousTechnician = AppUser(
-          id: 0,
-          email: "technician@example.com",
-          password: '',
-          role: UserRole.user,
-        );
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MainMenu(user: anonymousTechnician),
-          ),
-        );
-      }
+      return true;
     } catch (e) {
-      setState(() => isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Submission failed: ${e.toString().replaceAll('Exception: ', '')}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      return false;
     }
   }
 
@@ -175,8 +335,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         .toList();
 
     // Evaluates to true only if active components are selected and every single one is 100% completed
-    final bool canSubmitReport = activeSubCategoryIds.isNotEmpty &&
-        activeSubCategoryIds.every((id) => _checklistCompletionStates[id] == true);
+    final bool canSubmitReport =
+        activeSubCategoryIds.isNotEmpty &&
+        activeSubCategoryIds.every(
+          (id) => _checklistCompletionStates[id] == true,
+        );
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -270,7 +433,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                         newValue,
                                         () => "",
                                       );
-                                      _checklistCompletionStates.putIfAbsent(newValue, () => false);
+                                      _checklistCompletionStates.putIfAbsent(
+                                        newValue,
+                                        () => false,
+                                      );
                                     }
                                   });
                                 },
@@ -315,9 +481,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                   },
                                   onAllChecked: (isCleared) {
                                     setState(() {
-                                      _checklistCompletionStates[currentSelectedId] = isCleared;
-                                    }
-                                    );
+                                      _checklistCompletionStates[currentSelectedId] =
+                                          isCleared;
+                                    });
                                   },
                                 ),
                               )
@@ -351,10 +517,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                       SizedBox(
                         width: fieldWidth,
                         child: MenuButton(
-                          label: "Submit Safety Report",
-                          onTap: canSubmitReport ? submitReport : () => {},
+                          label: "Continue",
+                          onTap: canSubmitReport
+                              ? _showAcknowledgementDialog
+                              : () => {},
                           isPrimary: true,
-                          icon: Icons.check_circle_outline,
+                          icon: Icons.arrow_forward_rounded,
                           isDisabled: !canSubmitReport,
                         ),
                       ),
