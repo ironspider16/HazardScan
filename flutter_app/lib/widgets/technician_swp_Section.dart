@@ -20,6 +20,7 @@ class TechnicianSwpSection extends StatefulWidget {
   final Function(bool isAbove3m, String ptw) onPtwChanged;
   final Function(List<String> checkedItems) onChecklistChanged;
   final Function(dynamic file) onImageChanged;
+  final Function(bool isCleared) onAllChecked;
 
   const TechnicianSwpSection({
     super.key,
@@ -34,6 +35,7 @@ class TechnicianSwpSection extends StatefulWidget {
     required this.initialAbove3m,
     required this.initialDetails,
     required this.onDetailsChanged,
+    required this.onAllChecked,
   });
 
   @override
@@ -90,46 +92,54 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
 
     return Padding(
       padding: const EdgeInsets.all(AppPadding.medium),
-      child: Column(
-        children: [
-          if (widget.categoryName.toLowerCase().contains("work at height"))
-            WAHPermitWidget(
-              isMobile: true,
-              initialPtw: widget.initialPtw,
-              initialAbove3m: widget.initialAbove3m,
-              onValidityChanged: (isAbove3m, ptwNum) {
-                setState(() {
-                  isPtwCleared = !isAbove3m || ptwNum.isNotEmpty;
-                });
-                widget.onPtwChanged(isAbove3m, ptwNum);
-              },
-            ),
-          SWPChecklistWidget(
-            isMobile: true,
-            items: items,
-            initialCheckedItems: widget.initialCheckedItems,
-            onChecklistChanged: (updatedCheckedList) {
-              widget.onChecklistChanged(updatedCheckedList);
-            },
-            onAllChecked: (status) => setState(() => isSafetyCleared = status),
-          ),
-          AppImageUpload(
-            label: "Site Photos",
-            onImageSelected: (file) {
-              widget.onImageChanged(file);
-            },
-          ),
-          const SizedBox(height: AppPadding.medium),
-          AppTextfield(
-            label: "Details",
-            hint: "Enter details here / Take photo to output AI details",
-            controller: _detailsCtrl,
-            Maxlines: 3,
-            onChanged: (value) {
-              widget.onDetailsChanged(value.trim());
-            },
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isMobile = constraints.maxWidth < 420;
+          return Column(
+            children: [
+              if (widget.categoryName.toLowerCase().contains("work at height"))
+                WAHPermitWidget(
+                  isMobile: true,
+                  initialPtw: widget.initialPtw,
+                  initialAbove3m: widget.initialAbove3m,
+                  onValidityChanged: (isAbove3m, ptwNum) {
+                    setState(() {
+                      isPtwCleared = !isAbove3m || ptwNum.isNotEmpty;
+                    });
+                    widget.onPtwChanged(isAbove3m, ptwNum);
+                  },
+                ),
+              SWPChecklistWidget(
+                isMobile: isMobile,
+                items: items,
+                initialCheckedItems: widget.initialCheckedItems,
+                onChecklistChanged: (updatedCheckedList) {
+                  widget.onChecklistChanged(updatedCheckedList);
+                },
+                onAllChecked: (status) {
+                  setState(() => isSafetyCleared = status);
+                  widget.onAllChecked(status);
+                },
+              ),
+              AppImageUpload(
+                label: "Site Photos",
+                onImageSelected: (file) {
+                  widget.onImageChanged(file);
+                },
+              ),
+              const SizedBox(height: AppPadding.medium),
+              AppTextfield(
+                label: "Details",
+                hint: "Enter details here / Take photo to output AI details",
+                controller: _detailsCtrl,
+                Maxlines: 3,
+                onChanged: (value) {
+                  widget.onDetailsChanged(value.trim());
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

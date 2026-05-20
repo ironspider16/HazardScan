@@ -79,9 +79,11 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
 
   @override
   Widget build(BuildContext context) {
+    
     if (widget.items.isEmpty) {
       return const Text("No items to display");
     }
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -92,7 +94,7 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
         const SizedBox(height: AppPadding.tight),
         ...widget.items.map((item) {
           return CheckboxListTile(
-            title: Text(item, style: AppTypography.body.copyWith(fontSize: 14)),
+            title: Text(item, style: AppTypography.body.copyWith(fontSize: widget.isMobile? 11 : null)),
             value: _checklistState[item] ?? false,
             onChanged: (value) => _updateCheck(item, value),
             controlAffinity: ListTileControlAffinity.leading,

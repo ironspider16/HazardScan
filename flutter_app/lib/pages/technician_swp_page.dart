@@ -34,6 +34,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, List<String>> _savedChecklists = {};
   final Map<int, dynamic> _savedImages = {};
   final Map<int, String> _savedDetails = {};
+  final Map<int, bool> _checklistCompletionStates = {};
 
   @override
   void initState() {
@@ -89,31 +90,37 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
 
   Future<void> submitReport() async {
+    // Collect only the active template IDs selected in the dropdown fields
+    final activeSubCategoryIds = selectedSubCategories.values
+        .where((id) => id != null)
+        .cast<int>()
+        .toList();
+
+    // Verify every active selected checklist has returned true inside our status map
+    bool allChecklistsPassed = activeSubCategoryIds.isNotEmpty && 
+        activeSubCategoryIds.every((id) => _checklistCompletionStates[id] == true);
+
+    if (!allChecklistsPassed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Cannot submit. Please complete all items across your active checklists first."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return; // Stop execution
+    }
+
     try {
       setState(() => isLoading = true);
 
-      final activeSubCategoryIds = selectedSubCategories.values
-          .where((id) => id != null)
-          .cast<int>()
-          .toList();
-
-      if (activeSubCategoryIds.isEmpty) {
-        throw Exception(
-          "Please select at least one activity type before submitting.",
-        );
-      }
-
       List<Map<String, dynamic>> recordsToInsert = [];
-
       for (int templateId in activeSubCategoryIds) {
         String ptwNumber = _savedPtwNumbers[templateId] ?? "";
         String detailsText = _savedDetails[templateId] ?? "";
 
         recordsToInsert.add({
           'swp_template_id': templateId,
-
           'wah_permit_numbers': ptwNumber.isNotEmpty ? ptwNumber : null,
-
           'Details': detailsText.isNotEmpty ? detailsText : null,
         });
       }
@@ -147,9 +154,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              "Submission failed: ${e.toString().replaceAll('Exception: ', '')}",
-            ),
+            content: Text("Submission failed: ${e.toString().replaceAll('Exception: ', '')}"),
             backgroundColor: Colors.red,
           ),
         );
@@ -163,6 +168,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       300.0,
       450.0,
     );
+
+    final activeSubCategoryIds = selectedSubCategories.values
+        .where((id) => id != null)
+        .cast<int>()
+        .toList();
+
+    // Evaluates to true only if active components are selected and every single one is 100% completed
+    final bool canSubmitReport = activeSubCategoryIds.isNotEmpty &&
+        activeSubCategoryIds.every((id) => _checklistCompletionStates[id] == true);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -218,7 +232,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               ),
                               child: DropdownButtonFormField<int>(
                                 initialValue: currentSelectedId,
-                                decoration: InputDecoration(
+                                isExpanded: true,
+                                decoration: const InputDecoration(
                                   labelText: "Select Specific Activity Type",
                                   filled: true,
                                 ),
@@ -229,6 +244,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                       t['title']?.toString().trim() ??
                                           'Untitled',
                                       style: AppTypography.body,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                     ),
                                   );
                                 }).toList(),
@@ -253,6 +270,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                         newValue,
                                         () => "",
                                       );
+                                      _checklistCompletionStates.putIfAbsent(newValue, () => false);
                                     }
                                   });
                                 },
@@ -295,6 +313,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     _savedDetails[currentSelectedId] =
                                         textValue;
                                   },
+                                  onAllChecked: (isCleared) {
+                                    setState(() {
+                                      _checklistCompletionStates[currentSelectedId] = isCleared;
+                                    }
+                                    );
+                                  },
                                 ),
                               )
                             else
@@ -328,9 +352,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         width: fieldWidth,
                         child: MenuButton(
                           label: "Submit Safety Report",
-                          onTap: submitReport,
+                          onTap: canSubmitReport ? submitReport : () => {},
                           isPrimary: true,
                           icon: Icons.check_circle_outline,
+                          isDisabled: !canSubmitReport,
                         ),
                       ),
                     ],
