@@ -47,7 +47,8 @@ from ultralytics import YOLO
 app = Flask(__name__)
 CORS(app)
 
-model = YOLO("models/my_model.pt")
+# model = YOLO("models/my_model.pt")
+model = YOLO("models/best.pt")
 
 @app.route("/")
 def home():
@@ -55,19 +56,38 @@ def home():
 
 @app.route("/detect", methods=["POST"])
 def detect():
-    image = request.files["image"]
-    results = model(image.read())
+    if "image" not in request.files:
+      return jsonify({"error": "No image uploaded"}), 400
+
+    file = request.files["image"]
+
+    # img = Image.open(file.stream)
+    # results = model(img)
+    
+    img = Image.open(file.stream).convert("RGB")
+    results = model.predict(
+      img,
+      imgsz=320,
+      device="cpu",
+      verbose=False,
+    )
 
     detections = []
 
-    for r in results:
-        for box in r.boxes:
-            cls = int(box.cls[0])
-            conf = float(box.conf[0])
-            detections.append({
-                "class": model.names[cls],
-                "confidence": conf
-            })
+    for box in results[0].boxes:
+        cls = int(box.cls[0])
+        conf = float(box.conf[0])
+
+        x1, y1, x2, y2 = box.xyxy[0]
+
+        detections.append({
+            "label": model.names[cls],
+            "confidence": conf,
+            "x1": float(x1),
+            "y1": float(y1),
+            "x2": float(x2),
+            "y2": float(y2),
+        })
 
     return jsonify(detections)
 
