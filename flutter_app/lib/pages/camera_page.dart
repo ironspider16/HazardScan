@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
 import '../services/gemini_service.dart';
 import 'result_screen.dart';
+import 'package:http/http.dart' as http;
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -69,6 +70,23 @@ class _CameraPageState extends State<CameraPage> {
         ).showSnackBar(SnackBar(content: Text('Analysis failed: $e')));
       }
     }
+  }
+
+  // YOLO Spreader Detection
+  Future<void> uploadImage(String imagePath) async {
+    var request = http.MultipartRequest(
+      'POST',
+
+      Uri.parse("http://localhost:5000/detect"),
+    );
+
+    request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+
+    var response = await request.send();
+
+    var responseString = await response.stream.bytesToString();
+
+    print(responseString);
   }
 
   @override
