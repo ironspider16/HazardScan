@@ -44,14 +44,16 @@ serve(async (req: Request) => {
 Analyze this image and evaluate it against the specific Non-Compliance (NC) list below, as well as general safety hazards.
 
 HOSPITAL SWP CONSTRAINTS TO ENFORCE:
-1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. 
+1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. You MUST CHECK if the ladder's spreader bars are locked, if unable to confirm, mark as "N/A" or "PARTIALLY COMPLIANT".
 2. BUDDY SYSTEM & PERSONNEL: Check for lack of a buddy system on ladders, missing attendants/watchmen for confined spaces or lifters, and unauthorized entry into cordoned zones.
 3. PPE (Personal Protective Equipment): Look for missing safety helmets, safety shoes and gloves. Boots must be rubber if the surface is wet. 
 4. AREA & SURFACE HAZARDS: Check for uncordoned work/refilling areas, slippery or wet surfaces, obstructed transport routes/exits, debris on platforms, confined spaces such as vents and lack of ventilation. Confined spaces are to be marked as either "PARTIALLY COMPLIANT" or "SAFE". You may include here any other general hazards you see as well. This category is a catch-all for any safety issues not covered by the first three categories.
 
 OUTPUT INSTRUCTIONS:
 - Evaluate the 4 target safety categories and map your assessment data into the requested JSON schema fields (compliance, description, reasoning, and advice).
-- For compliance fields, choose exactly one value from this list: [DANGEROUS, PARTIALLY COMPLIANT, COMPLIANT, SAFE, N/A].`;
+- For compliance fields, choose exactly one value from this list: [DANGEROUS, PARTIALLY COMPLIANT, COMPLIANT, SAFE, N/A].
+- If the image is too ambiguous to make a clear judgment on a category, mark it as "N/A" or "PARTIALLY COMPLIANT" and explain in the reasoning field what information is missing or unclear. Do not invent details that are not visible in the image, but you can make logical inferences based on what is visible (e.g., if you see a ladder but cannot confirm if the spreader bars are locked, you can infer potential risk and mark as "PARTIALLY COMPLIANT" with reasoning).
+`;
 
     for (const key of apiKeys) {
       try {
