@@ -1,6 +1,6 @@
+// index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-// FIXED IMPORT BELOW
-import { GoogleGenerativeAI } from "npm:@google/generative-ai@0.11.0"
+import { GoogleGenerativeAI } from "npm:@google/generative-ai"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,85 +11,145 @@ serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
-172
+
+  const buildDiagnosticJson = (title: string, details: string) => {
+    return JSON.stringify({
+      overallStatus: "N/A",
+      ladderHeight: { 
+        compliance: "N/A", 
+        description: `Diagnostic: ${title}`, 
+        reasoning: details, 
+        advice: "Check this text payload to see exactly what Google returned to your edge function." 
+      },
+      ppe: { compliance: "N/A", description: "N/A", reasoning: "N/A", advice: "N/A" },
+      buddySystem: { compliance: "N/A", description: "N/A", reasoning: "N/A", advice: "N/A" },
+      areaHazards: { compliance: "N/A", description: "N/A", reasoning: "N/A", advice: "N/A" }
+    });
+  };
+
   try {
     const { imageBase64 } = await req.json()
     const keysString = Deno.env.get('GEMINI_API_KEY') || ""
     const apiKeys = keysString.split(',').map(k => k.trim())
 
-    if (apiKeys.length === 0) throw new Error("No API keys configured.")
+    if (apiKeys.length === 0) {
+      return new Response(buildDiagnosticJson("Setup Error", "No API keys configured in Supabase environment variables."), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
-const prompt = `You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP). Analyze this image and evaluate it against the specific Non-Compliance (NC) list below, as well as general safety hazards.
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+
+    const prompt = `You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP). 
+Analyze this image and evaluate it against the specific Non-Compliance (NC) list below, as well as general safety hazards.
 
 HOSPITAL SWP CONSTRAINTS TO ENFORCE:
-1. LADDERS & HEIGHT: Check for damaged parts, unlocked spreaders, standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. 
+1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. 
 2. BUDDY SYSTEM & PERSONNEL: Check for lack of a buddy system on ladders, missing attendants/watchmen for confined spaces or lifters, and unauthorized entry into cordoned zones.
-3. PPE (Personal Protective Equipment): Look for missing safety helmets, safety shoes and gloves. 
-4. AREA & SURFACE HAZARDS: Check for uncordoned work/refilling areas, slippery or wet surfaces, obstructed transport routes/exits, debris on platforms, and lack of ventilation.
+3. PPE (Personal Protective Equipment): Look for missing safety helmets, safety shoes and gloves. Boots must be rubber if the surface is wet. 
+4. AREA & SURFACE HAZARDS: Check for uncordoned work/refilling areas, slippery or wet surfaces, obstructed transport routes/exits, debris on platforms, confined spaces such as vents and lack of ventilation. Confined spaces are to be marked as either "PARTIALLY COMPLIANT" or "SAFE". You may include here any other general hazards you see as well. This category is a catch-all for any safety issues not covered by the first three categories.
 
-OUTPUT FORMAT:
-Evaluate the following four categories. For each, assign a Label from this exact list: [DANGEROUS, PARTIALLY COMPLIANT, COMPLIANT, SAFE, N/A]. Then assign an overall compliance status based on the most severe category detected. For example, if any category is "DANGEROUS", the overall status is "DANGEROUS". If all categories are "COMPLIANT" or "SAFE", the overall status is "COMPLIANT". If a category cannot be evaluated due to lack of information, label it as "N/A" and do not let it affect the overall compliance status.
-* Note: "COMPLIANT" means inherent risks exist (e.g., working at heights) but proper safety measures are taken. "N/A" means the category is not present in the image.
-
-If a critical feature is cut out of frame or covered, state that it "cannot be confirmed" and default to PARTIALLY COMPLIANT or N/A. Do not invent details.
-
-Return EXACTLY this format and nothing else:
-
-DETECTION: [Overall Compliance Status: DANGEROUS, PARTIALLY COMPLIANT, COMPLIANT, SAFE, N/A]
-
-ANALYSIS:
-- [Ladder/Height] Compliance: [Insert Label]
-  Description: [Detail what is observed. e.g., "Worker is standing on the top rung."]
-  Reasoning: [Explain why the observed condition led to the assigned label. e.g., "Standing on the top rung is a violation of safe ladder use because it eliminates stability and increases fall risk."]
-  Advice: [Provide specific corrective action, e.g., "Step down to the second rung."]
-
-- [PPE] Compliance: [Insert Label]
-  Description: [Detail what is observed. e.g., "One worker has a helmet, the other cannot be confirmed."]
-  Reasoning: [Explain why the observed condition led to the assigned label. e.g., "Missing safety helmet is a violation of PPE requirements."]
-  Advice: [Provide specific corrective action.]
-
-- [Buddy System] Compliance: [Insert Label]
-  Description: [Detail what is observed. e.g., "Two people are detected."]
-  Reasoning: [Explain why the observed condition led to the assigned label. e.g., "Lack of a buddy system is a violation of safety protocols."]
-  Advice: [Provide specific corrective action.]
-
-- [Area/Surface Hazards] Compliance: [Insert Label]
-  Description: [Detail what is observed. e.g., "Debris is scattered around the base."]
-  Reasoning: [Explain why the observed condition led to the assigned label. e.g., "Scattered debris creates a tripping hazard."]
-  Advice: [Provide specific corrective action.]
-`;
+OUTPUT INSTRUCTIONS:
+- Evaluate the 4 target safety categories and map your assessment data into the requested JSON schema fields (compliance, description, reasoning, and advice).
+- For compliance fields, choose exactly one value from this list: [DANGEROUS, PARTIALLY COMPLIANT, COMPLIANT, SAFE, N/A].`;
 
     for (const key of apiKeys) {
       try {
         const genAI = new GoogleGenerativeAI(key)
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" })
+        
+        const model = genAI.getGenerativeModel({ 
+          model: "gemini-3.5-flash", 
+          safetySettings: [ //Note: These safety settings are set to BLOCK_NONE to allow the model to provide feedback on all categories, even if it identifies harmful content. Adjust as needed based on application requirements.
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
+          ],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                overallStatus: { type: "STRING" },
+                ladderHeight: { 
+                  type: "OBJECT", 
+                  properties: { compliance: { type: "STRING" }, description: { type: "STRING" }, reasoning: { type: "STRING" }, advice: { type: "STRING" } },
+                  required: ["compliance", "description", "reasoning", "advice"]
+                },
+                ppe: { 
+                  type: "OBJECT", 
+                  properties: { compliance: { type: "STRING" }, description: { type: "STRING" }, reasoning: { type: "STRING" }, advice: { type: "STRING" } },
+                  required: ["compliance", "description", "reasoning", "advice"]
+                },
+                buddySystem: { 
+                  type: "OBJECT", 
+                  properties: { compliance: { type: "STRING" }, description: { type: "STRING" }, reasoning: { type: "STRING" }, advice: { type: "STRING" } },
+                  required: ["compliance", "description", "reasoning", "advice"]
+                },
+                areaHazards: { 
+                  type: "OBJECT", 
+                  properties: { compliance: { type: "STRING" }, description: { type: "STRING" }, reasoning: { type: "STRING" }, advice: { type: "STRING" } },
+                  required: ["compliance", "description", "reasoning", "advice"]
+                }
+              },
+              required: ["overallStatus", "ladderHeight", "ppe", "buddySystem", "areaHazards"]
+            }
+          }
+        } as any)
 
         const result = await model.generateContent([
           prompt,
-          { inlineData: { data: imageBase64, mimeType: "image/jpeg" } }
-        ])
+          { inlineData: { data: cleanBase64, mimeType: 'image/jpeg' } }
+        ]);
 
-        const textResponse = result.response.text()
+        if (!result.response || !result.response.candidates || result.response.candidates.length === 0) {
+          const rawResponseText = JSON.stringify(result);
+          return new Response(buildDiagnosticJson("Empty Candidates Object", `API responded but candidates array is empty. Full response: ${rawResponseText}`), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
 
-        return new Response(JSON.stringify({ result: textResponse }), {
+        let textResponse = result.response.text();
+
+        // Guard against empty text response from SDK
+        if (!textResponse || textResponse.trim() === "") {
+          return new Response(buildDiagnosticJson("Empty Text Response", "result.response.text() returned empty. Candidates existed but text extraction failed. SDK may not support responseMimeType on this model version."), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200
+          });
+        }
+
+        textResponse = textResponse.replace(/```json/g, "").replace(/```/g, "").trim();
+
+        console.log(`Response length: ${textResponse.length}`)
+        console.log(`Response preview: ${textResponse.substring(0, 200)}`)
+
+        return new Response(textResponse, {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
         })
 
       } catch (err: any) {
         if (err.message?.includes('429') || err.message?.includes('quota')) {
-          console.log("Key exhausted, trying next one...")
           continue 
         }
-        throw err 
+        return new Response(buildDiagnosticJson("SDK Execution Error", err.message || "Unknown internal SDK error."), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
       }
     }
 
-    throw new Error("All API keys are exhausted.")
+    return new Response(buildDiagnosticJson("Exhaustion Error", "All configured API keys returned quota failures."), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200
+    });
 
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(buildDiagnosticJson("Global Runtime Crash", error.message || "Request parsing failed."), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 400,
+      status: 200,
     })
   }
 })
