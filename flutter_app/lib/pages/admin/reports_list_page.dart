@@ -15,42 +15,65 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
   List<Map<String, dynamic>> reports = []; // Renamed from tasks
   bool isLoading = true;
+  DateTimeRange? selectedRange;
+  String? selectedCategory;
+  String? selectedTitle;
+
+  final List<String> categories = [
+    'Work At Height',
+    'Confined Space Work',
+    'Chemical Hazard',
+  ];
+  final List<String> titles = [
+    'Ladder',
+    'Personnel Lifter',
+    'Scaffold',
+    'Liquid Nitrogen (LN2) Transportation',
+    'Liquid Nitrogen (LN2) Refilling',
+    'General',
+  ];
 
   @override
   void initState() {
     super.initState();
-    loadReports(); // Changed method name
+    loadReports();
   }
 
   Future<void> loadReports() async {
     setState(() => isLoading = true);
 
     try {
-      // Assuming your table is named 'safety_reports'
-      final response = await supabase
+      String selectQuery = '*, swp_templates!inner(id, category, title)';
+      PostgrestFilterBuilder query = supabase
           .from('safety_reports')
-          .select('''*,
-          swp_templates (
-           id,
-           category,
-           title
-          )
-          ''')
-          .order('submitted_at', ascending: false);
+          .select(selectQuery);
 
+      if (selectedRange != null) {
+        query = query
+            .gte('submitted_at', selectedRange!.start.toIso8601String())
+            .lte(
+              'submitted_at',
+              selectedRange!.end.add(const Duration(days: 1)).toIso8601String(),
+            );
+      }
+
+      // 3. Filter by SWP Template Category
+      if (selectedCategory != null) {
+        query = query.eq('swp_templates.category', selectedCategory!);
+      }
+
+      // 4. Filter by SWP Template Title
+      if (selectedTitle != null) {
+        query = query.eq('swp_templates.title', selectedTitle!);
+      }
+
+      final response = await query.order('submitted_at', ascending: false);
       setState(() {
         reports = List<Map<String, dynamic>>.from(response);
         isLoading = false;
       });
-
-      debugPrint(reports.toString());
     } catch (e) {
       setState(() => isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading reports: $e')));
-      }
     }
   }
 
@@ -63,8 +86,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
     final String SafetyProcedure_category =
         report['swp_templates']['title'] ?? 'N/A';
     final String designation = report["designation"] ?? 'N/A';
-    final String permit_Number =
-        report['wah_permit_numbers'] ?? ""; 
+    final String permit_Number = report['wah_permit_numbers'] ?? "";
     final String location = report['location'] ?? 'No location';
 
     return Container(
@@ -83,30 +105,27 @@ class _ReportsListPageState extends State<ReportsListPage> {
             style: AppTypography.Blacksubheading,
           ),
           const SizedBox(height: AppPadding.medium),
-          _buildInfoRow(Icons.location_history_outlined, location),
+          _buildInfoRow(Icons.location_on_outlined, location),
           const SizedBox(height: AppPadding.tight),
           _buildInfoRow(Icons.person, "Designation: $designation"),
           const SizedBox(height: AppPadding.tight),
           _buildInfoRow(Icons.business_outlined, "Department: $department"),
           if ((permit_Number.trim().isNotEmpty)) ...[
             const SizedBox(height: AppPadding.tight),
-            _buildInfoRow(Icons.perm_identity, "Ptw Number: $permit_Number"),
+            _buildInfoRow(Icons.badge_outlined, "Ptw Number: $permit_Number"),
           ],
           const SizedBox(height: AppPadding.tight),
           _buildInfoRow(Icons.calendar_today, date),
           const SizedBox(height: AppPadding.tight),
           Container(
-            color: Colors.blue[50],
+            color: AppColors.primaryTint,
             child: ExpansionTile(
               title: const Text('Details', style: AppTypography.body),
               children: <Widget>[
                 Align(
-                  alignment: Alignment
-                      .centerLeft, 
+                  alignment: Alignment.centerLeft,
                   child: Padding(
-                    padding: const EdgeInsets.all(
-                      16.0,
-                    ), 
+                    padding: const EdgeInsets.all(AppPadding.medium),
                     child: Text(details, style: AppTypography.body),
                   ),
                 ),
@@ -123,15 +142,156 @@ class _ReportsListPageState extends State<ReportsListPage> {
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 16, color: AppColors.primaryBlue),
+        Icon(icon, size: AppPadding.medium, color: AppColors.primaryBlue),
         const SizedBox(width: AppPadding.tight),
         Expanded(child: Text(text, style: AppTypography.body)),
       ],
     );
   }
 
+  void _showFilterDialog() async {
+    // Temporary variables to hold choices inside the dialog setup box
+    DateTimeRange? tempRange = selectedRange;
+    String? tempCategory = selectedCategory;
+    String? tempTitle = selectedTitle;
+
+    await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text(
+                'Filter Reports',
+                style: AppTypography.Bluesubheading,
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- DATE RANGE SECTION ---
+                    Text(
+                      'Date Range',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final DateTimeRange? picked = await showDateRangePicker(
+                          context: context,
+                          initialDateRange: tempRange,
+                          firstDate: DateTime(2025),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => tempRange = picked);
+                        }
+                      },
+                      icon: const Icon(Icons.date_range),
+                      label: Text(
+                        tempRange == null
+                            ? 'Select Date Range'
+                            : '${tempRange?.start.toString().split(' ')[0]} to ${tempRange?.end.toString().split(' ')[0]}',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- CATEGORY DROPDOWN ---
+                    Text(
+                      'Category',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempCategory,
+                      hint: const Text('All Categories'),
+                      items: categories.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempCategory = newValue);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+
+                    // --- TITLE DROPDOWN ---
+                    Text(
+                      'Title',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempTitle,
+                      hint: const Text('All Titles'),
+                      items: titles.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempTitle = newValue);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                // Clear All Active Filter Values Button
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      tempRange = null;
+                      tempCategory = null;
+                      tempTitle = null;
+                    });
+                  },
+                  child: const Text(
+                    'Clear All',
+                    style: TextStyle(color: Colors.red),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // Save Dialog state back to Page state context
+                    setState(() {
+                      selectedRange = tempRange;
+                      selectedCategory = tempCategory;
+                      selectedTitle = tempTitle;
+                    });
+                    Navigator.pop(context);
+                    loadReports(); // Fetch updated items
+                  },
+                  child: const Text('Apply Filters'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isFiltering =
+        selectedRange != null ||
+        selectedCategory != null ||
+        selectedTitle != null;
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
       body: SafeArea(
@@ -157,6 +317,27 @@ class _ReportsListPageState extends State<ReportsListPage> {
                       ),
                     ),
                   ),
+
+                  IconButton(
+                    icon: Icon(
+                      Icons.filter_list_alt,
+                      color: isFiltering ? AppColors.primaryBlue : Colors.black,
+                    ),
+                    onPressed: _showFilterDialog,
+                  ),
+
+                  if (isFiltering)
+                    IconButton(
+                      icon: const Icon(Icons.clear, color: Colors.red),
+                      onPressed: () {
+                        setState(() {
+                          selectedRange = null;
+                          selectedCategory = null;
+                          selectedTitle = null;
+                        });
+                        loadReports();
+                      },
+                    ),
                 ],
               ),
               const SizedBox(height: AppPadding.Largest),
