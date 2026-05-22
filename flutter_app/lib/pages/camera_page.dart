@@ -47,7 +47,7 @@ class _CameraPageState extends State<CameraPage> {
       final imagePath = image!.path;
       final imageBytes = await image!.readAsBytes();
 
-      final detections = await GeminiService.detectHazards(imageBytes);
+      final aiResponseString = await GeminiService.detectHazards(imageBytes);
 
       if (context.mounted) Navigator.pop(context);
 
@@ -58,7 +58,7 @@ class _CameraPageState extends State<CameraPage> {
             builder: (_) => ResultScreen(
               imagePath: imagePath,
               imageBytes: imageBytes,
-              detections: detections,
+              aiRawResponse: aiResponseString,
             ),
           ),
         );
