@@ -6,6 +6,7 @@ import '../pages/login_screen.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import 'admin/dashboard.dart';
+import 'admin/reports_list_page.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -79,6 +80,17 @@ class MainMenu extends StatelessWidget {
                       const SizedBox(height: AppPadding.medium),
 
                       MenuButton(
+                        label: "Reports List",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ReportsListPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppPadding.medium),
+
+                      MenuButton(
                         label: "Manage Worker Accounts",
                         onTap: () {
                           Navigator.push(
@@ -104,8 +116,6 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: AppPadding.medium),
-                      MenuButton(label: "Profile", onTap: () {}),
                     ],
                   ],
                 ),

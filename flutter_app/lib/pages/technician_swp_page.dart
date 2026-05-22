@@ -98,6 +98,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     final nameCtrl = TextEditingController();
     final desigCtrl = TextEditingController();
     final deptCtrl = TextEditingController();
+    final locationCtrl = TextEditingController();
     bool dialogSubmitting = false;
 
     const String ackMessage =
@@ -150,6 +151,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 label: "Designation",
                                 controller: desigCtrl,
                                 hint: "e.g. Senior Technician",
+                              ),
+                              const SizedBox(height: AppPadding.tight),
+                              AppTextfield(
+                                label: "Location",
+                                hint: "Ward-2B",
+                                controller: locationCtrl,
                               ),
                               const SizedBox(height: AppPadding.tight),
                               AppTextfield(
@@ -209,7 +216,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                             ),
                             const SizedBox(width: 12),
 
-                            // 2. Your Custom Submit Button
                             Flexible(
                               flex: 2,
                               child: MenuButton(
@@ -218,24 +224,21 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 isMini: true,
                                 icon: Icons.assignment_turned_in_rounded,
                                 onTap: () async {
-                                  // Check if all fields are valid via Form state
                                   if (!(formKey.currentState?.validate() ??
                                       false))
                                     return;
 
                                   setDialogState(() => dialogSubmitting = true);
 
-                                  // Executes the database storage transaction via collected parameters
                                   bool success = await _executeSubmitReport(
                                     name: nameCtrl.text.trim(),
                                     designation: desigCtrl.text.trim(),
                                     department: deptCtrl.text.trim(),
+                                    location: locationCtrl.text.trim(),
                                   );
 
                                   if (success && mounted) {
-                                    Navigator.pop(
-                                      dialogContext,
-                                    ); // Closes active popup framework
+                                    Navigator.pop(dialogContext);
 
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -285,11 +288,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String name,
     required String designation,
     required String department,
+    required String location,
   }) async {
     try {
       if (name.trim() == "" ||
           designation.trim() == "" ||
-          department.trim() == "") {
+          department.trim() == "" ||
+          location.trim() == "") {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -322,6 +327,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'technician_name': name,
           'designation': designation,
           'department': department,
+          'location': location,
         });
 
         await sendEmail(
@@ -332,6 +338,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           ptwNumber: ptwNumber,
           designation: designation,
           department: department,
+          location: location,
         );
       }
 
@@ -350,6 +357,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String department,
     required String title,
     required String category,
+    required String location,
   }) async {
     try {
       await emailjs.send(
@@ -363,6 +371,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'ptw': ptwNumber,
           'designation': designation,
           'department': department,
+          'location': location,
         },
         const emailjs.Options(
           publicKey: 'wbQ6enyH79nXAsNFR',
