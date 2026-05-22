@@ -46,6 +46,7 @@ dependencies:
   image_picker: ^1.2.2
   google_generative_ai: ^0.4.7
   flutter_svg: ^2.3.0
+  emailjs: ^4.0.0
   
 
 dev_dependencies:

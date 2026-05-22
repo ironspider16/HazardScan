@@ -6,7 +6,8 @@ import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
-import '../widgets/Menu_button.dart'; // Make sure MenuButton is imported
+import '../widgets/Menu_button.dart';
+import 'package:emailjs/emailjs.dart' as emailjs;
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
@@ -64,7 +65,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               .where((t) => t['category'] == category)
               .toList();
           if (matchedList.isNotEmpty) {
-            selectedSubCategories[category] = matchedList.first['id'] as int;
+            final firstId = matchedList.first['id'] as int;
+            selectedSubCategories[category] = firstId;
+
+            // PRE-POPULATE THE CORES HERE SO CONTROLLERS DO NOT GET WIPED
+            _savedPtwNumbers[firstId] = "";
+            _savedAbove3m[firstId] = false;
+            _savedChecklists[firstId] = [];
+            _savedDetails[firstId] = "";
+            _checklistCompletionStates[firstId] = false;
           } else {
             selectedSubCategories[category] = null;
           }
@@ -91,13 +100,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     final deptCtrl = TextEditingController();
     bool dialogSubmitting = false;
 
-    const String ackMessage = 
-      "The Safe Work Procedures have been communicated and are understood by all "
-      "relevant personnel. Inspections have been conducted to verify that work is "
-      "carried out in accordance with the established procedures, ensuring a safe "
-      "and compliant working environment.";
-
-
+    const String ackMessage =
+        "The Safe Work Procedures have been communicated and are understood by all "
+        "relevant personnel. Inspections have been conducted to verify that work is "
+        "carried out in accordance with the established procedures, ensuring a safe "
+        "and compliant working environment.";
 
     showDialog(
       context: context,
@@ -193,7 +200,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                           children: [
                             // 1. Cancel Button
                             Flexible(
-                              flex:1,
+                              flex: 1,
                               child: MenuButton(
                                 label: "Cancel",
                                 isMini: true,
@@ -301,6 +308,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       List<Map<String, dynamic>> recordsToInsert = [];
       for (int templateId in activeSubCategoryIds) {
+        final template = allTemplates.firstWhere((t) => t['id'] == templateId);
+        final String title = template['title'] ?? 'Unknown';
+        final String category = template['category'] ?? 'Unknown';
+
         String ptwNumber = _savedPtwNumbers[templateId] ?? "";
         String detailsText = _savedDetails[templateId] ?? "";
 
@@ -308,17 +319,60 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'swp_template_id': templateId,
           'wah_permit_numbers': ptwNumber.isNotEmpty ? ptwNumber : null,
           'Details': detailsText.isNotEmpty ? detailsText : null,
-          // Appends acknowledgment fields collected during modal input screen step
           'technician_name': name,
           'designation': designation,
           'department': department,
         });
+
+        await sendEmail(
+          technician_name: name,
+          details: detailsText,
+          title: title,
+          category: category,
+          ptwNumber: ptwNumber,
+          designation: designation,
+          department: department,
+        );
       }
 
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
       return false;
+    }
+  }
+
+  Future<void> sendEmail({
+    required String technician_name,
+    required String details,
+    required String ptwNumber,
+    required String designation,
+    required String department,
+    required String title,
+    required String category,
+  }) async {
+    try {
+      await emailjs.send(
+        'service_hylul67',
+        'template_pacsuzj',
+        {
+          'name': technician_name,
+          'message': details,
+          'template_title': title, // Now available
+          'category': category, // Now available
+          'ptw': ptwNumber,
+          'designation': designation,
+          'department': department,
+        },
+        const emailjs.Options(
+          publicKey: 'wbQ6enyH79nXAsNFR',
+          privateKey: 'ekKQkZzML_nu0MC4qGjik',
+        ),
+      );
+    } catch (error) {
+      if (error is emailjs.EmailJSResponseStatus) {
+        print('ERROR... ${error.status}: ${error.text}');
+      }
     }
   }
 
