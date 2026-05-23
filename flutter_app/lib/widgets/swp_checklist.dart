@@ -94,7 +94,7 @@ class _SWPChecklistWidgetState extends State<SWPChecklistWidget> {
         const SizedBox(height: AppPadding.tight),
         ...widget.items.map((item) {
           return CheckboxListTile(
-            title: Text(item, style: AppTypography.body.copyWith(fontSize: widget.isMobile? 11 : null)),
+            title: Text(item, style: AppTypography.body.copyWith(fontSize: widget.isMobile? 14 : null)),
             value: _checklistState[item] ?? false,
             onChanged: (value) => _updateCheck(item, value),
             controlAffinity: ListTileControlAffinity.leading,
