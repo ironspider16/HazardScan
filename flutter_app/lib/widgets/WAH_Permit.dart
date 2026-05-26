@@ -27,7 +27,6 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
   @override
   void initState() {
     super.initState();
-    // Initialize the states from parent variables when opened
     _above3m = widget.initialAbove3m;
     _ptwCtrl = TextEditingController(text: widget.initialPtw);
   }
@@ -35,9 +34,10 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
   @override
   void didUpdateWidget(covariant WAHPermitWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialPtw != widget.initialPtw) {
+    if (widget.initialPtw != _ptwCtrl.text && widget.initialPtw != _ptwCtrl.text.trim()) {
       _ptwCtrl.text = widget.initialPtw;
     }
+    
     if (oldWidget.initialAbove3m != widget.initialAbove3m) {
       setState(() {
         _above3m = widget.initialAbove3m;
@@ -46,7 +46,7 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
   }
 
   void _notifyParent() {
-    widget.onValidityChanged(_above3m, _ptwCtrl.text.trim());
+    widget.onValidityChanged(_above3m, _ptwCtrl.text);
   }
 
   @override
@@ -95,7 +95,7 @@ class _WAHPermitWidgetState extends State<WAHPermitWidget> {
           const SizedBox(height: AppPadding.medium),
           AppTextfield(
             label: "Enter Permit To Work Number (Required)",
-            hint: "Enter PTW number",
+            hint: "PTW number is required for height work",
             controller: _ptwCtrl,
             onChanged: (value) => _notifyParent(),
           ),

@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/config/app_users.dart';
@@ -34,9 +35,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, String> _savedPtwNumbers = {};
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
-  final Map<int, dynamic> _savedImages = {};
+  final Map<int, Uint8List> _savedImages = {};
   final Map<int, String> _savedDetails = {};
   final Map<int, bool> _checklistCompletionStates = {};
+
+  final Map<int, Map<String, dynamic>> _savedAiData = {};
 
   @override
   void initState() {
@@ -320,6 +323,29 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         String ptwNumber = _savedPtwNumbers[templateId] ?? "";
         String detailsText = _savedDetails[templateId] ?? "";
 
+        int? wahSafetyForeignKey;
+
+        if (_savedAiData.containsKey(templateId) &&
+            _savedAiData[templateId] != null) {
+          final aiData = _savedAiData[templateId]!;
+
+          // Insert into WAH_safetyVariables and request the new row back
+          final insertedWahData = await supabase
+              .from('WAH_safetyVariables')
+              .insert({
+                'Overall Status': aiData['overallStatus'] ?? 'N/A',
+                'ladderheight': aiData['ladderHeight'] ?? {},
+                'ppe': aiData['ppe'] ?? {},
+                'buddySystem': aiData['buddySystem'] ?? {},
+                'areaHazards': aiData['areaHazards'] ?? {},
+              })
+              .select('id')
+              .single();
+
+          // Grab the generated ID
+          wahSafetyForeignKey = insertedWahData['id'];
+        }
+
         recordsToInsert.add({
           'swp_template_id': templateId,
           'wah_permit_numbers': ptwNumber.isNotEmpty ? ptwNumber : null,
@@ -328,6 +354,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
+          'WAH_safetyVariables_FK': wahSafetyForeignKey,
         });
 
         await sendEmail(
@@ -345,6 +372,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
+      print("$e");
       return false;
     }
   }
@@ -397,12 +425,59 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         .cast<int>()
         .toList();
 
+    final String? errorMessage = activeSubCategoryIds
+        .map((id) {
+          // Check common condition first
+          if (_checklistCompletionStates[id] != true) {
+            return "Please complete all checklist items.";
+          }
+
+          // Only check photo/PTW requirements if it is Work at Height
+          bool isAbove3m = _savedAbove3m[id] ?? false;
+          if (isAbove3m) {
+            String ptw = _savedPtwNumbers[id] ?? "";
+            if (ptw.trim().isEmpty) {
+              return "Permit To Work (PTW) number is required.";
+            }
+            if (_savedImages[id] == null) {
+              return "Please upload a photo for Work at Height tasks.";
+            }
+
+            final status = _savedAiData[id]?['overallStatus'];
+            if (status == "DANGEROUS" || status == "N/A") {
+              return "Photo analysis shows non-compliance. Please retake.";
+            }
+          }
+
+          return null;
+        })
+        .firstWhere((msg) => msg != null, orElse: () => null);
+
     // Evaluates to true only if active components are selected and every single one is 100% completed
     final bool canSubmitReport =
         activeSubCategoryIds.isNotEmpty &&
-        activeSubCategoryIds.every(
-          (id) => _checklistCompletionStates[id] == true,
-        );
+        activeSubCategoryIds.every((id) {
+          // 1. Checklist must always be completed
+          bool isChecklistDone = _checklistCompletionStates[id] == true;
+
+          // 2. Check WAH status
+          bool isAbove3m = _savedAbove3m[id] ?? false;
+          String ptw = _savedPtwNumbers[id] ?? "";
+
+          if (isAbove3m) {
+            // If it IS Work at Height:
+            bool isPtwValid = ptw.trim().isNotEmpty;
+            bool hasImage = _savedImages[id] != null;
+
+            final status = _savedAiData[id]?['overallStatus'];
+            bool isCompliant = status != "DANGEROUS" && status != "N/A";
+
+            return isChecklistDone && isPtwValid && hasImage && isCompliant;
+          } else {
+            // If it is NOT Work at Height:
+            return isChecklistDone;
+          }
+        });
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -447,6 +522,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         ),
                         clipBehavior: Clip.antiAlias,
                         child: ExpansionTile(
+                          maintainState: true,
                           initiallyExpanded: true,
                           backgroundColor: AppColors.primaryTint.withAlpha(10),
                           title: Text(category, style: AppTypography.body),
@@ -525,28 +601,37 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                   initialDetails:
                                       _savedDetails[currentSelectedId] ?? "",
                                   onPtwChanged: (isAbove3m, ptw) {
-                                    _savedPtwNumbers[currentSelectedId] = ptw;
-                                    _savedAbove3m[currentSelectedId] =
-                                        isAbove3m;
+                                    setState(() {
+                                      _savedPtwNumbers[currentSelectedId] = ptw;
+                                      _savedAbove3m[currentSelectedId] =
+                                          isAbove3m;
+                                    });
                                   },
                                   onChecklistChanged: (checkedList) {
-                                    _savedChecklists[currentSelectedId] =
-                                        checkedList;
-                                  },
-                                  onImageChanged: (file) {
                                     setState(() {
-                                      _savedImages[currentSelectedId] = file;
+                                      _savedChecklists[currentSelectedId] =
+                                          checkedList;
+                                    });
+                                  },
+                                  onImageChanged: (bytes) {
+                                    setState(() {
+                                      _savedImages[currentSelectedId] = bytes;
                                     });
                                   },
                                   onDetailsChanged: (textValue) {
-                                    _savedDetails[currentSelectedId] =
-                                        textValue;
+                                    setState(() {
+                                      _savedDetails[currentSelectedId] =
+                                          textValue;
+                                    });
                                   },
                                   onAllChecked: (isCleared) {
                                     setState(() {
                                       _checklistCompletionStates[currentSelectedId] =
                                           isCleared;
                                     });
+                                  },
+                                  onAiAnalyzed: (aiData) {
+                                    _savedAiData[currentSelectedId] = aiData;
                                   },
                                 ),
                               )
@@ -577,6 +662,16 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         ),
                       ),
                       const SizedBox(height: AppPadding.tight),
+                      if (errorMessage != null && !canSubmitReport)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            errorMessage,
+                            style: AppTypography.faintbody.copyWith(
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
                       SizedBox(
                         width: fieldWidth,
                         child: MenuButton(
