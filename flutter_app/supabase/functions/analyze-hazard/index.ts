@@ -45,7 +45,7 @@ Analyze this image and evaluate it against the specific Non-Compliance (NC) list
 
 HOSPITAL SWP CONSTRAINTS TO ENFORCE:
 1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. You MUST CHECK if the ladder's spreader bars are locked, if unable to confirm, mark as "N/A" or "PARTIALLY COMPLIANT".
-2. BUDDY SYSTEM & PERSONNEL: Check for lack of a buddy system on ladders, missing attendants/watchmen for confined spaces or lifters, and unauthorized entry into cordoned zones.
+2. BUDDY SYSTEM & PERSONNEL: Check for lack of a buddy system on ladders, missing attendants/watchmen for confined spaces or lifters, and unauthorized entry into cordoned zones. It is assumed that one of the buddy system participants is the photographer, so if you see one person on a ladder but cannot confirm if a buddy is present, you can infer potential non-compliance and mark as "PARTIALLY COMPLIANT" only with reasoning.
 3. PPE (Personal Protective Equipment): Look for missing safety helmets, safety shoes and gloves. Boots must be rubber if the surface is wet. 
 4. AREA & SURFACE HAZARDS: Check for uncordoned work/refilling areas, slippery or wet surfaces, obstructed transport routes/exits, debris on platforms, confined spaces such as vents and lack of ventilation. Confined spaces are to be marked as either "PARTIALLY COMPLIANT" or "SAFE". You may include here any other general hazards you see as well. This category is a catch-all for any safety issues not covered by the first three categories.
 
