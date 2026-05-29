@@ -184,18 +184,18 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                             final compliance = value['compliance']?.toString().toUpperCase() ?? '';
                             
                             // Collect from non-compliant components
-                            if (compliance == 'PARTIALLY COMPLIANT' || compliance == 'DANGEROUS') {
-                              final reasoning = value['reasoning'] ?? '';
-                              final advice = value['advice'] ?? '';
-                              final categoryTitle = _formatCategoryKey(key);
-                              
-                              if (reasoning.isNotEmpty) {
-                                extractedReasons.add("[$categoryTitle] $reasoning");
-                              }
-                              if (advice.isNotEmpty) {
-                                extractedReasons.add("Recommendation: $advice");
-                              }
+                            // if (compliance == 'PARTIALLY COMPLIANT' || compliance == 'DANGEROUS') {
+                            final reasoning = value['reasoning'] ?? '';
+                            final advice = value['advice'] ?? '';
+                            final categoryTitle = _formatCategoryKey(key);
+                            
+                            if (reasoning.isNotEmpty) {
+                              extractedReasons.add("[$categoryTitle] $reasoning");
                             }
+                            if (advice.isNotEmpty) {
+                              extractedReasons.add("Recommendation: $advice");
+                            }
+                            // }
                           }
                         });
                         
