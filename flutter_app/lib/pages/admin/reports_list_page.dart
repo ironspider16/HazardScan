@@ -19,6 +19,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
   String? selectedCategory;
   String? selectedTitle;
 
+  bool sortAscending = false; 
+
   final List<String> categories = [
     'Work At Height',
     'Confined Space Work',
@@ -67,7 +69,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
         query = query.eq('swp_templates.title', selectedTitle!);
       }
 
-      final response = await query.order('submitted_at', ascending: false);
+      final response = await query.order('submitted_at', ascending: sortAscending);
       setState(() {
         reports = List<Map<String, dynamic>>.from(response);
         isLoading = false;
@@ -316,6 +318,20 @@ class _ReportsListPageState extends State<ReportsListPage> {
                         style: AppTypography.Bluesubheading,
                       ),
                     ),
+                  ),
+
+                  IconButton(
+                    icon: Icon(
+                      sortAscending ? Icons.swap_vert_rounded : Icons.swap_vert_rounded,
+                      color: sortAscending ? AppColors.primaryBlue : Colors.black,
+                    ),
+                    tooltip: sortAscending ? 'Showing Oldest First' : 'Showing Newest First',
+                    onPressed: () {
+                      setState(() {
+                        sortAscending = !sortAscending;
+                      });
+                      loadReports();
+                    },
                   ),
 
                   IconButton(
