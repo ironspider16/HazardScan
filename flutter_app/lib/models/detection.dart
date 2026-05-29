@@ -16,4 +16,20 @@ class Detection {
     required this.bottom,
     this.classId,
   });
+
+  factory Detection.fromJson(Map<String, dynamic> json) {
+    return Detection(
+      label: json['label'] ?? '',
+
+      confidence: (json['confidence'] ?? 0).toDouble(),
+
+      left: (json['x1'] ?? 0).toDouble(),
+
+      top: (json['y1'] ?? 0).toDouble(),
+
+      right: (json['x2'] ?? 0).toDouble(),
+
+      bottom: (json['y2'] ?? 0).toDouble(),
+    );
+  }
 }
