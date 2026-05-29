@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
-import 'admin/dashboard.dart';
+import 'admin/reports_statistics_page.dart';
+import 'admin/reports_list_page.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -51,11 +53,12 @@ class MainMenu extends StatelessWidget {
                           AppDimensions.radiusLarge,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.local_hospital, // or Icons.medical_services
-                        color: Colors.white,
-                        size: 36,
-                      ),
+                    child: SvgPicture.asset(
+                    'assets/images/KKHlogo.svg',
+                    width: 100,
+                    height: 100,
+                    semanticsLabel: 'Company Logo',
+                  ),
                     ),
 
                     const SizedBox(height: AppPadding.medium),
@@ -68,11 +71,22 @@ class MainMenu extends StatelessWidget {
                     const SizedBox(height: AppPadding.extraLarge),
                     if (isAdmin) ...[
                       MenuButton(
-                        label: "Dashboard",
+                        label: "Reports Statistics",
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => DashboardPage()),
+                            MaterialPageRoute(builder: (_) => ReportsStatisticsPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: AppPadding.medium),
+
+                      MenuButton(
+                        label: "Reports List",
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ReportsListPage()),
                           );
                         },
                       ),
@@ -104,8 +118,6 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: AppPadding.medium),
-                      MenuButton(label: "Profile", onTap: () {}),
                     ],
                   ],
                 ),
