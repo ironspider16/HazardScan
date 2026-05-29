@@ -9,6 +9,7 @@ import '../widgets/image_upload.dart';
 import '../Design/style_constant.dart';
 import '../widgets/App_Textfield.dart';
 import '../widgets/safety_status_widget.dart';
+import '../yolo/yolo_service.dart';
 
 class TechnicianSwpSection extends StatefulWidget {
   final int templateId;
@@ -68,7 +69,6 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
     _loadItems();
     _detailsCtrl = TextEditingController(text: widget.initialDetails);
 
-
     if (widget.categoryName.toLowerCase().contains("work at height")) {
       isPtwCleared = !widget.initialAbove3m || widget.initialPtw.isNotEmpty;
     } else {
@@ -99,7 +99,9 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
     if (key == 'ppe') return 'PPE';
     final RegExp numUpperRegExp = RegExp(r'(?<=[a-z])(?=[A-Z])');
     final words = key.split(numUpperRegExp);
-    return words.map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1)).join(' ');
+    return words
+        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 
   @override
@@ -148,13 +150,17 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                   onImageSelected: (bytes) async {
                     widget.onImageChanged(bytes as Uint8List);
                     print(
-                      "🚀 Starting AI Analysis for: ${widget.categoryName}...",
+                      "Starting AI Analysis for: ${widget.categoryName}...",
                     );
-
                     setState(() {
                       isAnalyzing = true;
                     });
-
+                    // YOLO Detection
+                    final detections = await YoloService().yoloDetect(
+                      context,
+                      bytes,
+                    );
+                    print(detections);
                     try {
                       final string userContext = _detailsCtrl.text.trim();
                       final String rawResponse =
@@ -176,22 +182,26 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                       setState(() {
                         // 1. Correctly parse status using 'overallStatus'
                         aiStatus = data['overallStatus'] ?? "N/A";
-                        
+
                         // 2. Extract reasons dynamically from nested maps
                         List<String> extractedReasons = [];
-                        
+
                         data.forEach((key, value) {
                           if (value is Map<String, dynamic>) {
-                            final compliance = value['compliance']?.toString().toUpperCase() ?? '';
-                            
+                            final compliance =
+                                value['compliance']?.toString().toUpperCase() ??
+                                '';
+
                             // Collect from non-compliant components
                             // if (compliance == 'PARTIALLY COMPLIANT' || compliance == 'DANGEROUS') {
                             final reasoning = value['reasoning'] ?? '';
                             final advice = value['advice'] ?? '';
                             final categoryTitle = _formatCategoryKey(key);
-                            
+
                             if (reasoning.isNotEmpty) {
-                              extractedReasons.add("[$categoryTitle] $reasoning");
+                              extractedReasons.add(
+                                "[$categoryTitle] $reasoning",
+                              );
                             }
                             if (advice.isNotEmpty) {
                               extractedReasons.add("Recommendation: $advice");
@@ -199,20 +209,34 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                             // }
                           }
                         });
-                        
+
                         aiReasons = extractedReasons;
+                        debugPrint("$aiReasons");
                         isAnalyzing = false;
                       });
 
                       // 3. Format text details beautifully into a human-readable summary
                       StringBuffer detailsBuffer = StringBuffer();
-                      detailsBuffer.writeln("Overall Safety Status: $aiStatus\n");
+                      detailsBuffer.writeln(
+                        "Overall Safety Status: $aiStatus\n",
+                      );
                       data.forEach((key, value) {
                         if (value is Map<String, dynamic>) {
-                          detailsBuffer.writeln("${_formatCategoryKey(key)}: ${value['compliance']}");
-                          if (value['description'] != null) detailsBuffer.writeln(" • Description: ${value['description']}");
-                          if (value['reasoning'] != null) detailsBuffer.writeln(" • Reasoning: ${value['reasoning']}");
-                          if (value['advice'] != null) detailsBuffer.writeln(" • Advice: ${value['advice']}");
+                          detailsBuffer.writeln(
+                            "${_formatCategoryKey(key)}: ${value['compliance']}",
+                          );
+                          if (value['description'] != null)
+                            detailsBuffer.writeln(
+                              " • Description: ${value['description']}",
+                            );
+                          if (value['reasoning'] != null)
+                            detailsBuffer.writeln(
+                              " • Reasoning: ${value['reasoning']}",
+                            );
+                          if (value['advice'] != null)
+                            detailsBuffer.writeln(
+                              " • Advice: ${value['advice']}",
+                            );
                           detailsBuffer.writeln();
                         }
                       });
@@ -245,10 +269,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                     ),
                   )
                 else
-                  SafetyStatusWidget(
-                    rawStatus: aiStatus,
-                    reasons: aiReasons,
-                  ),
+                  SafetyStatusWidget(rawStatus: aiStatus, reasons: aiReasons),
               ],
 
               const SizedBox(height: AppPadding.medium),
