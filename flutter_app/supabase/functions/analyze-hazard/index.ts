@@ -28,7 +28,7 @@ serve(async (req: Request) => {
   };
 
   try {
-    const { imageBase64 } = await req.json()
+    const { imageBase64, userContext } = await req.json()
     const keysString = Deno.env.get('GEMINI_API_KEY') || ""
     const apiKeys = keysString.split(',').map(k => k.trim())
 
@@ -42,6 +42,9 @@ serve(async (req: Request) => {
 
     const prompt = `You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP). 
 Analyze this image and evaluate it against the specific Non-Compliance (NC) list below, as well as general safety hazards.
+
+ADDITIONAL SITE CONTEXT PROVIDED BY THE TECHNICIAN ON-SITE:
+"${userContext || "No additional context provided."}"
 
 HOSPITAL SWP CONSTRAINTS TO ENFORCE:
 1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. You MUST CHECK if the ladder's spreader bars are locked, if unable to confirm, mark as "N/A" or "PARTIALLY COMPLIANT".

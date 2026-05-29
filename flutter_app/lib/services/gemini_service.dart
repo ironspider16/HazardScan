@@ -4,13 +4,19 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 class GeminiService {
-  static Future<String> detectHazards(Uint8List imageBytes) async {
+  /// Sends the compressed image data along with an optional on-site environmental 
+  /// context string down to the hosted serverless analyzer endpoint.
+  /// [userContext] is optional. If left out, it defaults to an empty string ("").
+  static Future<String> detectHazards(Uint8List imageBytes, [String userContext = ""]) async {
     try {
       final base64Image = base64Encode(imageBytes);
 
       final response = await Supabase.instance.client.functions.invoke(
         'analyze-hazard',
-        body: {'imageBase64': base64Image},
+        body: {
+          'imageBase64': base64Image,
+          'userContext': userContext,
+        },
       );
 
       if (response.data != null) {
