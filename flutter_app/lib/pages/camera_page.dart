@@ -30,47 +30,6 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-  //AI Analysis
-  Future<void> _runAnalysis(BuildContext context) async {
-    if (image == null) return;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final imagePath = image!.path;
-      final imageBytes = await image!.readAsBytes();
-
-      final aiResponseString = await GeminiService.detectHazards(imageBytes);
-
-      if (context.mounted) Navigator.pop(context);
-
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultScreen(
-              imagePath: imagePath,
-              imageBytes: imageBytes,
-              aiRawResponse: aiResponseString,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Analysis failed: $e')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -125,15 +84,7 @@ class _CameraPageState extends State<CameraPage> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: image == null
-                                      ? null
-                                      : () => _runAnalysis(context),
-                                  child: const Text("Analysis Hazard"),
-                                ),
-                              ),
+                              SizedBox(width: double.infinity),
                             ],
                           )
                         : Row(
@@ -144,12 +95,6 @@ class _CameraPageState extends State<CameraPage> {
                                 child: const Text("Take a Photo"),
                               ),
                               const SizedBox(width: 20),
-                              ElevatedButton(
-                                onPressed: image == null
-                                    ? null
-                                    : () => _runAnalysis(context),
-                                child: const Text("Analysis Hazard"),
-                              ),
                             ],
                           ),
                   ],
