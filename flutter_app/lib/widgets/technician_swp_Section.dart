@@ -225,18 +225,21 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                           detailsBuffer.writeln(
                             "${_formatCategoryKey(key)}: ${value['compliance']}",
                           );
-                          if (value['description'] != null)
+                          if (value['description'] != null) {
                             detailsBuffer.writeln(
                               " • Description: ${value['description']}",
                             );
-                          if (value['reasoning'] != null)
+                          }
+                          if (value['reasoning'] != null) {
                             detailsBuffer.writeln(
                               " • Reasoning: ${value['reasoning']}",
                             );
-                          if (value['advice'] != null)
+                          }
+                          if (value['advice'] != null) {
                             detailsBuffer.writeln(
                               " • Advice: ${value['advice']}",
                             );
+                          }
                           detailsBuffer.writeln();
                         }
                       });
