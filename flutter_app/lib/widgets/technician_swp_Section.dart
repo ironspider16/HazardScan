@@ -163,7 +163,10 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                     print(detections);
                     try {
                       final String rawResponse =
-                          await GeminiService.detectHazards(bytes as Uint8List, _detailsCtrl.text.trim());
+                          await GeminiService.detectHazards(
+                            bytes as Uint8List,
+                            _detailsCtrl.text.trim(),
+                          );
                       print("--- GEMINI JSON OUTPUT ---");
                       print(rawResponse);
 

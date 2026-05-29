@@ -143,21 +143,39 @@ class SafetyStatusWidget extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: reasons.map((reason) {
-                  final bool isRecommendation = reason.startsWith("Recommendation:");
-                  final bool isCategoryHeader = !reason.startsWith("[") && 
-                                                !isRecommendation && 
-                                                reason.contains(":");
+                  final String trimmed = reason.trim();
+                  if (trimmed.isEmpty) return const SizedBox.shrink();
+
+                  final String upperReason = trimmed.toUpperCase();
+
+                  // Identify corrective advice blocks
+                  final bool isRecommendation = trimmed.startsWith("Recommendation:") || 
+                      upperReason.startsWith("• ADVICE:") || 
+                      upperReason.contains("ADVICE:");
+
+                  // Identify genuine section categories (Must contain standard safety keywords, not details)
+                  final bool isCategoryHeader = !trimmed.startsWith("•") && 
+                      !trimmed.startsWith("[") && 
+                      !isRecommendation && 
+                      trimmed.contains(":") &&
+                      (upperReason.contains("COMPLIANT") || upperReason.contains("DANGEROUS") || upperReason.contains("SAFE"));
+
+                  // Identify secondary breakdown item details
+                  final bool isBulletDetail = trimmed.startsWith("•") || 
+                      upperReason.startsWith("DESCRIPTION:") || 
+                      upperReason.startsWith("REASONING:");
 
                   // 1. Structural Category Title Banner Header Layout
                   if (isCategoryHeader) {
-                    final parts = reason.split(":");
+                    final parts = trimmed.split(":");
                     final String categoryName = parts[0].trim();
-                    final String complianceStatus = parts[1].trim();
+                    final String complianceStatus = parts.length > 1 ? parts[1].trim() : "UNKNOWN";
                     final Color subStatusColor = _getColorFromRawString(complianceStatus);
 
                     return Padding(
                       padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -187,7 +205,6 @@ class SafetyStatusWidget extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: AppPadding.tight),
-
                         ],
                       ),
                     );
@@ -195,11 +212,23 @@ class SafetyStatusWidget extends StatelessWidget {
                   
                   // 2. Blueprint Actionable Recommendation Callout Box Layout
                   else if (isRecommendation) {
-                    final adviceText = reason.replaceFirst("Recommendation:", "").trim();
+                    String adviceText = trimmed;
+                    if (adviceText.startsWith("Recommendation:")) {
+                      adviceText = adviceText.replaceFirst("Recommendation:", "").trim();
+                    } else if (adviceText.startsWith("•")) {
+                      String temp = adviceText.substring(1).trim();
+                      if (temp.toUpperCase().startsWith("ADVICE:")) {
+                        adviceText = temp.substring(7).trim();
+                      } else {
+                        adviceText = temp;
+                      }
+                    } else if (adviceText.toUpperCase().startsWith("ADVICE:")) {
+                      adviceText = adviceText.substring(7).trim();
+                    }
                     
                     return Container(
                       width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8, top: 2),
+                      margin: const EdgeInsets.only(bottom: 8, top: 4),
                       padding: const EdgeInsets.all(AppPadding.medium),
                       decoration: BoxDecoration(
                         color: Colors.blueAccent.withOpacity(0.04),
@@ -234,16 +263,44 @@ class SafetyStatusWidget extends StatelessWidget {
                     );
                   } 
                   
+                  // Smoothly display clean details directly underneath header tags
+                  else if (isBulletDetail) {
+                    String bodyText = trimmed;
+                    if (bodyText.startsWith("•")) {
+                      bodyText = bodyText.substring(1).trim();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                          Expanded(
+                            child: Text(
+                              bodyText,
+                              style: const TextStyle(
+                                color: Color.fromARGB(255, 40, 40, 40),
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
                   // 3. Generic/Factual Observations Layout Box Frame
                   else {
                     String category = "OBSERVATION";
-                    String bodyText = reason;
+                    String bodyText = trimmed;
                     
-                    if (reason.startsWith("[")) {
-                      final closingBracketIdx = reason.indexOf("]");
+                    if (trimmed.startsWith("[")) {
+                      final closingBracketIdx = trimmed.indexOf("]");
                       if (closingBracketIdx != -1) {
-                        category = reason.substring(1, closingBracketIdx);
-                        bodyText = reason.substring(closingBracketIdx + 1).trim();
+                        category = trimmed.substring(1, closingBracketIdx);
+                        bodyText = trimmed.substring(closingBracketIdx + 1).trim();
                       }
                     }
 
