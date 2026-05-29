@@ -148,7 +148,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                   onImageSelected: (bytes) async {
                     widget.onImageChanged(bytes as Uint8List);
                     print(
-                      "🚀 Starting AI Analysis for: ${widget.categoryName}...",
+                      "Starting AI Analysis for: ${widget.categoryName}...",
                     );
 
                     setState(() {
@@ -188,6 +188,10 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                             final reasoning = value['reasoning'] ?? '';
                             final advice = value['advice'] ?? '';
                             final categoryTitle = _formatCategoryKey(key);
+
+                            if (compliance.isNotEmpty) {
+                              extractedReasons.add("$categoryTitle: $compliance");
+                            }
                             
                             if (reasoning.isNotEmpty) {
                               extractedReasons.add("[$categoryTitle] $reasoning");
@@ -200,6 +204,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                         });
                         
                         aiReasons = extractedReasons;
+                        debugPrint("$aiReasons");
                         isAnalyzing = false;
                       });
 

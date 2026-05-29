@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:kkhazardscan/pages/camera_page.dart';
 
 class GeminiService {
   static Future<String> detectHazards(Uint8List imageBytes) async {
