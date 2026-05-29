@@ -2,7 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../models/detection.dart';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 
 class ResultScreen extends StatefulWidget {
   final String imagePath;
@@ -23,15 +22,6 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> {
   Size? _imageSize;
 
-  // Local Class Definitions (No longer relying on YoloService)
-  static const List<String> classNames = [
-    'Broken Steps',
-    'Ladder',
-    'Locked',
-    'Scaffolding',
-    'Unlocked',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -48,46 +38,34 @@ class _ResultScreenState extends State<ResultScreen> {
     });
   }
 
-  // Helper to determine what text to show in the bounding box
-  String _getBoxLabel(Detection d) {
-    if (d.label.isNotEmpty) {
-      // Takes the first part of Gemini's response for the overlay
-      // e.g. "[Ladder] HAZARD"
-      return d.label.split(':').first;
-    }
-    return "Object";
+  bool _isHazard(Detection d) {
+    final label = d.label.toLowerCase();
+    return label.contains("spreader_unlock");
   }
 
-  // Logic to determine if the AI found a hazard
-  bool _isHazard(Detection d) {
-    final upperLabel = d.label.toUpperCase();
-    return upperLabel.contains("HAZARD") ||
-        upperLabel.contains("UNLOCKED") ||
-        upperLabel.contains("BROKEN");
+  String _getBoxLabel(Detection d) {
+    return "${d.label} ${(d.confidence * 100).toStringAsFixed(1)}%";
   }
 
   @override
   Widget build(BuildContext context) {
     final imgSize = _imageSize;
 
-    // Filter out "LOCKED" (Safe) status to keep UI clean
-    final visibleDetections = widget.detections
-        .where((d) => !d.label.toUpperCase().contains("LOCKED"))
-        .toList();
+    // You only have 2 classes: ladder and spreader_unlock
+    final visibleDetections = widget.detections;
 
-    String hazardsText = "None";
     String detectedText = "No objects identified";
+    String hazardsText = "None";
 
     if (visibleDetections.isNotEmpty) {
-      final aiResult = visibleDetections.first;
-      bool foundHazard = _isHazard(aiResult);
+      detectedText = visibleDetections
+          .map((d) => "${d.label} ${(d.confidence * 100).toStringAsFixed(1)}%")
+          .join(", ");
 
-      if (foundHazard) {
-        hazardsText = aiResult.label; // Show full Gemini Reason
-        detectedText = "Analysis Complete";
-      } else {
-        hazardsText = "None";
-        detectedText = aiResult.label; // Show full Gemini Reason
+      final hazardDetections = visibleDetections.where(_isHazard).toList();
+
+      if (hazardDetections.isNotEmpty) {
+        hazardsText = "Ladder spreader is unlocked";
       }
     }
 
@@ -108,7 +86,6 @@ class _ResultScreenState extends State<ResultScreen> {
 
                 return Stack(
                   children: [
-                    // The Photo
                     Positioned.fill(
                       child: Image.memory(
                         widget.imageBytes,
@@ -116,7 +93,6 @@ class _ResultScreenState extends State<ResultScreen> {
                       ),
                     ),
 
-                    // Draw AI Overlays
                     Positioned.fill(
                       child: CustomPaint(
                         painter: BoundingBoxPainter(
@@ -129,7 +105,6 @@ class _ResultScreenState extends State<ResultScreen> {
                       ),
                     ),
 
-                    // Bottom Panel with Detailed AI Reasoning
                     Align(
                       alignment: Alignment.bottomCenter,
                       child: Container(
@@ -154,14 +129,17 @@ class _ResultScreenState extends State<ResultScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
+
                             Text(
-                              'Status: $detectedText',
+                              'Detected: $detectedText',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
                               ),
                             ),
+
                             const Divider(color: Colors.white24, height: 20),
+
                             Text(
                               'Safety Analysis:',
                               style: TextStyle(
@@ -172,7 +150,9 @@ class _ResultScreenState extends State<ResultScreen> {
                                 fontSize: 16,
                               ),
                             ),
+
                             const SizedBox(height: 5),
+
                             Text(
                               hazardsText,
                               style: const TextStyle(
@@ -216,20 +196,17 @@ class BoundingBoxPainter extends CustomPainter {
       widgetSize.width / imageSize.width,
       widgetSize.height / imageSize.height,
     );
+
     final dx = (widgetSize.width - imageSize.width * scale) / 2;
     final dy = (widgetSize.height - imageSize.height * scale) / 2;
 
-    final paint = Paint()
+    final boxPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
 
     for (final d in detections) {
-      // Logic: If Gemini provides a full-screen analysis (0,0 to 1,1),
-      // we don't draw a box because it blocks the view.
-      if (d.left == 0.0 && d.top == 0.0 && d.right == 1.0) continue;
-
       final isHazard = hazardChecker(d);
-      paint.color = isHazard ? Colors.redAccent : Colors.lightBlueAccent;
+      boxPaint.color = isHazard ? Colors.redAccent : Colors.lightBlueAccent;
 
       final rect = Rect.fromLTRB(
         dx + d.left * scale,
@@ -237,7 +214,32 @@ class BoundingBoxPainter extends CustomPainter {
         dx + d.right * scale,
         dy + d.bottom * scale,
       );
-      canvas.drawRect(rect, paint);
+
+      canvas.drawRect(rect, boxPaint);
+
+      final label = labelResolver(d);
+
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            backgroundColor: isHazard ? Colors.redAccent : Colors.blueAccent,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+
+      textPainter.layout();
+
+      final labelOffset = Offset(
+        rect.left,
+        max(0, rect.top - textPainter.height),
+      );
+
+      textPainter.paint(canvas, labelOffset);
     }
   }
 

@@ -87,7 +87,9 @@ class _CameraPageState extends State<CameraPage> {
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse("https://hazardscan.onrender.com/detect"),
+        Uri.parse(
+          "https://hazardscan-yolo-663409506217.asia-southeast1.run.app/detect",
+        ),
       );
 
       request.files.add(
