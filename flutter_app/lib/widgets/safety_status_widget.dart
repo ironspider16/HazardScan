@@ -4,17 +4,16 @@ import '../Design/style_constant.dart';
 enum SafetyStatus { dangerous, partiallyCompliant, compliant, safe, na }
 
 class SafetyStatusWidget extends StatelessWidget {
-  final String rawStatus;
-  final List<String> reasons;
+  final Map<String, dynamic>? aiData;
 
   const SafetyStatusWidget({
     super.key,
-    required this.rawStatus,
-    required this.reasons,
+    required this.aiData,
   });
 
-  // Helper to parse the main overall status string into an enum
   SafetyStatus get _status {
+    if (aiData == null) return SafetyStatus.na;
+    final String rawStatus = aiData!['overallStatus']?.toString() ?? 'N/A';
     switch (rawStatus.trim().toUpperCase()) {
       case 'DANGEROUS':
         return SafetyStatus.dangerous;
@@ -29,7 +28,6 @@ class SafetyStatusWidget extends StatelessWidget {
     }
   }
 
-  // Define colors for each status type (Used across widget frames and pills)
   Color _getStatusColor(SafetyStatus status) {
     switch (status) {
       case SafetyStatus.dangerous:
@@ -45,7 +43,6 @@ class SafetyStatusWidget extends StatelessWidget {
     }
   }
 
-  // Helper to parse dynamic category compliance raw strings on the fly
   Color _getColorFromRawString(String statusStr) {
     switch (statusStr.trim().toUpperCase()) {
       case 'DANGEROUS':
@@ -61,7 +58,6 @@ class SafetyStatusWidget extends StatelessWidget {
     }
   }
 
-  // Define display text for each status type
   String _getStatusText(SafetyStatus status) {
     switch (status) {
       case SafetyStatus.dangerous:
@@ -77,9 +73,18 @@ class SafetyStatusWidget extends StatelessWidget {
     }
   }
 
-  // Updated: Button shows for any valid parsed data summary logs
   bool _shouldShowButton(SafetyStatus status) {
-    return status != SafetyStatus.na && reasons.isNotEmpty;
+    if (status == SafetyStatus.na || aiData == null) return false;
+    return aiData!.values.any((value) => value is Map<String, dynamic>);
+  }
+
+  String _formatCategoryKey(String key) {
+    if (key == 'ppe') return 'PPE';
+    final RegExp numUpperRegExp = RegExp(r'(?<=[a-z])(?=[A-Z])');
+    final words = key.split(numUpperRegExp);
+    return words
+        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
+        .join(' ');
   }
 
   void _showReasonsDialog(BuildContext context) {
@@ -90,8 +95,144 @@ class SafetyStatusWidget extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        List<Widget> dialogItems = [];
+
+        if (aiData != null) {
+          aiData!.forEach((key, value) {
+            if (value is Map<String, dynamic>) {
+              final String categoryName = _formatCategoryKey(key);
+              final String complianceStatus = value['compliance']?.toString() ?? 'UNKNOWN';
+              final Color subStatusColor = _getColorFromRawString(complianceStatus);
+
+              dialogItems.add(
+                Padding(
+                  padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        categoryName.toUpperCase(),
+                        style: AppTypography.body.copyWith(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppPadding.tight,
+                          vertical: AppPadding.tight,
+                        ),
+                        decoration: BoxDecoration(
+                          color: subStatusColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                        ),
+                        child: Text(
+                          complianceStatus.toUpperCase(),
+                          style: AppTypography.body.copyWith(
+                            color: subStatusColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+
+              if (value['description'] != null && value['description'].toString().trim().isNotEmpty) {
+                dialogItems.add(
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                        Expanded(
+                          child: Text(
+                            "Description: ${value['description']}",
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 40, 40, 40),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (value['reasoning'] != null && value['reasoning'].toString().trim().isNotEmpty) {
+                dialogItems.add(
+                  Padding(
+                    padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                        Expanded(
+                          child: Text(
+                            "Reasoning: ${value['reasoning']}",
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 40, 40, 40),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (value['advice'] != null && value['advice'].toString().trim().isNotEmpty) {
+                dialogItems.add(
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: 8, top: 4),
+                    padding: const EdgeInsets.all(AppPadding.medium),
+                    decoration: BoxDecoration(
+                      color: Colors.blueAccent.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(8),
+                      border: const Border(
+                        left: BorderSide(color: Colors.blueAccent, width: 3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "CORRECTIVE ADVICE:",
+                          style: TextStyle(
+                            color: Colors.blueAccent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: AppPadding.tight),
+                        Text(
+                          value['advice'].toString().trim(),
+                          style: const TextStyle(
+                            color: Color.fromARGB(255, 0, 0, 0),
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+            }
+          });
+        }
+
         return AlertDialog(
-          backgroundColor: AppColors.backgroundWhite, // Deep dark premium card background
+          backgroundColor: AppColors.backgroundWhite,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
             side: BorderSide(color: themeColor.withOpacity(0.2), width: 1.5),
@@ -111,11 +252,10 @@ class SafetyStatusWidget extends StatelessWidget {
                   const SizedBox(width: AppPadding.tight),
                   const Text(
                     "AI Safety Audit",
-                    style: AppTypography.Bluesubheading
+                    style: AppTypography.Bluesubheading,
                   ),
                 ],
               ),
-              // Right-aligned overall safety badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight, vertical: AppPadding.tight),
                 decoration: BoxDecoration(
@@ -142,203 +282,7 @@ class SafetyStatusWidget extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: reasons.map((reason) {
-                  final String trimmed = reason.trim();
-                  if (trimmed.isEmpty) return const SizedBox.shrink();
-
-                  final String upperReason = trimmed.toUpperCase();
-
-                  // Identify corrective advice blocks
-                  final bool isRecommendation = trimmed.startsWith("Recommendation:") || 
-                      upperReason.startsWith("• ADVICE:") || 
-                      upperReason.contains("ADVICE:");
-
-                  // Identify genuine section categories (Must contain standard safety keywords, not details)
-                  final bool isCategoryHeader = !trimmed.startsWith("•") && 
-                      !trimmed.startsWith("[") && 
-                      !isRecommendation && 
-                      trimmed.contains(":") &&
-                      (upperReason.contains("COMPLIANT") || upperReason.contains("DANGEROUS") || upperReason.contains("SAFE"));
-
-                  // Identify secondary breakdown item details
-                  final bool isBulletDetail = trimmed.startsWith("•") || 
-                      upperReason.startsWith("DESCRIPTION:") || 
-                      upperReason.startsWith("REASONING:");
-
-                  // 1. Structural Category Title Banner Header Layout
-                  if (isCategoryHeader) {
-                    final parts = trimmed.split(":");
-                    final String categoryName = parts[0].trim();
-                    final String complianceStatus = parts.length > 1 ? parts[1].trim() : "UNKNOWN";
-                    final Color subStatusColor = _getColorFromRawString(complianceStatus);
-
-                    return Padding(
-                      padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                categoryName.toUpperCase(),
-                                style: AppTypography.body.copyWith(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight, vertical: AppPadding.tight),
-                                decoration: BoxDecoration(
-                                  color: subStatusColor.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                                ),
-                                child: Text(
-                                  complianceStatus.toUpperCase(),
-                                  style: AppTypography.body.copyWith(
-                                    color: subStatusColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppPadding.tight),
-                        ],
-                      ),
-                    );
-                  }
-                  
-                  // 2. Blueprint Actionable Recommendation Callout Box Layout
-                  else if (isRecommendation) {
-                    String adviceText = trimmed;
-                    if (adviceText.startsWith("Recommendation:")) {
-                      adviceText = adviceText.replaceFirst("Recommendation:", "").trim();
-                    } else if (adviceText.startsWith("•")) {
-                      String temp = adviceText.substring(1).trim();
-                      if (temp.toUpperCase().startsWith("ADVICE:")) {
-                        adviceText = temp.substring(7).trim();
-                      } else {
-                        adviceText = temp;
-                      }
-                    } else if (adviceText.toUpperCase().startsWith("ADVICE:")) {
-                      adviceText = adviceText.substring(7).trim();
-                    }
-                    
-                    return Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8, top: 4),
-                      padding: const EdgeInsets.all(AppPadding.medium),
-                      decoration: BoxDecoration(
-                        color: Colors.blueAccent.withOpacity(0.04),
-                        borderRadius: BorderRadius.circular(8),
-                        border: const Border(
-                          left: BorderSide(color: Colors.blueAccent, width: 3),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "CORRECTIVE ADVICE:",
-                            style: TextStyle(
-                              color: Colors.blueAccent,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                        ),
-                          ),
-                          const SizedBox(height: AppPadding.tight),
-                          Text(
-                            adviceText,
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                              fontSize: 12,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  } 
-                  
-                  // Smoothly display clean details directly underneath header tags
-                  else if (isBulletDetail) {
-                    String bodyText = trimmed;
-                    if (bodyText.startsWith("•")) {
-                      bodyText = bodyText.substring(1).trim();
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
-                          Expanded(
-                            child: Text(
-                              bodyText,
-                              style: const TextStyle(
-                                color: Color.fromARGB(255, 40, 40, 40),
-                                fontSize: 12,
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  // 3. Generic/Factual Observations Layout Box Frame
-                  else {
-                    String category = "OBSERVATION";
-                    String bodyText = trimmed;
-                    
-                    if (trimmed.startsWith("[")) {
-                      final closingBracketIdx = trimmed.indexOf("]");
-                      if (closingBracketIdx != -1) {
-                        category = trimmed.substring(1, closingBracketIdx);
-                        bodyText = trimmed.substring(closingBracketIdx + 1).trim();
-                      }
-                    }
-
-                    return Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.all(AppPadding.medium),
-                      decoration: BoxDecoration(
-                        color: AppColors.backgroundWhite,
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                        border: Border.all(color: AppColors.borderGrey, width: 0.5),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            category.toUpperCase(),
-                            style: AppTypography.faintbody.copyWith(
-                              color: const Color.fromARGB(221, 0, 0, 0),
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: AppPadding.tight),
-                          Text(
-                            bodyText,
-                            style: const TextStyle(
-                              color: Color.fromARGB(255, 0, 0, 0),
-                              fontSize: 12,
-                              height: 1.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                }).toList(),
+                children: dialogItems,
               ),
             ),
           ),
@@ -364,7 +308,6 @@ class SafetyStatusWidget extends StatelessWidget {
     final statusType = _status;
     final statusColor = _getStatusColor(statusType);
 
-    // Contextual adjustment for card button labels
     final String buttonLabel = (statusType == SafetyStatus.dangerous || 
                                 statusType == SafetyStatus.partiallyCompliant)
         ? "Why?"

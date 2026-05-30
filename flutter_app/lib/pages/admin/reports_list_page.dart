@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../design/style_constant.dart';
@@ -13,7 +14,7 @@ class ReportsListPage extends StatefulWidget {
 class _ReportsListPageState extends State<ReportsListPage> {
   final supabase = Supabase.instance.client;
 
-  List<Map<String, dynamic>> reports = []; // Renamed from tasks
+  List<Map<String, dynamic>> reports = [];
   bool isLoading = true;
   DateTimeRange? selectedRange;
   String? selectedCategory;
@@ -45,7 +46,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
     setState(() => isLoading = true);
 
     try {
-      String selectQuery = '*, swp_templates!inner(id, category, title)';
+      // Include the foreign key join to load audit safety variables
+      String selectQuery = '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK(*)';
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -59,12 +61,12 @@ class _ReportsListPageState extends State<ReportsListPage> {
             );
       }
 
-      // 3. Filter by SWP Template Category
+      // Filter by SWP Template Category
       if (selectedCategory != null) {
         query = query.eq('swp_templates.category', selectedCategory!);
       }
 
-      // 4. Filter by SWP Template Title
+      // Filter by SWP Template Title
       if (selectedTitle != null) {
         query = query.eq('swp_templates.title', selectedTitle!);
       }
@@ -79,17 +81,75 @@ class _ReportsListPageState extends State<ReportsListPage> {
     }
   }
 
+  // Determines the theme color from a compliance status string
+  Color _getColorFromRawString(String status) {
+    final upper = status.toUpperCase();
+    if (upper.contains('PARTIALLY')) {
+      return Colors.orange;
+    } else if (upper.contains('COMPLIANT') || upper.contains('SAFE')) {
+      return Colors.green;
+    } else if (upper.contains('NON') || upper.contains('DANGEROUS') || upper.contains('RISK')) {
+      return Colors.red;
+    }
+    return Colors.grey;
+  }
+
+  // Parses safety JSON map/string fields into structured reason strings
+  List<String> _buildReasonsList(Map<String, dynamic> safetyVar) {
+    final List<String> reasons = [];
+
+    void parseCategory(String label, dynamic categoryData) {
+      if (categoryData == null) return;
+      Map<String, dynamic> data = {};
+      
+      if (categoryData is Map) {
+        data = Map<String, dynamic>.from(categoryData);
+      } else if (categoryData is String) {
+        try {
+          data = Map<String, dynamic>.from(jsonDecode(categoryData));
+        } catch (_) {}
+      }
+
+      if (data.isNotEmpty) {
+        final compliance = data['compliance'] ?? 'UNKNOWN';
+        final description = data['description'] ?? '';
+        final reasoning = data['reasoning'] ?? '';
+        final advice = data['advice'] ?? '';
+
+        reasons.add("$label: $compliance");
+        if (description.isNotEmpty) {
+          reasons.add("• DESCRIPTION: $description");
+        }
+        if (reasoning.isNotEmpty) {
+          reasons.add("• REASONING: $reasoning");
+        }
+        if (advice.isNotEmpty) {
+          reasons.add("Recommendation: $advice");
+        }
+      }
+    }
+
+    parseCategory("LADDER HEIGHT", safetyVar['ladderheight']);
+    parseCategory("PPE", safetyVar['ppe']);
+    parseCategory("BUDDY SYSTEM", safetyVar['buddySystem']);
+    parseCategory("AREA HAZARDS", safetyVar['areaHazards']);
+
+    return reasons;
+  }
+
   Widget _reportCard(Map<String, dynamic> report) {
     final String techName = report['technician_name'] ?? 'Unknown Technician';
     final String details = report['Details'] ?? 'No details provided';
     final String date = report['submitted_at'] ?? '';
     final String department = report['department'] ?? 'N/A';
     final String SafetyProcedure = report['swp_templates']['category'] ?? 'N/A';
-    final String SafetyProcedure_category =
-        report['swp_templates']['title'] ?? 'N/A';
+    final String SafetyProcedure_category = report['swp_templates']['title'] ?? 'N/A';
     final String designation = report["designation"] ?? 'N/A';
     final String permit_Number = report['wah_permit_numbers'] ?? "";
     final String location = report['location'] ?? 'No location';
+
+    // Safely extract the safety variables object if present
+    final safetyVar = report['WAH_safetyVariables_FK'];
 
     return Container(
       margin: const EdgeInsets.only(top: AppPadding.medium),
@@ -119,6 +179,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           const SizedBox(height: AppPadding.tight),
           _buildInfoRow(Icons.calendar_today, date),
           const SizedBox(height: AppPadding.tight),
+          
           Container(
             color: AppColors.primaryTint,
             child: ExpansionTile(
@@ -134,6 +195,249 @@ class _ReportsListPageState extends State<ReportsListPage> {
               ],
             ),
           ),
+
+          // Dropdown section for AI Safety Audit if safety variables foreign key is not null
+          if (safetyVar != null) ...[
+            const SizedBox(height: AppPadding.tight),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.backgroundWhite,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                border: Border.all(color: AppColors.borderGrey.withAlpha(75)),
+              ),
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  title: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            (safetyVar['Overall Status'] ?? '').toString().toUpperCase().contains('DANGEROUS') ||
+                                    (safetyVar['Overall Status'] ?? '').toString().toUpperCase().contains('NON')
+                                ? Icons.report_problem_rounded
+                                : Icons.assignment_turned_in_rounded,
+                            color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN'),
+                            size: 20,
+                          ),
+                          const SizedBox(width: AppPadding.tight),
+                          const Text(
+                            "AI Safety Audit",
+                            style: AppTypography.body,
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN').withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN'), width: 1),
+                        ),
+                        child: Text(
+                          (safetyVar['Overall Status'] ?? 'UNKNOWN').toString().toUpperCase(),
+                          style: TextStyle(
+                            color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN'),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppPadding.medium),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _buildReasonsList(safetyVar).map((reason) {
+                          final String trimmed = reason.trim();
+                          if (trimmed.isEmpty) return const SizedBox.shrink();
+
+                          final String upperReason = trimmed.toUpperCase();
+
+                          final bool isRecommendation = trimmed.startsWith("Recommendation:") || 
+                              upperReason.startsWith("• ADVICE:") || 
+                              upperReason.contains("ADVICE:");
+
+                          final bool isCategoryHeader = !trimmed.startsWith("•") && 
+                              !trimmed.startsWith("[") && 
+                              !isRecommendation && 
+                              trimmed.contains(":") &&
+                              (upperReason.contains("COMPLIANT") || upperReason.contains("DANGEROUS") || upperReason.contains("SAFE"));
+
+                          final bool isBulletDetail = trimmed.startsWith("•") || 
+                              upperReason.startsWith("DESCRIPTION:") || 
+                              upperReason.startsWith("REASONING:");
+
+                          if (isCategoryHeader) {
+                            final parts = trimmed.split(":");
+                            final String categoryName = parts[0].trim();
+                            final String complianceStatus = parts.length > 1 ? parts[1].trim() : "UNKNOWN";
+                            final Color subStatusColor = _getColorFromRawString(complianceStatus);
+
+                            return Padding(
+                              padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    categoryName.toUpperCase(),
+                                    style: AppTypography.body.copyWith(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: subStatusColor.withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      complianceStatus.toUpperCase(),
+                                      style: AppTypography.body.copyWith(
+                                        color: subStatusColor,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else if (isRecommendation) {
+                            String adviceText = trimmed;
+                            if (adviceText.startsWith("Recommendation:")) {
+                              adviceText = adviceText.replaceFirst("Recommendation:", "").trim();
+                            } else if (adviceText.startsWith("•")) {
+                              String temp = adviceText.substring(1).trim();
+                              if (temp.toUpperCase().startsWith("ADVICE:")) {
+                                adviceText = temp.substring(7).trim();
+                              } else {
+                                adviceText = temp;
+                              }
+                            } else if (adviceText.toUpperCase().startsWith("ADVICE:")) {
+                              adviceText = adviceText.substring(7).trim();
+                            }
+                            
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 8, top: 4),
+                              padding: const EdgeInsets.all(AppPadding.medium),
+                              decoration: BoxDecoration(
+                                color: Colors.blueAccent.withOpacity(0.04),
+                                borderRadius: BorderRadius.circular(8),
+                                border: const Border(
+                                  left: BorderSide(color: Colors.blueAccent, width: 3),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "CORRECTIVE ADVICE:",
+                                    style: TextStyle(
+                                      color: Colors.blueAccent,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppPadding.tight),
+                                  Text(
+                                    adviceText,
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else if (isBulletDetail) {
+                            String bodyText = trimmed;
+                            if (bodyText.startsWith("•")) {
+                              bodyText = bodyText.substring(1).trim();
+                            }
+
+                            return Padding(
+                              padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                                  Expanded(
+                                    child: Text(
+                                      bodyText,
+                                      style: const TextStyle(
+                                        color: Colors.black87,
+                                        fontSize: 12,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            String category = "OBSERVATION";
+                            String bodyText = trimmed;
+                            
+                            if (trimmed.startsWith("[")) {
+                              final closingBracketIdx = trimmed.indexOf("]");
+                              if (closingBracketIdx != -1) {
+                                category = trimmed.substring(1, closingBracketIdx);
+                                bodyText = trimmed.substring(closingBracketIdx + 1).trim();
+                              }
+                            }
+
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 6),
+                              padding: const EdgeInsets.all(AppPadding.medium),
+                              decoration: BoxDecoration(
+                                color: AppColors.backgroundWhite,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: AppColors.borderGrey, width: 0.5),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    category.toUpperCase(),
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppPadding.tight),
+                                  Text(
+                                    bodyText,
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 12,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -151,8 +455,271 @@ class _ReportsListPageState extends State<ReportsListPage> {
     );
   }
 
+  // Action dialog variant matching safety_status_widget fallback trigger if needed
+  void _showReasonsDialog(BuildContext context, Map<String, dynamic> safetyVar) {
+    final String overallStatusText = safetyVar['Overall Status'] ?? 'UNKNOWN';
+    final Color themeColor = _getColorFromRawString(overallStatusText);
+    final List<String> reasons = _buildReasonsList(safetyVar);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.backgroundWhite,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+            side: BorderSide(color: themeColor.withOpacity(0.2), width: 1.5),
+          ),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    overallStatusText.toUpperCase().contains('DANGEROUS') || overallStatusText.toUpperCase().contains('NON')
+                        ? Icons.report_problem_rounded
+                        : Icons.assignment_turned_in_rounded,
+                    color: themeColor,
+                    size: AppDimensions.radiusLarge,
+                  ),
+                  const SizedBox(width: AppPadding.tight),
+                  const Text(
+                    "AI Safety Audit",
+                    style: AppTypography.Bluesubheading,
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight, vertical: AppPadding.tight),
+                decoration: BoxDecoration(
+                  color: themeColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                  border: Border.all(color: themeColor, width: 1),
+                ),
+                child: Text(
+                  overallStatusText,
+                  style: AppTypography.body.copyWith(
+                    color: themeColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.9,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: reasons.map((reason) {
+                  final String trimmed = reason.trim();
+                  if (trimmed.isEmpty) return const SizedBox.shrink();
+
+                  final String upperReason = trimmed.toUpperCase();
+
+                  final bool isRecommendation = trimmed.startsWith("Recommendation:") || 
+                      upperReason.startsWith("• ADVICE:") || 
+                      upperReason.contains("ADVICE:");
+
+                  final bool isCategoryHeader = !trimmed.startsWith("•") && 
+                      !trimmed.startsWith("[") && 
+                      !isRecommendation && 
+                      trimmed.contains(":") &&
+                      (upperReason.contains("COMPLIANT") || upperReason.contains("DANGEROUS") || upperReason.contains("SAFE"));
+
+                  final bool isBulletDetail = trimmed.startsWith("•") || 
+                      upperReason.startsWith("DESCRIPTION:") || 
+                      upperReason.startsWith("REASONING:");
+
+                  if (isCategoryHeader) {
+                    final parts = trimmed.split(":");
+                    final String categoryName = parts[0].trim();
+                    final String complianceStatus = parts.length > 1 ? parts[1].trim() : "UNKNOWN";
+                    final Color subStatusColor = _getColorFromRawString(complianceStatus);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                categoryName.toUpperCase(),
+                                style: AppTypography.body.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight, vertical: AppPadding.tight),
+                                decoration: BoxDecoration(
+                                  color: subStatusColor.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                                ),
+                                child: Text(
+                                  complianceStatus.toUpperCase(),
+                                  style: AppTypography.body.copyWith(
+                                    color: subStatusColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppPadding.tight),
+                        ],
+                      ),
+                    );
+                  } else if (isRecommendation) {
+                    String adviceText = trimmed;
+                    if (adviceText.startsWith("Recommendation:")) {
+                      adviceText = adviceText.replaceFirst("Recommendation:", "").trim();
+                    } else if (adviceText.startsWith("•")) {
+                      String temp = adviceText.substring(1).trim();
+                      if (temp.toUpperCase().startsWith("ADVICE:")) {
+                        adviceText = temp.substring(7).trim();
+                      } else {
+                        adviceText = temp;
+                      }
+                    } else if (adviceText.toUpperCase().startsWith("ADVICE:")) {
+                      adviceText = adviceText.substring(7).trim();
+                    }
+                    
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8, top: 4),
+                      padding: const EdgeInsets.all(AppPadding.medium),
+                      decoration: BoxDecoration(
+                        color: Colors.blueAccent.withOpacity(0.04),
+                        borderRadius: BorderRadius.circular(8),
+                        border: const Border(
+                          left: BorderSide(color: Colors.blueAccent, width: 3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "CORRECTIVE ADVICE:",
+                            style: TextStyle(
+                              color: Colors.blueAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: AppPadding.tight),
+                          Text(
+                            adviceText,
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else if (isBulletDetail) {
+                    String bodyText = trimmed;
+                    if (bodyText.startsWith("•")) {
+                      bodyText = bodyText.substring(1).trim();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                          Expanded(
+                            child: Text(
+                              bodyText,
+                              style: const TextStyle(
+                                color: Color.fromARGB(255, 40, 40, 40),
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else {
+                    String category = "OBSERVATION";
+                    String bodyText = trimmed;
+                    
+                    if (trimmed.startsWith("[")) {
+                      final closingBracketIdx = trimmed.indexOf("]");
+                      if (closingBracketIdx != -1) {
+                        category = trimmed.substring(1, closingBracketIdx);
+                        bodyText = trimmed.substring(closingBracketIdx + 1).trim();
+                      }
+                    }
+
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 6),
+                      padding: const EdgeInsets.all(AppPadding.medium),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundWhite,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                        border: Border.all(color: AppColors.borderGrey, width: 0.5),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            category.toUpperCase(),
+                            style: AppTypography.faintbody.copyWith(
+                              color: const Color.fromARGB(221, 0, 0, 0),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: AppPadding.tight),
+                          Text(
+                            bodyText,
+                            style: const TextStyle(
+                              color: Color.fromARGB(255, 0, 0, 0),
+                              fontSize: 12,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }).toList(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryBlue,
+                textStyle: AppTypography.body.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("CLOSE"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showFilterDialog() async {
-    // Temporary variables to hold choices inside the dialog setup box
     DateTimeRange? tempRange = selectedRange;
     String? tempCategory = selectedCategory;
     String? tempTitle = selectedTitle;
@@ -172,7 +739,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- DATE RANGE SECTION ---
                     Text(
                       'Date Range',
                       style: AppTypography.Blacksubheading.copyWith(
@@ -201,7 +767,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
                     ),
                     const SizedBox(height: AppPadding.medium),
 
-                    // --- CATEGORY DROPDOWN ---
                     Text(
                       'Category',
                       style: AppTypography.Blacksubheading.copyWith(
@@ -224,7 +789,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
                     ),
                     const SizedBox(height: AppPadding.tight),
 
-                    // --- TITLE DROPDOWN ---
                     Text(
                       'Title',
                       style: AppTypography.Blacksubheading.copyWith(
@@ -249,7 +813,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
                 ),
               ),
               actions: [
-                // Clear All Active Filter Values Button
                 TextButton(
                   onPressed: () {
                     setDialogState(() {
@@ -269,14 +832,13 @@ class _ReportsListPageState extends State<ReportsListPage> {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    // Save Dialog state back to Page state context
                     setState(() {
                       selectedRange = tempRange;
                       selectedCategory = tempCategory;
                       selectedTitle = tempTitle;
                     });
                     Navigator.pop(context);
-                    loadReports(); // Fetch updated items
+                    loadReports();
                   },
                   child: const Text('Apply Filters'),
                 ),
@@ -321,9 +883,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
                   ),
 
                   IconButton(
-                    icon: Icon(
-                      sortAscending ? Icons.swap_vert_rounded : Icons.swap_vert_rounded,
-                      color: sortAscending ? AppColors.primaryBlue : Colors.black,
+                    icon: const Icon(
+                      Icons.swap_vert_rounded,
+                      color: Colors.black,
                     ),
                     tooltip: sortAscending ? 'Showing Oldest First' : 'Showing Newest First',
                     onPressed: () {

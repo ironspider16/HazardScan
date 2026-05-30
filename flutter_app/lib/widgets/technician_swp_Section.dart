@@ -59,8 +59,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
   bool isLoading = true;
   late final TextEditingController _detailsCtrl;
 
-  String aiStatus = 'N/A';
-  List<String> aiReasons = [];
+  Map<String, dynamic>? aiData;
   bool isAnalyzing = false;
 
   @override
@@ -94,7 +93,6 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
     });
   }
 
-  // Helper utility to convert camelCase keys (like ladderHeight) into clean labels (Ladder Height)
   String _formatCategoryKey(String key) {
     if (key == 'ppe') return 'PPE';
     final RegExp numUpperRegExp = RegExp(r'(?<=[a-z])(?=[A-Z])');
@@ -149,26 +147,23 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                   label: "Site Photos",
                   onImageSelected: (bytes) async {
                     widget.onImageChanged(bytes as Uint8List);
-                    print(
-                      "Starting AI Analysis for: ${widget.categoryName}...",
-                    );
+                    debugPrint("Starting AI Analysis for: ${widget.categoryName}...");
                     setState(() {
                       isAnalyzing = true;
                     });
-                    // YOLO Detection
+                    
                     final detections = await YoloService().yoloDetect(
                       context,
                       bytes,
                     );
-                    print(detections);
+                    debugPrint(detections.toString());
+                    
                     try {
                       final String rawResponse =
                           await GeminiService.detectHazards(
-                            bytes as Uint8List,
-                            _detailsCtrl.text.trim(),
-                          );
-                      print("--- GEMINI JSON OUTPUT ---");
-                      print(rawResponse);
+                        bytes as Uint8List,
+                        _detailsCtrl.text.trim(),
+                      );
 
                       String cleanJson = rawResponse
                           .replaceAll('```json', '')
@@ -181,83 +176,44 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                         widget.onAiAnalyzed!(data);
                       }
 
-                      setState(() {
-                        // 1. Correctly parse status using 'overallStatus'
-                        aiStatus = data['overallStatus'] ?? "N/A";
-
-                        // 2. Extract reasons dynamically from nested maps
-                        List<String> extractedReasons = [];
-
-                        data.forEach((key, value) {
-                          if (value is Map<String, dynamic>) {
-                            final compliance =
-                                value['compliance']?.toString().toUpperCase() ??
-                                '';
-
-                            // Collect from non-compliant components
-                            // if (compliance == 'PARTIALLY COMPLIANT' || compliance == 'DANGEROUS') {
-                            final reasoning = value['reasoning'] ?? '';
-                            final advice = value['advice'] ?? '';
-                            final categoryTitle = _formatCategoryKey(key);
-
-                            if (reasoning.isNotEmpty) {
-                              extractedReasons.add(
-                                "[$categoryTitle] $reasoning",
-                              );
-                            }
-                            if (advice.isNotEmpty) {
-                              extractedReasons.add("Recommendation: $advice");
-                            }
-                            // }
-                          }
-                        });
-
-                        aiReasons = extractedReasons;
-                        debugPrint("$aiReasons");
-                        isAnalyzing = false;
-                      });
-
-                      // 3. Format text details beautifully into a human-readable summary
                       StringBuffer detailsBuffer = StringBuffer();
-                      detailsBuffer.writeln(
-                        "Overall Safety Status: $aiStatus\n",
-                      );
+                      final String aiStatus = data['overallStatus'] ?? "N/A";
+                      detailsBuffer.writeln("Overall Safety Status: $aiStatus\n");
+                      
                       data.forEach((key, value) {
                         if (value is Map<String, dynamic>) {
                           detailsBuffer.writeln(
                             "${_formatCategoryKey(key)}: ${value['compliance']}",
                           );
                           if (value['description'] != null) {
-                            detailsBuffer.writeln(
-                              " • Description: ${value['description']}",
-                            );
+                            detailsBuffer.writeln(" • Description: ${value['description']}");
                           }
                           if (value['reasoning'] != null) {
-                            detailsBuffer.writeln(
-                              " • Reasoning: ${value['reasoning']}",
-                            );
+                            detailsBuffer.writeln(" • Reasoning: ${value['reasoning']}");
                           }
                           if (value['advice'] != null) {
-                            detailsBuffer.writeln(
-                              " • Advice: ${value['advice']}",
-                            );
+                            detailsBuffer.writeln(" • Advice: ${value['advice']}");
                           }
                           detailsBuffer.writeln();
                         }
                       });
+
+                      setState(() {
+                        aiData = data;
+                        isAnalyzing = false;
+                      });
+                      
+                      widget.onDetailsChanged(_detailsCtrl.text);
                     } catch (e) {
-                      print("❌ AI Analysis failed: $e");
+                      debugPrint("AI Analysis failed: $e");
                       setState(() {
                         isAnalyzing = false;
-                        aiStatus = "N/A";
-                        aiReasons = [];
+                        aiData = null;
                       });
                     }
                   },
                 ),
-              if (widget.categoryName.toLowerCase().contains(
-                "work at height",
-              )) ...[
+              if (widget.categoryName.toLowerCase().contains("work at height")) ...[
                 if (isAnalyzing)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: AppPadding.tight),
@@ -274,7 +230,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                     ),
                   )
                 else
-                  SafetyStatusWidget(rawStatus: aiStatus, reasons: aiReasons),
+                  SafetyStatusWidget(aiData: aiData),
               ],
 
               const SizedBox(height: AppPadding.medium),
@@ -282,7 +238,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                 label: "Details",
                 hint: "Enter details here / Take photo to output AI details",
                 controller: _detailsCtrl,
-                Maxlines: 5, // Expanded display space for report layout logs
+                Maxlines: 5,
                 onChanged: (value) {
                   widget.onDetailsChanged(value.trim());
                 },
