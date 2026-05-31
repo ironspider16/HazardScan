@@ -43,7 +43,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     setState(() => isLoading = true);
 
     try {
-      String selectQuery = '*, swp_templates!inner(id, category, title)';
+      String selectQuery = '*, swp_templates!inner(id, category, title), WAH_safetyVariables(*)';
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -268,16 +268,42 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           children: [
             const SizedBox(height: AppPadding.medium),
             // ================= TOP STATS =================
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                DashboardCircle(
-                  icon: Icons.assignment_outlined,
-                  value: reports.length.toString(),
-                  label: "Total Reports",
-                ),
-                WorkActivityCircle(reports: reports),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // If the screen is wider than 600px, use a row; otherwise, a column
+                bool isWide = constraints.maxWidth > 600;
+
+                if (isWide) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      DashboardCircle(
+                        icon: Icons.assignment_outlined,
+                        value: reports.length.toString(),
+                        label: "Total Reports",
+                      ),
+                      WorkActivityCircle(reports: reports),
+                      StatusDistributionCircle(reports: reports),
+                    ],
+                  );
+                } else {
+                  return Center(
+                    child: Column(
+                      children: [
+                        DashboardCircle(
+                          icon: Icons.assignment_outlined,
+                          value: reports.length.toString(),
+                          label: "Total Reports",
+                        ),
+                        const SizedBox(height: AppPadding.medium),
+                        WorkActivityCircle(reports: reports),
+                        const SizedBox(height: AppPadding.medium),
+                        StatusDistributionCircle(reports: reports),
+                      ],
+                    ),
+                  );
+                }
+              },
             ),
           ],
         ),
@@ -337,15 +363,67 @@ class DashboardCircle extends StatelessWidget {
   }
 }
 
-// =====================================================
+class StatusDistributionCircle extends StatelessWidget {
+  final List<Map<String, dynamic>> reports;
 
-// WORK ACTIVITY CIRCLE
+  const StatusDistributionCircle({super.key, required this.reports});
 
-// =====================================================
+  List<PieChartSectionData> _generateChartData() {
+    // 1. Define order and colors for consistency
+    final Map<String, Color> statusColors = {
+      'SAFE': Colors.green,
+      'COMPLIANT': Colors.blue,
+      'PARTIALLY COMPLIANT': Colors.orange,
+      'DANGEROUS': Colors.red,
+      'N/A': Colors.grey,
+    };
 
-// =====================================================
-// DYNAMIC WORK ACTIVITY CIRCLE
-// =====================================================
+    // 2. Count statuses
+    Map<String, int> statusCounts = {};
+    for (var report in reports) {
+      if (report["WAH_safetyVariables"] != null) {
+        final vars = report['WAH_safetyVariables'];
+        final status = (vars != null) ? (vars['Overall Status'] ?? 'N/A') : 'N/A';
+        if (status != null) {
+          statusCounts[status] = (statusCounts[status] ?? 0) + 1;
+        }
+      }
+    }
+
+    // 3. Generate Sections
+    return statusCounts.entries.map((entry) {
+      return PieChartSectionData(
+        value: entry.value.toDouble(),
+        color: statusColors[entry.key] ?? Colors.grey,
+        radius: 80,
+        title: '${entry.key}\n(${entry.value})', // Shows Label + Number
+        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+      );
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          width: 180,
+          height: 180,
+          child: PieChart(
+            PieChartData(
+              sections: _generateChartData(),
+              sectionsSpace: 2,
+              centerSpaceRadius: 20, // Add a center hole for a "donut" look
+            ),
+          ),
+        ),
+        const SizedBox(height: AppPadding.medium),
+        const Text("Overall Safety Status", style: TextStyle(fontSize: 16)),
+      ],
+    );
+  }
+}
+
 class WorkActivityCircle extends StatelessWidget {
   final List<Map<String, dynamic>> reports;
 
@@ -376,7 +454,7 @@ class WorkActivityCircle extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: Colors.black54,
           ),
-        )
+        ),
       ];
     }
 
@@ -404,7 +482,8 @@ class WorkActivityCircle extends StatelessWidget {
       colorIndex++;
 
       return PieChartSectionData(
-        value: entry.value.toDouble(), // Ratios handled automatically by FL Chart
+        value: entry.value
+            .toDouble(), // Ratios handled automatically by FL Chart
         color: color,
         radius: 90,
         title: _getAcronym(entry.key), // E.g., 'CH' for Chemical Hazard
@@ -449,4 +528,3 @@ class WorkActivityCircle extends StatelessWidget {
 // TASK CARD
 
 // =====================================================
-
