@@ -20,43 +20,6 @@ class AppImageUpload extends StatefulWidget {
   State<AppImageUpload> createState() => _AppImageUploadState();
 }
 
-// class _AppImageUploadState extends State<AppImageUpload> {
-//   File? _selectedImage;
-//   bool _isCompressing = false;
-
-//   Future<void> _pickAndCompress() async {
-//     final picker = ImagePicker();
-//     final XFile? photo = await picker.pickImage(source: ImageSource.camera);
-
-//     if (photo == null) {
-//       setState(() => _isCompressing = false);
-//       return;
-//     }
-
-//     setState(() => _isCompressing = true);
-
-//     final dir = await path_provider.getTemporaryDirectory();
-//     final targetPath =
-//         "${dir.absolute.path}/temp_${DateTime.now().millisecondsSinceEpoch}.jpg";
-
-//     final XFile? compressedFile = await FlutterImageCompress.compressAndGetFile(
-//       photo.path,
-//       targetPath,
-//       quality: 70, // 70-80 is the sweet spot for quality vs size
-//       minWidth: 1024,
-//       minHeight: 1024,
-//     );
-
-//     if (compressedFile != null) {
-//       final file = File(compressedFile.path);
-//       setState(() {
-//         _selectedImage = file;
-//         _isCompressing = false;
-//       });
-//       widget.onImageSelected(file);
-//     }
-//   }
-
 class _AppImageUploadState extends State<AppImageUpload> {
   Uint8List? _imageBytes; // Store bytes instead of File
 

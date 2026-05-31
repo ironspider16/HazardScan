@@ -1,6 +1,5 @@
 import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
-import '../services/gemini_service.dart';
 import 'result_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';

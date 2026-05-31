@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/main_menu.dart';
@@ -9,6 +8,7 @@ import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
 import '../widgets/Menu_button.dart';
 import 'package:emailjs/emailjs.dart' as emailjs;
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
@@ -94,6 +94,16 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         );
       }
     }
+  }
+
+  Future<Uint8List> _prepareEmailImage(Uint8List orginalBytes) async {
+    final compressed = await FlutterImageCompress.compressWithList(
+      orginalBytes,
+      quality: 30,
+      minWidth: 500,
+      minHeight: 500,
+    );
+    return compressed;
   }
 
   void _showAcknowledgementDialog() {
@@ -324,6 +334,20 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         String detailsText = _savedDetails[templateId] ?? "";
 
         int? wahSafetyForeignKey;
+        String? imageUrl;
+
+        Uint8List? imageBytes = _savedImages[templateId];
+        if (imageBytes != null) {
+          final compressedImageBytes = await _prepareEmailImage(imageBytes);
+          final fileName =
+              'report_${DateTime.now().millisecondsSinceEpoch}_$templateId.jpg';
+          await supabase.storage
+              .from('safety_reports')
+              .uploadBinary(fileName, compressedImageBytes);
+          imageUrl = supabase.storage
+              .from('safety_reports')
+              .getPublicUrl(fileName);
+        }
 
         if (_savedAiData.containsKey(templateId) &&
             _savedAiData[templateId] != null) {
@@ -355,6 +379,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'department': department,
           'location': location,
           'WAH_safetyVariables_FK': wahSafetyForeignKey,
+          'image_url': imageUrl,
         });
 
         await sendEmail(
@@ -366,6 +391,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           designation: designation,
           department: department,
           location: location,
+          imageUrl: imageUrl,
         );
       }
 
@@ -386,6 +412,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String title,
     required String category,
     required String location,
+    String? imageUrl,
   }) async {
     try {
       await emailjs.send(
@@ -400,6 +427,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
+          'image': imageUrl ?? "",
         },
         const emailjs.Options(
           publicKey: 'wbQ6enyH79nXAsNFR',

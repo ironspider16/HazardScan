@@ -61,6 +61,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
 
   Map<String, dynamic>? aiData;
   bool isAnalyzing = false;
+  bool get isWAH => widget.categoryName.toLowerCase().contains("work at height");
 
   @override
   void initState() {
@@ -118,7 +119,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
           bool isMobile = constraints.maxWidth < 420;
           return Column(
             children: [
-              if (widget.categoryName.toLowerCase().contains("work at height"))
+              if (isWAH)
                 WAHPermitWidget(
                   isMobile: true,
                   initialPtw: widget.initialPtw,
@@ -142,11 +143,13 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                   widget.onAllChecked(status);
                 },
               ),
-              if (widget.categoryName.toLowerCase().contains("work at height"))
+              
                 AppImageUpload(
                   label: "Site Photos",
                   onImageSelected: (bytes) async {
                     widget.onImageChanged(bytes as Uint8List);
+
+                    if (!isWAH) return;
                     debugPrint("Starting AI Analysis for: ${widget.categoryName}...");
                     setState(() {
                       isAnalyzing = true;
@@ -213,7 +216,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                     }
                   },
                 ),
-              if (widget.categoryName.toLowerCase().contains("work at height")) ...[
+              if (isWAH) ...[
                 if (isAnalyzing)
                   const Padding(
                     padding: EdgeInsets.symmetric(vertical: AppPadding.tight),

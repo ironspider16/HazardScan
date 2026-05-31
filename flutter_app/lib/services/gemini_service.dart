@@ -1,8 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:kkhazardscan/pages/camera_page.dart';
 
 class GeminiService {
   /// Sends the compressed image data along with an optional on-site environmental 
