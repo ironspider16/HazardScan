@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'dart:convert';
 class ReportsStatisticsPage extends StatefulWidget {
   const ReportsStatisticsPage({super.key});
 
@@ -18,6 +18,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   DateTimeRange? selectedRange;
   String? selectedCategory;
   String? selectedTitle;
+  
 
   final List<String> categories = [
     'Work At Height',
@@ -216,12 +217,65 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     );
   }
 
+  List<Map<String, dynamic>> _calculateRiskLeaderboard() {
+    Map<String, int> scores = {
+      'Ladder Height': 0,
+      'PPE': 0,
+      'Buddy System': 0,
+      'Area Hazards': 0,
+    };
+
+    // Helper to map compliance status to score
+    int _getScore(String? compliance) {
+      switch (compliance?.toUpperCase()) {
+        case 'SAFE': return 0;
+        case 'COMPLIANT': return 1;
+        case 'PARTIALLY COMPLIANT': return 2;
+        case 'DANGEROUS': return 4;
+        default: return 0;
+      }
+    }
+
+    // Helper to parse the JSON string or Map structure
+    // Adjust logic if data arrives as Map vs String
+    int _extractScore(dynamic data) {
+      if (data == null) return 0;
+      
+      // If it is a string (JSON), decode it first
+      final Map<String, dynamic> parsed = (data is String) 
+          ? Map<String, dynamic>.from(jsonDecode(data)) 
+          : Map<String, dynamic>.from(data);
+          
+      return _getScore(parsed['compliance'] as String?);
+    }
+
+    for (var report in reports) {
+      final vars = report['WAH_safetyVariables'];
+      if (vars != null) {
+        scores['Ladder Height'] = scores['Ladder Height']! + _extractScore(vars['ladderheight']);
+        scores['PPE'] = scores['PPE']! + _extractScore(vars['ppe']);
+        scores['Buddy System'] = scores['Buddy System']! + _extractScore(vars['buddySystem']);
+        scores['Area Hazards'] = scores['Area Hazards']! + _extractScore(vars['areaHazards']);
+      }
+    }
+
+    // Convert to list and sort by score descending
+    List<Map<String, dynamic>> leaderboard = scores.entries
+        .map((e) => {'category': e.key, 'score': e.value})
+        .toList();
+    
+    leaderboard.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
+    return leaderboard;
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isFiltering =
         selectedRange != null ||
         selectedCategory != null ||
         selectedTitle != null;
+
+    final List<Map<String, dynamic>> leaderboard = _calculateRiskLeaderboard();
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -262,11 +316,13 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       ),
 
       // ================= BODY =================
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppPadding.page),
-        child: Column(
-          children: [
-            const SizedBox(height: AppPadding.medium),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppPadding.page),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: AppPadding.medium),
             // ================= TOP STATS =================
             LayoutBuilder(
               builder: (context, constraints) {
@@ -305,9 +361,12 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                 }
               },
             ),
+            const SizedBox(height: AppPadding.medium),
+            RiskLeaderboardWidget(leaderboardData: leaderboard),
           ],
         ),
       ),
+    )
     );
   }
 }
@@ -317,6 +376,59 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 // DASHBOARD CIRCLE
 
 // =====================================================
+
+class RiskLeaderboardWidget extends StatelessWidget {
+  final List<Map<String, dynamic>> leaderboardData;
+
+  const RiskLeaderboardWidget({super.key, required this.leaderboardData});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Risk Leaderboard", style: AppTypography.Bluesubheading),
+          const SizedBox(height: 16),
+          ...leaderboardData.asMap().entries.map((entry) {
+            int index = entry.key;
+            var item = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Text(item['category'] as String, style: const TextStyle(fontSize: 16))),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: (item['score'] as int) > 10 ? Colors.red.shade100 : Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "${item['score']} pts",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: (item['score'] as int) > 10 ? Colors.red : Colors.blue,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
 
 class DashboardCircle extends StatelessWidget {
   final IconData icon;
