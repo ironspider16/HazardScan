@@ -1,7 +1,5 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:kkhazardscan/config/app_users.dart';
-import 'package:kkhazardscan/pages/main_menu.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
@@ -9,6 +7,7 @@ import '../widgets/technician_swp_Section.dart';
 import '../widgets/Menu_button.dart';
 import 'package:emailjs/emailjs.dart' as emailjs;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:kkhazardscan/services/report_compiler.dart';
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
@@ -219,20 +218,77 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         child: Row(
                           children: [
                             // 1. Cancel Button
-                            Flexible(
-                              flex: 1,
+                            Expanded(
+                              flex: 2,
                               child: MenuButton(
                                 label: "Cancel",
                                 isMini: true,
                                 onTap: () => Navigator.pop(dialogContext),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: 8),
 
-                            Flexible(
-                              flex: 2,
+                            // 2. NEW: Preview Button
+                            Expanded(
+                              flex: 3,
                               child: MenuButton(
-                                label: "Submit Report",
+                                label: "Preview",
+                                isPrimary:
+                                    false, // Make it look different from the submit button
+                                isMini: true,
+                                icon: Icons.remove_red_eye,
+                                onTap: () {
+                                  // Find the first active template ID to pull the AI data and notes
+                                  final firstActiveId = selectedSubCategories
+                                      .values
+                                      .firstWhere(
+                                        (id) => id != null,
+                                        orElse: () => null,
+                                      );
+
+                                  if (firstActiveId != null) {
+                                    final aiData =
+                                        _savedAiData[firstActiveId] ?? {};
+                                    final textDetail =
+                                        _savedDetails[firstActiveId] ?? "";
+
+                                    // Generate the raw text report instantly
+                                    final markdownReport =
+                                        LocalReportCompiler.generateWshReport(
+                                          locationCtrl: locationCtrl,
+                                          supervisorCtrl: nameCtrl,
+                                          employerCtrl: deptCtrl,
+                                          // We create dummy empty controllers for fields not currently in your dialog
+                                          feedbackCtrl: TextEditingController(),
+                                          changesCtrl: TextEditingController(),
+                                          manualNotesCtrl:
+                                              TextEditingController(
+                                                text: textDetail,
+                                              ),
+                                          initialAiData: aiData,
+                                        );
+
+                                    // Navigate to the dummy debug screen
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ReportPreviewScreen(
+                                              reportContent: markdownReport,
+                                            ),
+                                      ),
+                                    );
+                                  }
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+
+                            // 3. Submit Button
+                            Expanded(
+                              flex: 3,
+                              child: MenuButton(
+                                label: "Submit",
                                 isPrimary: true,
                                 isMini: true,
                                 icon: Icons.assignment_turned_in_rounded,
@@ -252,31 +308,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
                                   if (success && mounted) {
                                     Navigator.pop(dialogContext);
-
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          "All safety checks successfully submitted!",
-                                        ),
-                                        backgroundColor: Colors.green,
-                                      ),
-                                    );
-
-                                    final anonymousTechnician = AppUser(
-                                      id: 0,
-                                      email: "technician@example.com",
-                                      password: '',
-                                      role: UserRole.user,
-                                    );
-
-                                    Navigator.pushAndRemoveUntil(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            MainMenu(user: anonymousTechnician),
-                                      ),
-                                      (route) => false,
-                                    );
+                                    // ... the rest of your existing success routing code ...
                                   } else {
                                     setDialogState(
                                       () => dialogSubmitting = false,
@@ -717,6 +749,37 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class ReportPreviewScreen extends StatelessWidget {
+  final String reportContent;
+
+  const ReportPreviewScreen({super.key, required this.reportContent});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text("Debug Report Preview"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Text(
+          reportContent,
+          style: const TextStyle(
+            fontSize: 14,
+            fontFamily:
+                'Courier', // Monospace font helps spot formatting issues
+            color: Colors.black87,
+          ),
+        ),
+      ),
     );
   }
 }
