@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
 import '../widgets/Menu_button.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:kkhazardscan/services/report_compiler.dart';
@@ -607,9 +606,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'siteSupervision':
-                  _globalAiData!['siteSupervision'] ??
-                  {}, // Updated fields mapped here
               'mhi': _globalAiData!['mhi'] ?? {}, // Updated fields mapped here
             })
             .select('id')
@@ -637,23 +633,23 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK': wahSafetyForeignKey,
+          'WAH_safetyVariables_FK': globalWahSafetyForeignKey,
           'image_url': null, // Storing null since we are no longer using Supabase storage
         });
 
 
         // Send email via Brevo
-        await sendBrevoEmail(
-          technicianName: name,
-          details: detailsText,
-          title: title,
-          category: category,
-          ptwNumber: ptwNumber,
-          designation: designation,
-          department: department,
-          location: location,
-          imageBytes: imageBytes,
-        );
+        // await sendBrevoEmail(
+        //   technicianName: name,
+        //   details: _globalDetailsCtrl.text,
+        //   title: title,
+        //   category: category,
+        //   ptwNumber: ptwNumber,
+        //   designation: designation,
+        //   department: department,
+        //   location: location,
+        //   imageBytes: _globalImageBytes,
+        // );
       }
 
 
@@ -666,70 +662,70 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
 
 
-    Future<void> sendBrevoEmail({
-    required String technicianName,
-    required String details,
-    required String ptwNumber,
-    required String designation,
-    required String department,
-    required String title,
-    required String category,
-    required String location,
-    Uint8List? imageBytes,
-  }) async {
-    final Uri url = Uri.parse('https://api.brevo.com/v3/smtp/email');
+  //   Future<void> sendBrevoEmail({
+  //   required String technicianName,
+  //   required String details,
+  //   required String ptwNumber,
+  //   required String designation,
+  //   required String department,
+  //   required String title,
+  //   required String category,
+  //   required String location,
+  //   Uint8List? imageBytes,
+  // }) async {
+  //   final Uri url = Uri.parse('https://api.brevo.com/v3/smtp/email');
+  //   final String apiKey = 'xkeysib'; 
+
+  //   // Prepare body
+  //   final Map<String, dynamic> body = {
+  //     "sender": {"name": "Safety System", "email": "liewjunlei16@gmail.com"},
+  //     "to": [{"email": "liewjunlei16@gmail.com", "name": "Manager"}],
+  //     "templateId": 1, // Replace with your actual Brevo template ID
+  //     "params": {
+  //       "category": category,
+  //       "technician_name": technicianName,
+  //       "name": technicianName,
+  //       "template_title": title,
+  //       "ptw": ptwNumber,
+  //       "designation": designation,
+  //       "department": department,
+  //       "location": location,
+  //       "message": details,
+  //     },
+  //   };
 
 
-    // Prepare body
-    final Map<String, dynamic> body = {
-      "sender": {"name": "Safety System", "email": "liewjunlei16@gmail.com"},
-      "to": [{"email": "liewjunlei16@gmail.com", "name": "Manager"}],
-      "templateId": 1, // Replace with your actual Brevo template ID
-      "params": {
-        "category": category,
-        "technician_name": technicianName,
-        "name": technicianName,
-        "template_title": title,
-        "ptw": ptwNumber,
-        "designation": designation,
-        "department": department,
-        "location": location,
-        "message": details,
-      },
-    };
+  //   // Attach image if it exists
+  //   if (imageBytes != null) {
+  //     final String base64Image = base64Encode(imageBytes);
+  //     body['attachment'] = [
+  //       {
+  //         "name": "safety_evidence.jpg",
+  //         "content": base64Image,
+  //       }
+  //     ];
+  //   }
 
 
-    // Attach image if it exists
-    if (imageBytes != null) {
-      final String base64Image = base64Encode(imageBytes);
-      body['attachment'] = [
-        {
-          "name": "safety_evidence.jpg",
-          "content": base64Image,
-        }
-      ];
-    }
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {
+  //         'api-key': apiKey,
+  //         'Content-Type': 'application/json',
+  //         'accept': 'application/json',
+  //       },
+  //       body: jsonEncode(body),
+  //     );
 
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {
-          'api-key': apiKey,
-          'Content-Type': 'application/json',
-          'accept': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
-
-
-      if (response.statusCode != 201) {
-        print('Failed to send email: ${response.body}');
-      }
-    } catch (e) {
-      print('Error sending email: $e');
-    }
-  }
+  //     if (response.statusCode != 201) {
+  //       print('Failed to send email: ${response.body}');
+  //     }
+  //   } catch (e) {
+  //     print('Error sending email: $e');
+  //   }
+  // }
 
 
   @override
