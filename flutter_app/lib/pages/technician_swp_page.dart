@@ -9,7 +9,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
 import '../widgets/Menu_button.dart';
-import 'package:http/http.dart' as http;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:kkhazardscan/services/report_compiler.dart';
 import 'package:kkhazardscan/services/gemini_service.dart';
@@ -573,28 +572,16 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return false;
       }
 
-
       final activeSubCategoryIds = selectedSubCategories.values
           .where((id) => id != null)
           .cast<int>()
           .toList();
 
-      // --- NEW: UPLOAD GLOBALS ONCE ---
-      String? globalImageUrl;
       int? globalWahSafetyForeignKey;
+      Uint8List? compressedImageBytes;
 
       if (_globalImageBytes != null) {
-        final compressedImageBytes = await _prepareEmailImage(
-          _globalImageBytes!,
-        );
-        final fileName =
-            'report_${DateTime.now().millisecondsSinceEpoch}_global.jpg';
-        await supabase.storage
-            .from('safety_reports')
-            .uploadBinary(fileName, compressedImageBytes);
-        globalImageUrl = supabase.storage
-            .from('safety_reports')
-            .getPublicUrl(fileName);
+        compressedImageBytes = await _prepareEmailImage(_globalImageBytes!);
       }
 
       if (_globalAiData != null) {
@@ -606,14 +593,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'mhi': _globalAiData!['mhi'] ?? {}, // Updated fields mapped here
+              'mhi': _globalAiData!['mhi'] ?? {}, 
             })
             .select('id')
             .single();
 
         globalWahSafetyForeignKey = insertedWahData['id'];
       }
-      // --------------------------------
 
       List<Map<String, dynamic>> recordsToInsert = [];
       for (int templateId in activeSubCategoryIds) {
@@ -634,24 +620,21 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'department': department,
           'location': location,
           'WAH_safetyVariables_FK': globalWahSafetyForeignKey,
-          'image_url': null, // Storing null since we are no longer using Supabase storage
         });
 
-
-        // Send email via Brevo
-        // await sendBrevoEmail(
-        //   technicianName: name,
-        //   details: _globalDetailsCtrl.text,
-        //   title: title,
-        //   category: category,
-        //   ptwNumber: ptwNumber,
-        //   designation: designation,
-        //   department: department,
-        //   location: location,
-        //   imageBytes: _globalImageBytes,
-        // );
+        // Trigger edge function email process
+        await sendBrevoEmail(
+           technicianName: name,
+           details: _globalDetailsCtrl.text,
+           title: title,
+           category: category,
+           ptwNumber: ptwNumber,
+           designation: designation,
+           department: department,
+           location: location,
+           imageBytes: compressedImageBytes ?? _globalImageBytes,
+        );
       }
-
 
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
@@ -661,71 +644,46 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     }
   }
 
+  Future<void> sendBrevoEmail({
+    required String technicianName,
+    required String details,
+    required String ptwNumber,
+    required String designation,
+    required String department,
+    required String title,
+    required String category,
+    required String location,
+    Uint8List? imageBytes,
+  }) async {
+    try {
+      String? base64Image;
+      if (imageBytes != null) {
+        base64Image = base64Encode(imageBytes);
+      }
 
-  //   Future<void> sendBrevoEmail({
-  //   required String technicianName,
-  //   required String details,
-  //   required String ptwNumber,
-  //   required String designation,
-  //   required String department,
-  //   required String title,
-  //   required String category,
-  //   required String location,
-  //   Uint8List? imageBytes,
-  // }) async {
-  //   final Uri url = Uri.parse('https://api.brevo.com/v3/smtp/email');
-  //   final String apiKey = 'xkeysib'; 
+      // Route to Supabase Edge Function to protect API credentials
+      final response = await supabase.functions.invoke(
+        'email-sending',
+        body: {
+          "technician_name": technicianName,
+          "details": details,
+          "title": title,
+          "category": category,
+          "ptw_number": ptwNumber,
+          "designation": designation,
+          "department": department,
+          "location": location,
+          "image": base64Image,
+        },
+      );
 
-  //   // Prepare body
-  //   final Map<String, dynamic> body = {
-  //     "sender": {"name": "Safety System", "email": "liewjunlei16@gmail.com"},
-  //     "to": [{"email": "liewjunlei16@gmail.com", "name": "Manager"}],
-  //     "templateId": 1, // Replace with your actual Brevo template ID
-  //     "params": {
-  //       "category": category,
-  //       "technician_name": technicianName,
-  //       "name": technicianName,
-  //       "template_title": title,
-  //       "ptw": ptwNumber,
-  //       "designation": designation,
-  //       "department": department,
-  //       "location": location,
-  //       "message": details,
-  //     },
-  //   };
-
-
-  //   // Attach image if it exists
-  //   if (imageBytes != null) {
-  //     final String base64Image = base64Encode(imageBytes);
-  //     body['attachment'] = [
-  //       {
-  //         "name": "safety_evidence.jpg",
-  //         "content": base64Image,
-  //       }
-  //     ];
-  //   }
-
-
-  //   try {
-  //     final response = await http.post(
-  //       url,
-  //       headers: {
-  //         'api-key': apiKey,
-  //         'Content-Type': 'application/json',
-  //         'accept': 'application/json',
-  //       },
-  //       body: jsonEncode(body),
-  //     );
-
-
-  //     if (response.statusCode != 201) {
-  //       print('Failed to send email: ${response.body}');
-  //     }
-  //   } catch (e) {
-  //     print('Error sending email: $e');
-  //   }
-  // }
+      if (response.status != 200 && response.status != 201) {
+        print('Failed to send email via function: ${response.data}');
+      }
+    } catch (e) {
+      print('Error calling edge function: $e');
+    }
+  }
 
 
   @override
