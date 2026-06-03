@@ -525,7 +525,6 @@ class StatusDistributionCircle extends StatelessWidget {
             PieChartData(
               sections: _generateChartData(),
               sectionsSpace: 2,
-              centerSpaceRadius: 20, // Add a center hole for a "donut" look
             ),
           ),
         ),
