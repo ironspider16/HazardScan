@@ -9,7 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
 import '../widgets/Menu_button.dart';
-import 'package:emailjs/emailjs.dart' as emailjs;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:kkhazardscan/services/report_compiler.dart';
 import 'package:kkhazardscan/services/gemini_service.dart';
@@ -26,21 +27,26 @@ class TechnicianSWPPage extends StatefulWidget {
     this.task,
   });
 
+
   @override
   State<TechnicianSWPPage> createState() => _TechnicianSWPPageState();
 }
 
+
 class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final supabase = Supabase.instance.client;
+
 
   List<Map<String, dynamic>> allTemplates = [];
   Map<String, int?> selectedSubCategories = {};
   bool isLoading = true;
 
+
   final Map<int, String> _savedPtwNumbers = {};
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
   final Map<int, bool> _checklistCompletionStates = {};
+
 
   // --- NEW GLOBAL STATE VARIABLES ---
   Uint8List? _globalImageBytes;
@@ -65,17 +71,21 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     try {
       setState(() => isLoading = true);
 
+
       final response = await supabase
           .from('swp_templates')
           .select('id, category, title')
           .order('title');
 
+
       final templateList = List<Map<String, dynamic>>.from(response);
+
 
       setState(() {
         allTemplates = templateList
             .where((t) => widget.selectedCategories.contains(t['category']))
             .toList();
+
 
         for (String category in widget.selectedCategories) {
           final matchedList = allTemplates
@@ -84,6 +94,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           if (matchedList.isNotEmpty) {
             final firstId = matchedList.first['id'] as int;
             selectedSubCategories[category] = firstId;
+
 
             _savedPtwNumbers[firstId] = "";
             _savedAbove3m[firstId] = false;
@@ -107,6 +118,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
     }
   }
+
 
   Future<Uint8List> _prepareEmailImage(Uint8List orginalBytes) async {
     final compressed = await FlutterImageCompress.compressWithList(
@@ -317,6 +329,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     );
   }
 
+
   void _showAcknowledgementDialog() {
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
@@ -325,11 +338,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     final locationCtrl = TextEditingController();
     bool dialogSubmitting = false;
 
+
     const String ackMessage =
         "The Safe Work Procedures have been communicated and are understood by all "
         "relevant personnel. Inspections have been conducted to verify that work is "
         "carried out in accordance with the established procedures, ensuring a safe "
         "and compliant working environment.";
+
 
     showDialog(
       context: context,
@@ -480,7 +495,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                       false))
                                     return;
 
+
                                   setDialogState(() => dialogSubmitting = true);
+
 
                                   bool success = await _executeSubmitReport(
                                     name: nameCtrl.text.trim(),
@@ -488,6 +505,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     department: deptCtrl.text.trim(),
                                     location: locationCtrl.text.trim(),
                                   );
+
 
                                   if (success && mounted) {
                                     Navigator.pop(dialogContext);
@@ -556,6 +574,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return false;
       }
 
+
       final activeSubCategoryIds = selectedSubCategories.values
           .where((id) => id != null)
           .cast<int>()
@@ -618,35 +637,37 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK':
-              globalWahSafetyForeignKey, // Links all records to the exact same foreign key
-          'image_url':
-              globalImageUrl, // Links all records to the exact same image
+          'WAH_safetyVariables_FK': wahSafetyForeignKey,
+          'image_url': null, // Storing null since we are no longer using Supabase storage
         });
 
-        await sendEmail(
-          technician_name: name,
-          details: _globalDetailsCtrl.text,
+
+        // Send email via Brevo
+        await sendBrevoEmail(
+          technicianName: name,
+          details: detailsText,
           title: title,
           category: category,
           ptwNumber: ptwNumber,
           designation: designation,
           department: department,
           location: location,
-          imageUrl: globalImageUrl,
+          imageBytes: imageBytes,
         );
       }
+
 
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
-      print("$e");
+      print("Error executing report: $e");
       return false;
     }
   }
 
-  Future<void> sendEmail({
-    required String technician_name,
+
+    Future<void> sendBrevoEmail({
+    required String technicianName,
     required String details,
     required String ptwNumber,
     required String designation,
@@ -654,34 +675,62 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String title,
     required String category,
     required String location,
-    String? imageUrl,
+    Uint8List? imageBytes,
   }) async {
-    try {
-      await emailjs.send(
-        'service_hylul67',
-        'template_pacsuzj',
+    final Uri url = Uri.parse('https://api.brevo.com/v3/smtp/email');
+
+
+    // Prepare body
+    final Map<String, dynamic> body = {
+      "sender": {"name": "Safety System", "email": "liewjunlei16@gmail.com"},
+      "to": [{"email": "liewjunlei16@gmail.com", "name": "Manager"}],
+      "templateId": 1, // Replace with your actual Brevo template ID
+      "params": {
+        "category": category,
+        "technician_name": technicianName,
+        "name": technicianName,
+        "template_title": title,
+        "ptw": ptwNumber,
+        "designation": designation,
+        "department": department,
+        "location": location,
+        "message": details,
+      },
+    };
+
+
+    // Attach image if it exists
+    if (imageBytes != null) {
+      final String base64Image = base64Encode(imageBytes);
+      body['attachment'] = [
         {
-          'name': technician_name,
-          'message': details,
-          'template_title': title,
-          'category': category,
-          'ptw': ptwNumber,
-          'designation': designation,
-          'department': department,
-          'location': location,
-          'image': imageUrl ?? "",
+          "name": "safety_evidence.jpg",
+          "content": base64Image,
+        }
+      ];
+    }
+
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'api-key': apiKey,
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
         },
-        const emailjs.Options(
-          publicKey: 'wbQ6enyH79nXAsNFR',
-          privateKey: 'ekKQkZzML_nu0MC4qGjik',
-        ),
+        body: jsonEncode(body),
       );
-    } catch (error) {
-      if (error is emailjs.EmailJSResponseStatus) {
-        print('ERROR... ${error.status}: ${error.text}');
+
+
+      if (response.statusCode != 201) {
+        print('Failed to send email: ${response.body}');
       }
+    } catch (e) {
+      print('Error sending email: $e');
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -689,6 +738,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       300.0,
       450.0,
     );
+
 
     final activeSubCategoryIds = selectedSubCategories.values
         .where((id) => id != null)
@@ -702,6 +752,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             return "Please complete all checklist items.";
           }
 
+ 
           bool isAbove3m = _savedAbove3m[id] ?? false;
           if (isAbove3m) {
             String ptw = _savedPtwNumbers[id] ?? "";
@@ -711,6 +762,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             if (_globalImageBytes == null) {
               return "Please upload a site photo for Work at Height tasks.";
             }
+
 
             final status = _globalAiData?['overallStatus'];
             if (status == "DANGEROUS" || status == "N/A" || status == null) {
@@ -728,6 +780,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           bool isAbove3m = _savedAbove3m[id] ?? false;
           String ptw = _savedPtwNumbers[id] ?? "";
 
+
           if (isAbove3m) {
             bool isPtwValid = ptw.trim().isNotEmpty;
             bool hasImage = _globalImageBytes != null;
@@ -740,6 +793,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             return isChecklistDone;
           }
         });
+
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -770,6 +824,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                     itemBuilder: (context, index) {
                       final category = widget.selectedCategories[index];
 
+ 
                       // FIX: Derive local variables from category so they are defined in this scope
                       final int? currentSelectedId =
                           selectedSubCategories[category];
@@ -1061,10 +1116,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
 }
 
+
 class ReportPreviewScreen extends StatelessWidget {
   final String reportContent;
 
+
   const ReportPreviewScreen({super.key, required this.reportContent});
+
 
   @override
   Widget build(BuildContext context) {
@@ -1090,3 +1148,6 @@ class ReportPreviewScreen extends StatelessWidget {
     );
   }
 }
+
+
+
