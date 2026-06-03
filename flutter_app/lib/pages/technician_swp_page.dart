@@ -13,7 +13,8 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:kkhazardscan/services/report_compiler.dart';
 import 'package:kkhazardscan/services/gemini_service.dart';
 import 'dart:ui';
-import 'package:kkhazardscan/widgets/safety_status_widget.dart'; // adjust path as needed
+import 'package:kkhazardscan/widgets/safety_status_widget.dart'; // adjust pat
+import 'package:printing/printing.dart';
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
@@ -25,26 +26,21 @@ class TechnicianSWPPage extends StatefulWidget {
     this.task,
   });
 
-
   @override
   State<TechnicianSWPPage> createState() => _TechnicianSWPPageState();
 }
 
-
 class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final supabase = Supabase.instance.client;
-
 
   List<Map<String, dynamic>> allTemplates = [];
   Map<String, int?> selectedSubCategories = {};
   bool isLoading = true;
 
-
   final Map<int, String> _savedPtwNumbers = {};
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
   final Map<int, bool> _checklistCompletionStates = {};
-
 
   // --- NEW GLOBAL STATE VARIABLES ---
   Uint8List? _globalImageBytes;
@@ -69,21 +65,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     try {
       setState(() => isLoading = true);
 
-
       final response = await supabase
           .from('swp_templates')
           .select('id, category, title')
           .order('title');
 
-
       final templateList = List<Map<String, dynamic>>.from(response);
-
 
       setState(() {
         allTemplates = templateList
             .where((t) => widget.selectedCategories.contains(t['category']))
             .toList();
-
 
         for (String category in widget.selectedCategories) {
           final matchedList = allTemplates
@@ -92,7 +84,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           if (matchedList.isNotEmpty) {
             final firstId = matchedList.first['id'] as int;
             selectedSubCategories[category] = firstId;
-
 
             _savedPtwNumbers[firstId] = "";
             _savedAbove3m[firstId] = false;
@@ -116,7 +107,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
     }
   }
-
 
   Future<Uint8List> _prepareEmailImage(Uint8List orginalBytes) async {
     final compressed = await FlutterImageCompress.compressWithList(
@@ -327,7 +317,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     );
   }
 
-
   void _showAcknowledgementDialog() {
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
@@ -336,13 +325,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     final locationCtrl = TextEditingController();
     bool dialogSubmitting = false;
 
-
     const String ackMessage =
         "The Safe Work Procedures have been communicated and are understood by all "
         "relevant personnel. Inspections have been conducted to verify that work is "
         "carried out in accordance with the established procedures, ensuring a safe "
         "and compliant working environment.";
-
 
     showDialog(
       context: context,
@@ -457,25 +444,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 isPrimary: false,
                                 isMini: true,
                                 icon: Icons.remove_red_eye,
-                                onTap: () {
-                                  final markdownReport =
-                                      LocalReportCompiler.generateWshReport(
-                                        locationCtrl: locationCtrl,
-                                        supervisorCtrl: nameCtrl,
-                                        employerCtrl: deptCtrl,
-                                        feedbackCtrl: TextEditingController(),
-                                        changesCtrl: TextEditingController(),
-                                        manualNotesCtrl: _globalDetailsCtrl,
+                                onTap: () async {
+                                  final Uint8List pdfBytes =
+                                      await LocalReportCompiler.generateWshReport(
+                                        location: locationCtrl.text,
+                                        supervisor: nameCtrl.text,
+                                        employer: deptCtrl.text,
+                                        manualNotes: _globalDetailsCtrl.text,
                                         initialAiData: _globalAiData ?? {},
+                                        imageBytes: _globalImageBytes,
                                       );
 
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ReportPreviewScreen(
-                                        reportContent: markdownReport,
-                                      ),
-                                    ),
+                                  await Printing.layoutPdf(
+                                    onLayout: (_) => pdfBytes,
                                   );
                                 },
                               ),
@@ -493,9 +474,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                       false))
                                     return;
 
-
                                   setDialogState(() => dialogSubmitting = true);
-
 
                                   bool success = await _executeSubmitReport(
                                     name: nameCtrl.text.trim(),
@@ -503,7 +482,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     department: deptCtrl.text.trim(),
                                     location: locationCtrl.text.trim(),
                                   );
-
 
                                   if (success && mounted) {
                                     Navigator.pop(dialogContext);
@@ -593,7 +571,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'mhi': _globalAiData!['mhi'] ?? {}, 
+              'mhi': _globalAiData!['mhi'] ?? {},
             })
             .select('id')
             .single();
@@ -624,15 +602,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
         // Trigger edge function email process
         await sendBrevoEmail(
-           technicianName: name,
-           details: _globalDetailsCtrl.text,
-           title: title,
-           category: category,
-           ptwNumber: ptwNumber,
-           designation: designation,
-           department: department,
-           location: location,
-           imageBytes: compressedImageBytes ?? _globalImageBytes,
+          technicianName: name,
+          details: _globalDetailsCtrl.text,
+          title: title,
+          category: category,
+          ptwNumber: ptwNumber,
+          designation: designation,
+          department: department,
+          location: location,
+          imageBytes: compressedImageBytes ?? _globalImageBytes,
         );
       }
 
@@ -685,14 +663,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final double fieldWidth = (MediaQuery.of(context).size.width * 0.85).clamp(
       300.0,
       450.0,
     );
-
 
     final activeSubCategoryIds = selectedSubCategories.values
         .where((id) => id != null)
@@ -706,7 +682,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             return "Please complete all checklist items.";
           }
 
- 
           bool isAbove3m = _savedAbove3m[id] ?? false;
           if (isAbove3m) {
             String ptw = _savedPtwNumbers[id] ?? "";
@@ -716,7 +691,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             if (_globalImageBytes == null) {
               return "Please upload a site photo for Work at Height tasks.";
             }
-
 
             final status = _globalAiData?['overallStatus'];
             if (status == "DANGEROUS" || status == "N/A" || status == null) {
@@ -734,7 +708,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           bool isAbove3m = _savedAbove3m[id] ?? false;
           String ptw = _savedPtwNumbers[id] ?? "";
 
-
           if (isAbove3m) {
             bool isPtwValid = ptw.trim().isNotEmpty;
             bool hasImage = _globalImageBytes != null;
@@ -747,7 +720,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             return isChecklistDone;
           }
         });
-
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -778,7 +750,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                     itemBuilder: (context, index) {
                       final category = widget.selectedCategories[index];
 
- 
                       // FIX: Derive local variables from category so they are defined in this scope
                       final int? currentSelectedId =
                           selectedSubCategories[category];
@@ -1070,13 +1041,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
 }
 
-
 class ReportPreviewScreen extends StatelessWidget {
   final String reportContent;
 
-
   const ReportPreviewScreen({super.key, required this.reportContent});
-
 
   @override
   Widget build(BuildContext context) {
@@ -1102,6 +1070,3 @@ class ReportPreviewScreen extends StatelessWidget {
     );
   }
 }
-
-
-
