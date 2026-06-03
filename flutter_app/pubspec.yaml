@@ -38,6 +38,8 @@ dependencies:
   http: ^1.2.1
   flutter_image_compress: ^2.4.0
   fl_chart: ^0.68.0
+  pdf: ^3.8.0
+  printing: ^5.9.0
 
 
   # The following adds the Cupertino Icons font to your application.

@@ -1,78 +1,128 @@
-import 'package:flutter/material.dart';
+import 'dart:typed_data';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class LocalReportCompiler {
-  static String generateWshReport({
-    required TextEditingController locationCtrl,
-    required TextEditingController supervisorCtrl,
-    required TextEditingController employerCtrl,
-    required TextEditingController feedbackCtrl,
-    required TextEditingController changesCtrl,
-    required TextEditingController manualNotesCtrl,
+  static Future<Uint8List> generateWshReport({
+    required String location,
+    required String supervisor,
+    required String employer,
     required Map<String, dynamic> initialAiData,
-  }) {
-    // Extract individual hazard evaluation blocks safely from existing JSON schema
+    required String manualNotes,
+    Uint8List? imageBytes,
+  }) async {
+    final pdf = pw.Document();
+
+    // Extract blocks
     final Map<String, dynamic> ladder = initialAiData['ladderHeight'] ?? {};
     final Map<String, dynamic> ppe = initialAiData['ppe'] ?? {};
     final Map<String, dynamic> buddy = initialAiData['buddySystem'] ?? {};
     final Map<String, dynamic> hazards = initialAiData['areaHazards'] ?? {};
     final String overallStatus = initialAiData['overallStatus'] ?? 'PENDING';
 
-    // Helper to extract nested string attributes cleanly
-    String getAiField(Map<String, dynamic> block, String field) {
-      return block[field]?.toString().trim() ?? 'Not Declared';
+    String getField(Map<String, dynamic> block, String field) =>
+        block[field]?.toString().trim() ?? 'Not Declared';
+
+    final String currentDate = DateTime.now().toIso8601String().split('T')[0];
+    final String currentTime =
+        "${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}";
+
+    // Decode image if present
+    pw.MemoryImage? siteImage;
+    if (imageBytes != null) {
+      siteImage = pw.MemoryImage(imageBytes);
     }
 
-    // Capture precise system timestamps right at compilation time
-    final String currentDate = DateTime.now().toIso8601String().split('T')[0];
-    final String currentTime = "${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}";
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        build: (pw.Context context) => [
+          // Header
+          pw.Text(
+            'WSH INSPECTION REPORT',
+            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Divider(),
+          pw.SizedBox(height: 12),
 
-    // Compile all data streams into a clean, professional textual report
-    return '''
-WORKPLACE SAFETY & HEALTH (WSH) OFFICIAL INSPECTION REPORT
+          // Section 1
+          _sectionHeader('1. Site and Personnel Details'),
+          _field('Date & Time', '$currentDate at $currentTime SGT'),
+          _field('Location', location.isEmpty ? 'Not Declared' : location),
+          _field('Supervisor', supervisor.isEmpty ? 'Unassigned' : supervisor),
+          _field('Employer', employer.isEmpty ? 'Not Declared' : employer),
+          pw.SizedBox(height: 12),
 
-1. Site and Personnel Details
-• Date & Time of Inspection: $currentDate at $currentTime SGT
-• Site Location / Designated Zone: ${locationCtrl.text.isEmpty ? "Not Declared" : locationCtrl.text}
-• Assigned Site Supervisor: ${supervisorCtrl.text.isEmpty ? "Unassigned" : supervisorCtrl.text}
-• Employer / Core Contractor: ${employerCtrl.text.isEmpty ? "Not Declared" : employerCtrl.text}
+          // Section 2
+          _sectionHeader('2. Hazard Identification'),
+          _field('Working at Heights', getField(ladder, 'description')),
+          _field('PPE', getField(ppe, 'description')),
+          _field('Area Hazards', getField(hazards, 'description')),
+          _field('Manual Notes', manualNotes.isEmpty ? 'None' : manualNotes),
+          pw.SizedBox(height: 12),
 
-2. Hazard Identification
-• Working At Heights / Ladder Setup: ${getAiField(ladder, 'description')}
-• Personal Protective Equipment (PPE): ${getAiField(ppe, 'description')}
-• General Environmental Hazards: ${getAiField(hazards, 'description')}
-• Supplemental On-Site Observations: ${manualNotesCtrl.text.isEmpty ? "No manual auxiliary hazards logged by the inspector." : manualNotesCtrl.text}
+          // Section 3
+          _sectionHeader('3. Risk Assessment'),
+          _field('Overall Status', overallStatus),
+          _field('Heights Compliance', getField(ladder, 'compliance')),
+          _field('Heights Reasoning', getField(ladder, 'reasoning')),
+          _field('PPE Compliance', getField(ppe, 'compliance')),
+          _field('PPE Reasoning', getField(ppe, 'reasoning')),
+          _field('Buddy System Compliance', getField(buddy, 'compliance')),
+          _field('Buddy System Reasoning', getField(buddy, 'reasoning')),
+          pw.SizedBox(height: 12),
 
-3. Risk Assessment
-• Overall Site Status Evaluation: $overallStatus
-• Scaffolding / Elevation Tasks Risk Level: ${getAiField(ladder, 'compliance')}
-  Analysis: ${getAiField(ladder, 'reasoning')}
-• Personnel Protective Gear Compliance Level: ${getAiField(ppe, 'compliance')}
-  Analysis: ${getAiField(ppe, 'reasoning')}
-• Buddy System / Operational Supervision Adherence: ${getAiField(buddy, 'compliance')}
-  Analysis: ${getAiField(buddy, 'reasoning')}
+          // Section 4
+          _sectionHeader('4. Corrective Measures'),
+          _field('Heights Advice', getField(ladder, 'advice')),
+          _field('PPE Advice', getField(ppe, 'advice')),
+          _field('Area Advice', getField(hazards, 'advice')),
+          pw.SizedBox(height: 12),
 
-4. Preventive and Corrective Measures
-• Height Safety Mitigation: ${getAiField(ladder, 'advice')}
-• Equipment Safety Mitigation: ${getAiField(ppe, 'advice')}
-• Area Workspace Mitigation: ${getAiField(hazards, 'advice')}
+          // Section 5 - Image
+          _sectionHeader('5. Photo Evidence'),
+          if (siteImage != null) ...[
+            pw.SizedBox(height: 8),
+            pw.Center(
+              child: pw.Image(siteImage, width: 400, fit: pw.BoxFit.contain),
+            ),
+          ] else
+            pw.Text('No image captured.', style: const pw.TextStyle(fontSize: 11)),
+        ],
+      ),
+    );
 
-5. Photo Evidence
-• Status: Image successfully uploaded, processed, and validated via computerized vision sub-routines.
-• Analysis Context: Visual evaluation cross-referenced automatically against standard industrial compliance parameters. The descriptive breakdowns in Section 2 serve as the primary audit trail for this visual evidence.
-
-6. Review of Changes
-• Operational Shift & Process Transitions Cumulative Safety Impact: ${changesCtrl.text.isEmpty ? "No recent process, machinery configurations, or major personnel shifts declared for this inspection cycle." : changesCtrl.text}
-
-7. Worker / Subcontractor Feedback
-• Documented On-Site Personnel Concerns: ${feedbackCtrl.text.isEmpty ? "No complaints, safety concerns, or procedural feedback raised by subcontractors/workers during this site walk." : feedbackCtrl.text}
-
-8. Construction / Site Supervision
-• Structural Plan Adherence & Joint Safety Evaluation: ${getAiField(hazards, 'reasoning').toLowerCase().contains('structural') ? getAiField(hazards, 'reasoning') : "Structural layout and steel connection joints match standard operational guidelines within the visible camera range."}
-• High-Risk Compliance Mode: Active enforcement protocols initiated based on the safety status flagged in Section 3.
-
-9. Major Hazard Installations (MHI)
-• Process Safety & Critical Equipment Status: Evaluated against unintended thermal signatures, flash explosions, or toxic substance leaks.
-• Evaluation Core: No active process anomalies or safety-critical apparatus malfunctions were triggered during this inspection interval. Standard facility operating thresholds are maintained.
-''';
+    return pdf.save();
   }
+
+  static pw.Widget _sectionHeader(String title) => pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 6),
+        child: pw.Text(
+          title,
+          style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+        ),
+      );
+
+  static pw.Widget _field(String label, String value) => pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 4),
+        child: pw.RichText(
+          text: pw.TextSpan(
+            children: [
+              pw.TextSpan(
+                text: '$label: ',
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.TextSpan(
+                text: value,
+                style: const pw.TextStyle(fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      );
 }
