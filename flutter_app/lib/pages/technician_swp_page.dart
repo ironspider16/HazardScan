@@ -1,5 +1,9 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:kkhazardscan/config/app_users.dart';
+import 'package:kkhazardscan/pages/main_menu.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
@@ -8,16 +12,18 @@ import '../widgets/Menu_button.dart';
 import 'package:emailjs/emailjs.dart' as emailjs;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:kkhazardscan/services/report_compiler.dart';
+import 'package:kkhazardscan/services/gemini_service.dart';
+import 'dart:ui';
+import 'package:kkhazardscan/widgets/safety_status_widget.dart'; // adjust path as needed
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
-  final Map<String, dynamic>?
-  task; // Fixed: Restored task property to prevent widget.task errors
+  final Map<String, dynamic>? task;
 
   const TechnicianSWPPage({
     super.key,
     required this.selectedCategories,
-    this.task, // Optional for flexibility
+    this.task,
   });
 
   @override
@@ -34,16 +40,25 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, String> _savedPtwNumbers = {};
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
-  final Map<int, Uint8List> _savedImages = {};
-  final Map<int, String> _savedDetails = {};
   final Map<int, bool> _checklistCompletionStates = {};
 
-  final Map<int, Map<String, dynamic>> _savedAiData = {};
+  // --- NEW GLOBAL STATE VARIABLES ---
+  Uint8List? _globalImageBytes;
+  Map<String, dynamic>? _globalAiData;
+  final TextEditingController _globalDetailsCtrl = TextEditingController();
+  bool _isAnalyzing = false;
+  // ----------------------------------
 
   @override
   void initState() {
     super.initState();
     _fetchSubCategories();
+  }
+
+  @override
+  void dispose() {
+    _globalDetailsCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchSubCategories() async {
@@ -70,11 +85,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             final firstId = matchedList.first['id'] as int;
             selectedSubCategories[category] = firstId;
 
-            // PRE-POPULATE THE CORES HERE SO CONTROLLERS DO NOT GET WIPED
             _savedPtwNumbers[firstId] = "";
             _savedAbove3m[firstId] = false;
             _savedChecklists[firstId] = [];
-            _savedDetails[firstId] = "";
             _checklistCompletionStates[firstId] = false;
           } else {
             selectedSubCategories[category] = null;
@@ -105,6 +118,205 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     return compressed;
   }
 
+  // --- NEW GLOBAL IMAGE METHODS ---
+  Future<void> _pickGlobalImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _globalImageBytes = bytes;
+        _globalAiData = null; // Reset analysis if image changes
+      });
+    }
+  }
+
+  Future<void> _analyzeGlobalImage() async {
+    if (_globalImageBytes == null) return;
+
+    setState(() => _isAnalyzing = true);
+
+    try {
+      final String rawResponse = await GeminiService.detectHazards(
+        _globalImageBytes!,
+        _globalDetailsCtrl.text,
+      );
+
+      if (!mounted) return;
+
+      final decodedData = jsonDecode(rawResponse);
+
+      // --- NEW: ERROR INTERCEPTOR ---
+      // Check if backend returned our diagnostic failure schema
+      if (decodedData['overallStatus'] == 'N/A') {
+        final diagnosticTitle =
+            decodedData['ladderHeight']?['description'] ?? "Error";
+        final diagnosticReason =
+            decodedData['ladderHeight']?['reasoning'] ?? "";
+
+        setState(() {
+          _isAnalyzing = false;
+          _globalAiData = null; // Clear data so they have to try again
+        });
+
+        // Parse specific error types based on backend messages
+        if (diagnosticTitle.contains("Exhaustion") ||
+            diagnosticReason.contains("quota")) {
+          _showErrorDialog(
+            "API Quota Warning",
+            "API limit reached. If you are experiencing this, you are nearing your quota limit (approx. 75%+ utilization across rotating keys). Please wait a moment and try again.",
+          );
+        } else if (diagnosticReason.contains("503") ||
+            diagnosticReason.contains("overloaded")) {
+          _showErrorDialog(
+            "Service Unavailable",
+            "Gemini servers are temporarily overloaded or unavailable. Please try your analysis again in 30 seconds.",
+          );
+        } else {
+          _showErrorDialog("Analysis Failed", diagnosticReason);
+        }
+        return;
+      }
+      // ------------------------------
+
+      setState(() {
+        _globalAiData = decodedData;
+        _isAnalyzing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isAnalyzing = false);
+      _showErrorDialog(
+        "Network Error",
+        "Could not reach the analysis server. Check your connection.\n\nDetails: $e",
+      );
+    }
+  }
+  // --------------------------------
+
+  void _showImagePreviewDialog() {
+    if (_globalImageBytes == null) return;
+    showDialog(
+      context: context,
+      builder: (context) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), // Blur background
+        child: Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(10),
+          child: Stack(
+            alignment: Alignment.topRight,
+            children: [
+              InteractiveViewer(
+                // Allows pinching to zoom
+                child: Image.memory(_globalImageBytes!, fit: BoxFit.contain),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAiDetailsDialog() {
+    if (_globalAiData == null) return;
+
+    // Helper to format the sections
+    Widget buildSection(String title, Map<String, dynamic>? data) {
+      if (data == null || data.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: AppTypography.body.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+            Text(
+              "Status: ${data['compliance'] ?? 'N/A'}",
+              style: AppTypography.faintbody.copyWith(color: Colors.black87),
+            ),
+            Text(
+              "Reason: ${data['reasoning'] ?? 'N/A'}",
+              style: AppTypography.faintbody,
+            ),
+            Text(
+              "Advice: ${data['advice'] ?? 'N/A'}",
+              style: AppTypography.faintbody.copyWith(color: Colors.red[800]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          "Safety Analysis Breakdown",
+          style: AppTypography.Bluesubheading,
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              buildSection("Ladder & Heights", _globalAiData!['ladderHeight']),
+              buildSection("PPE", _globalAiData!['ppe']),
+              buildSection("Buddy System", _globalAiData!['buddySystem']),
+              buildSection("Area Hazards", _globalAiData!['areaHazards']),
+              buildSection(
+                "Site Supervision",
+                _globalAiData!['siteSupervision'],
+              ),
+              buildSection("Major Hazard Installations", _globalAiData!['mhi']),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: AppTypography.body.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(message, style: AppTypography.body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Understood"),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAcknowledgementDialog() {
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
@@ -121,8 +333,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
     showDialog(
       context: context,
-      barrierDismissible:
-          false, // Prevents closing accidentally by clicking outside
+      barrierDismissible: false,
       builder: (BuildContext dialogContext) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
@@ -145,7 +356,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                       ),
                     )
                   : SizedBox(
-                      width: 400, // Fixed layout sizing bounds
+                      width: 400,
                       child: Form(
                         key: formKey,
                         child: SingleChildScrollView(
@@ -217,7 +428,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         ),
                         child: Row(
                           children: [
-                            // 1. Cancel Button
                             Expanded(
                               flex: 2,
                               child: MenuButton(
@@ -227,64 +437,37 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               ),
                             ),
                             const SizedBox(width: 8),
-
-                            // 2. NEW: Preview Button
                             Expanded(
                               flex: 3,
                               child: MenuButton(
                                 label: "Preview",
-                                isPrimary:
-                                    false, // Make it look different from the submit button
+                                isPrimary: false,
                                 isMini: true,
                                 icon: Icons.remove_red_eye,
                                 onTap: () {
-                                  // Find the first active template ID to pull the AI data and notes
-                                  final firstActiveId = selectedSubCategories
-                                      .values
-                                      .firstWhere(
-                                        (id) => id != null,
-                                        orElse: () => null,
+                                  final markdownReport =
+                                      LocalReportCompiler.generateWshReport(
+                                        locationCtrl: locationCtrl,
+                                        supervisorCtrl: nameCtrl,
+                                        employerCtrl: deptCtrl,
+                                        feedbackCtrl: TextEditingController(),
+                                        changesCtrl: TextEditingController(),
+                                        manualNotesCtrl: _globalDetailsCtrl,
+                                        initialAiData: _globalAiData ?? {},
                                       );
 
-                                  if (firstActiveId != null) {
-                                    final aiData =
-                                        _savedAiData[firstActiveId] ?? {};
-                                    final textDetail =
-                                        _savedDetails[firstActiveId] ?? "";
-
-                                    // Generate the raw text report instantly
-                                    final markdownReport =
-                                        LocalReportCompiler.generateWshReport(
-                                          locationCtrl: locationCtrl,
-                                          supervisorCtrl: nameCtrl,
-                                          employerCtrl: deptCtrl,
-                                          // We create dummy empty controllers for fields not currently in your dialog
-                                          feedbackCtrl: TextEditingController(),
-                                          changesCtrl: TextEditingController(),
-                                          manualNotesCtrl:
-                                              TextEditingController(
-                                                text: textDetail,
-                                              ),
-                                          initialAiData: aiData,
-                                        );
-
-                                    // Navigate to the dummy debug screen
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ReportPreviewScreen(
-                                              reportContent: markdownReport,
-                                            ),
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ReportPreviewScreen(
+                                        reportContent: markdownReport,
                                       ),
-                                    );
-                                  }
+                                    ),
+                                  );
                                 },
                               ),
                             ),
                             const SizedBox(width: 8),
-
-                            // 3. Submit Button
                             Expanded(
                               flex: 3,
                               child: MenuButton(
@@ -308,7 +491,30 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
                                   if (success && mounted) {
                                     Navigator.pop(dialogContext);
-                                    // ... the rest of your existing success routing code ...
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                          "All safety checks successfully submitted!",
+                                        ),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+
+                                    final anonymousTechnician = AppUser(
+                                      id: 0,
+                                      email: "technician@example.com",
+                                      password: '',
+                                      role: UserRole.user,
+                                    );
+
+                                    Navigator.pushAndRemoveUntil(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            MainMenu(user: anonymousTechnician),
+                                      ),
+                                      (route) => false,
+                                    );
                                   } else {
                                     setDialogState(
                                       () => dialogSubmitting = false,
@@ -328,7 +534,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     );
   }
 
-  /// Handles internal background processing and execution logic for Supabase injection queries
   Future<bool> _executeSubmitReport({
     required String name,
     required String designation,
@@ -342,7 +547,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           location.trim() == "") {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
               content: Text("Fill in all fields"),
               backgroundColor: Colors.red,
             ),
@@ -356,6 +561,45 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           .cast<int>()
           .toList();
 
+      // --- NEW: UPLOAD GLOBALS ONCE ---
+      String? globalImageUrl;
+      int? globalWahSafetyForeignKey;
+
+      if (_globalImageBytes != null) {
+        final compressedImageBytes = await _prepareEmailImage(
+          _globalImageBytes!,
+        );
+        final fileName =
+            'report_${DateTime.now().millisecondsSinceEpoch}_global.jpg';
+        await supabase.storage
+            .from('safety_reports')
+            .uploadBinary(fileName, compressedImageBytes);
+        globalImageUrl = supabase.storage
+            .from('safety_reports')
+            .getPublicUrl(fileName);
+      }
+
+      if (_globalAiData != null) {
+        final insertedWahData = await supabase
+            .from('WAH_safetyVariables')
+            .insert({
+              'Overall Status': _globalAiData!['overallStatus'] ?? 'N/A',
+              'ladderheight': _globalAiData!['ladderHeight'] ?? {},
+              'ppe': _globalAiData!['ppe'] ?? {},
+              'buddySystem': _globalAiData!['buddySystem'] ?? {},
+              'areaHazards': _globalAiData!['areaHazards'] ?? {},
+              'siteSupervision':
+                  _globalAiData!['siteSupervision'] ??
+                  {}, // Updated fields mapped here
+              'mhi': _globalAiData!['mhi'] ?? {}, // Updated fields mapped here
+            })
+            .select('id')
+            .single();
+
+        globalWahSafetyForeignKey = insertedWahData['id'];
+      }
+      // --------------------------------
+
       List<Map<String, dynamic>> recordsToInsert = [];
       for (int templateId in activeSubCategoryIds) {
         final template = allTemplates.firstWhere((t) => t['id'] == templateId);
@@ -363,67 +607,33 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         final String category = template['category'] ?? 'Unknown';
 
         String ptwNumber = _savedPtwNumbers[templateId] ?? "";
-        String detailsText = _savedDetails[templateId] ?? "";
-
-        int? wahSafetyForeignKey;
-        String? imageUrl;
-
-        Uint8List? imageBytes = _savedImages[templateId];
-        if (imageBytes != null) {
-          final compressedImageBytes = await _prepareEmailImage(imageBytes);
-          final fileName =
-              'report_${DateTime.now().millisecondsSinceEpoch}_$templateId.jpg';
-          await supabase.storage
-              .from('safety_reports')
-              .uploadBinary(fileName, compressedImageBytes);
-          imageUrl = supabase.storage
-              .from('safety_reports')
-              .getPublicUrl(fileName);
-        }
-
-        if (_savedAiData.containsKey(templateId) &&
-            _savedAiData[templateId] != null) {
-          final aiData = _savedAiData[templateId]!;
-
-          // Insert into WAH_safetyVariables and request the new row back
-          final insertedWahData = await supabase
-              .from('WAH_safetyVariables')
-              .insert({
-                'Overall Status': aiData['overallStatus'] ?? 'N/A',
-                'ladderheight': aiData['ladderHeight'] ?? {},
-                'ppe': aiData['ppe'] ?? {},
-                'buddySystem': aiData['buddySystem'] ?? {},
-                'areaHazards': aiData['areaHazards'] ?? {},
-              })
-              .select('id')
-              .single();
-
-          // Grab the generated ID
-          wahSafetyForeignKey = insertedWahData['id'];
-        }
 
         recordsToInsert.add({
           'swp_template_id': templateId,
           'wah_permit_numbers': ptwNumber.isNotEmpty ? ptwNumber : null,
-          'Details': detailsText.isNotEmpty ? detailsText : null,
+          'Details': _globalDetailsCtrl.text.isNotEmpty
+              ? _globalDetailsCtrl.text
+              : null,
           'technician_name': name,
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK': wahSafetyForeignKey,
-          'image_url': imageUrl,
+          'WAH_safetyVariables_FK':
+              globalWahSafetyForeignKey, // Links all records to the exact same foreign key
+          'image_url':
+              globalImageUrl, // Links all records to the exact same image
         });
 
         await sendEmail(
           technician_name: name,
-          details: detailsText,
+          details: _globalDetailsCtrl.text,
           title: title,
           category: category,
           ptwNumber: ptwNumber,
           designation: designation,
           department: department,
           location: location,
-          imageUrl: imageUrl,
+          imageUrl: globalImageUrl,
         );
       }
 
@@ -453,8 +663,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         {
           'name': technician_name,
           'message': details,
-          'template_title': title, // Now available
-          'category': category, // Now available
+          'template_title': title,
+          'category': category,
           'ptw': ptwNumber,
           'designation': designation,
           'department': department,
@@ -485,56 +695,48 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         .cast<int>()
         .toList();
 
+    // Re-mapped validation to check the global state instead of local loops
     final String? errorMessage = activeSubCategoryIds
         .map((id) {
-          // Check common condition first
           if (_checklistCompletionStates[id] != true) {
             return "Please complete all checklist items.";
           }
 
-          // Only check photo/PTW requirements if it is Work at Height
           bool isAbove3m = _savedAbove3m[id] ?? false;
           if (isAbove3m) {
             String ptw = _savedPtwNumbers[id] ?? "";
-            if (ptw.trim().isEmpty) {
+            if (ptw.trim().isEmpty)
               return "Permit To Work (PTW) number is required.";
-            }
-            if (_savedImages[id] == null) {
-              return "Please upload a photo for Work at Height tasks.";
+
+            if (_globalImageBytes == null) {
+              return "Please upload a site photo for Work at Height tasks.";
             }
 
-            final status = _savedAiData[id]?['overallStatus'];
-            if (status == "DANGEROUS" || status == "N/A") {
-              return "Photo analysis shows non-compliance. Please retake.";
+            final status = _globalAiData?['overallStatus'];
+            if (status == "DANGEROUS" || status == "N/A" || status == null) {
+              return "Photo analysis required or shows non-compliance. Please analyze/retake.";
             }
           }
-
           return null;
         })
         .firstWhere((msg) => msg != null, orElse: () => null);
 
-    // Evaluates to true only if active components are selected and every single one is 100% completed
     final bool canSubmitReport =
         activeSubCategoryIds.isNotEmpty &&
         activeSubCategoryIds.every((id) {
-          // 1. Checklist must always be completed
           bool isChecklistDone = _checklistCompletionStates[id] == true;
-
-          // 2. Check WAH status
           bool isAbove3m = _savedAbove3m[id] ?? false;
           String ptw = _savedPtwNumbers[id] ?? "";
 
           if (isAbove3m) {
-            // If it IS Work at Height:
             bool isPtwValid = ptw.trim().isNotEmpty;
-            bool hasImage = _savedImages[id] != null;
-
-            final status = _savedAiData[id]?['overallStatus'];
-            bool isCompliant = status != "DANGEROUS" && status != "N/A";
+            bool hasImage = _globalImageBytes != null;
+            final status = _globalAiData?['overallStatus'];
+            bool isCompliant =
+                status != null && status != "DANGEROUS" && status != "N/A";
 
             return isChecklistDone && isPtwValid && hasImage && isCompliant;
           } else {
-            // If it is NOT Work at Height:
             return isChecklistDone;
           }
         });
@@ -554,20 +756,27 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
+          : SingleChildScrollView(
+              // Makes the whole page scroll together
+              child: Column(
+                children: [
+                  // 1. Checklist Iteration Area
+                  ListView.builder(
+                    shrinkWrap: true, // Lets the list size itself
+                    physics:
+                        const NeverScrollableScrollPhysics(), // Prevents inner scrolling conflicts
                     padding: const EdgeInsets.all(AppPadding.page),
                     itemCount: widget.selectedCategories.length,
                     itemBuilder: (context, index) {
                       final category = widget.selectedCategories[index];
 
-                      final categoryTemplates = allTemplates
-                          .where((t) => t['category'] == category)
-                          .toList();
-
-                      final currentSelectedId = selectedSubCategories[category];
+                      // FIX: Derive local variables from category so they are defined in this scope
+                      final int? currentSelectedId =
+                          selectedSubCategories[category];
+                      final List<Map<String, dynamic>> categoryTemplates =
+                          allTemplates
+                              .where((t) => t['category'] == category)
+                              .toList();
 
                       return Card(
                         color: AppColors.primaryTint,
@@ -593,7 +802,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 vertical: AppPadding.tight,
                               ),
                               child: DropdownButtonFormField<int>(
-                                initialValue: currentSelectedId,
+                                value: currentSelectedId,
                                 isExpanded: true,
                                 decoration: const InputDecoration(
                                   labelText: "Select Specific Activity Type",
@@ -614,7 +823,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 onChanged: (newValue) {
                                   setState(() {
                                     selectedSubCategories[category] = newValue;
-
                                     if (newValue != null) {
                                       _savedPtwNumbers.putIfAbsent(
                                         newValue,
@@ -628,10 +836,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                         newValue,
                                         () => [],
                                       );
-                                      _savedDetails.putIfAbsent(
-                                        newValue,
-                                        () => "",
-                                      );
                                       _checklistCompletionStates.putIfAbsent(
                                         newValue,
                                         () => false,
@@ -641,7 +845,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 },
                               ),
                             ),
-
                             if (currentSelectedId != null)
                               Padding(
                                 padding: const EdgeInsets.only(
@@ -657,9 +860,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                       _savedAbove3m[currentSelectedId] ?? false,
                                   initialCheckedItems:
                                       _savedChecklists[currentSelectedId] ?? [],
-                                  initialImage: _savedImages[currentSelectedId],
-                                  initialDetails:
-                                      _savedDetails[currentSelectedId] ?? "",
                                   onPtwChanged: (isAbove3m, ptw) {
                                     setState(() {
                                       _savedPtwNumbers[currentSelectedId] = ptw;
@@ -673,25 +873,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                           checkedList;
                                     });
                                   },
-                                  onImageChanged: (bytes) {
-                                    setState(() {
-                                      _savedImages[currentSelectedId] = bytes;
-                                    });
-                                  },
-                                  onDetailsChanged: (textValue) {
-                                    setState(() {
-                                      _savedDetails[currentSelectedId] =
-                                          textValue;
-                                    });
-                                  },
                                   onAllChecked: (isCleared) {
                                     setState(() {
                                       _checklistCompletionStates[currentSelectedId] =
                                           isCleared;
                                     });
-                                  },
-                                  onAiAnalyzed: (aiData) {
-                                    _savedAiData[currentSelectedId] = aiData;
                                   },
                                 ),
                               )
@@ -707,47 +893,169 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                       );
                     },
                   ),
-                ),
 
-                Padding(
-                  padding: const EdgeInsets.all(AppPadding.page),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        width: fieldWidth,
-                        child: const Divider(
-                          height: AppPadding.large,
-                          thickness: 1,
-                          color: AppColors.borderGrey,
+                  // Global Image Analysis Block
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppPadding.page,
+                    ),
+                    child: Card(
+                      color: AppColors.backgroundWhite,
+                      elevation: 1,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusMedium,
+                        ),
+                        side: BorderSide(
+                          color: AppColors.borderGrey.withAlpha(50),
                         ),
                       ),
-                      const SizedBox(height: AppPadding.tight),
-                      if (errorMessage != null && !canSubmitReport)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: Text(
-                            errorMessage,
-                            style: AppTypography.faintbody.copyWith(
-                              color: Colors.red,
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppPadding.medium),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              "Site Condition Validation",
+                              style: AppTypography.body.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
+                            const SizedBox(height: AppPadding.tight),
+                            AppTextfield(
+                              label: "Site Context / Notes",
+                              controller: _globalDetailsCtrl,
+                              hint:
+                                  "Enter site conditions to assist AI context...",
+                            ),
+                            const SizedBox(height: AppPadding.medium),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: const Icon(Icons.camera_alt),
+                                    label: const Text(
+                                      "Select Image",
+                                      style: TextStyle(fontSize: 12),
+                                    ),
+                                    onPressed: _pickGlobalImage,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: _isAnalyzing
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : const Icon(Icons.analytics),
+                                    label: Text(
+                                      _isAnalyzing
+                                          ? "Analyzing..."
+                                          : "Analyze Image",
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    onPressed:
+                                        (_globalImageBytes != null &&
+                                            !_isAnalyzing)
+                                        ? _analyzeGlobalImage
+                                        : null,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (_globalImageBytes != null) ...[
+                              const SizedBox(height: AppPadding.medium),
+                              InkWell(
+                                onTap:
+                                    _showImagePreviewDialog, // Opens blurred popup
+                                child: Container(
+                                  padding: const EdgeInsets.all(
+                                    AppPadding.tight,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: AppColors.borderGrey.withAlpha(
+                                        100,
+                                      ),
+                                    ),
+                                    borderRadius: BorderRadius.circular(
+                                      AppDimensions.radiusSmall,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(
+                                        Icons.image,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        "View Captured Image",
+                                        style: AppTypography.body.copyWith(
+                                          color: AppColors.primaryBlue,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: AppPadding.medium),
+                            SafetyStatusWidget(aiData: _globalAiData),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // 3. Final Continue Button Block
+                  Padding(
+                    padding: const EdgeInsets.all(AppPadding.page),
+                    child: Column(
+                      children: [
+                        SizedBox(
+                          width: fieldWidth,
+                          child: const Divider(
+                            height: AppPadding.large,
+                            thickness: 1,
+                            color: AppColors.borderGrey,
                           ),
                         ),
-                      SizedBox(
-                        width: fieldWidth,
-                        child: MenuButton(
-                          label: "Continue",
-                          onTap: canSubmitReport
-                              ? _showAcknowledgementDialog
-                              : () => {},
-                          isPrimary: true,
-                          icon: Icons.arrow_forward_rounded,
-                          isDisabled: !canSubmitReport,
+                        const SizedBox(height: AppPadding.tight),
+                        if (errorMessage != null && !canSubmitReport)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Text(
+                              errorMessage,
+                              style: AppTypography.faintbody.copyWith(
+                                color: Colors.red,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        SizedBox(
+                          width: fieldWidth,
+                          child: MenuButton(
+                            label: "Continue",
+                            onTap: canSubmitReport
+                                ? _showAcknowledgementDialog
+                                : () => {},
+                            isPrimary: true,
+                            icon: Icons.arrow_forward_rounded,
+                            isDisabled: !canSubmitReport,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
     );
   }
@@ -774,8 +1082,7 @@ class ReportPreviewScreen extends StatelessWidget {
           reportContent,
           style: const TextStyle(
             fontSize: 14,
-            fontFamily:
-                'Courier', // Monospace font helps spot formatting issues
+            fontFamily: 'Courier',
             color: Colors.black87,
           ),
         ),

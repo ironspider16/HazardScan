@@ -38,7 +38,7 @@ serve(async (req: Request) => {
       })
     }
 
-    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, "");
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, ""); 
 
     const prompt = `You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP). 
 Analyze this image and evaluate it against the specific Non-Compliance (NC) list below, as well as general safety hazards.
