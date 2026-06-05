@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'Design/style_constant.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 
 void main() async {
+  usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
     url:

@@ -15,6 +15,8 @@ import 'package:kkhazardscan/services/gemini_service.dart';
 import 'dart:ui';
 import 'package:kkhazardscan/widgets/safety_status_widget.dart'; // adjust pat
 import 'package:printing/printing.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html show Blob, Url, window;
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
@@ -109,6 +111,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
 
   Future<Uint8List> _prepareEmailImage(Uint8List orginalBytes) async {
+    if (kIsWeb) return orginalBytes;
+
     final compressed = await FlutterImageCompress.compressWithList(
       orginalBytes,
       quality: 30,
@@ -455,9 +459,39 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                         imageBytes: _globalImageBytes,
                                       );
 
-                                  await Printing.layoutPdf(
-                                    onLayout: (_) => pdfBytes,
-                                  );
+                                  if (!context.mounted) return;
+
+                                  if (kIsWeb) {
+                                    // On web: open PDF as blob URL in a new browser tab
+                                    final blob = html.Blob([
+                                      pdfBytes,
+                                    ], 'application/pdf');
+                                    final url =
+                                        html.Url.createObjectUrlFromBlob(blob);
+                                    html.window.open(url, '_blank');
+                                    html.Url.revokeObjectUrl(url);
+                                  } else {
+                                    // On native: use in-app PdfPreview screen
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => Scaffold(
+                                          appBar: AppBar(
+                                            title: const Text("Report Preview"),
+                                            backgroundColor: Colors.white,
+                                            foregroundColor: Colors.black,
+                                            elevation: 1,
+                                          ),
+                                          body: PdfPreview(
+                                            build: (_) => pdfBytes,
+                                            allowPrinting: false,
+                                            allowSharing: true,
+                                            canChangePageFormat: false,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                 },
                               ),
                             ),
