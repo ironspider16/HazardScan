@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/gestures.dart';
+
+enum ChartTimeframe { oneWeek, twoWeeks, oneMonth, oneYear }
 
 class ReportsStatisticsPage extends StatefulWidget {
   const ReportsStatisticsPage({super.key});
@@ -79,32 +84,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     } catch (e) {
       setState(() => isLoading = false);
     }
-  }
-
-  List<FlSpot> _getTimelineSpots(List<DateTime> last14Days) {
-    Map<String, int> dailyCounts = {
-      for (var date in last14Days) "${date.year}-${date.month}-${date.day}": 0,
-    };
-    //creates a dict of key: datetime string and sets value of each key to 0,
-    //basically saying 0 reports that day
-
-    for (var report in reports) {
-      //loops through reports
-      final date = DateTime.parse(
-        report['submitted_at'],
-      ); //for each report, get date as a datetime object
-      final key =
-          "${date.year}-${date.month}-${date.day}"; //creates a string key of datetime string, for daily counts dict
-      if (dailyCounts.containsKey(key)) {
-        dailyCounts[key] =
-            (dailyCounts[key] ?? 0) +
-            1; //plus one for each day if there is a report on that day
-      }
-    }
-
-    return dailyCounts.values.toList().asMap().entries.map((e) {
-      return FlSpot(e.key.toDouble(), e.value.toDouble());
-    }).toList();
   }
 
   void _showFilterDialog() async {
@@ -222,24 +201,38 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel'),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    // Save Dialog state back to Page state context
+                MenuButton(
+                  label: 'Apply Filters',
+                  isPrimary: true,
+                  width:
+                      120, // Set a fixed width that fits the dialog action area
+                  height: 40,
+                  onTap: () {
                     setState(() {
                       selectedRange = tempRange;
                       selectedCategory = tempCategory;
                       selectedTitle = tempTitle;
                     });
                     Navigator.pop(context);
-                    loadReports(); // Fetch updated items
+                    loadReports();
                   },
-                  child: const Text('Apply Filters'),
                 ),
               ],
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildChartContainer(Widget child) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint, // Light blue background
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+      ),
+      child: Center(child: child),
     );
   }
 
@@ -307,15 +300,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now(); // gets current time
-    final last14Days = List.generate(
-      14,
-      (i) => now.subtract(
-        Duration(days: 13 - i),
-      ), // Makes a list of datetime object of the last 14 days.
-      // oldest date first and newest date first
-    );
-
-    final List<FlSpot> timelineSpots = _getTimelineSpots(last14Days);
 
     final bool isFiltering =
         selectedRange != null ||
@@ -369,8 +353,10 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: AppPadding.medium),
+              const SizedBox(height: AppPadding.medium * 3),
               // ================= TOP STATS =================
+              ReportTimelineWidget(reports: reports),
+              const SizedBox(height: AppPadding.medium),
               LayoutBuilder(
                 builder: (context, constraints) {
                   // If the screen is wider than 600px, use a row; otherwise, a column
@@ -378,30 +364,32 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 
                   if (isWide) {
                     return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        DashboardCircle(
-                          icon: Icons.assignment_outlined,
-                          value: reports.length.toString(),
-                          label: "Total Reports",
+                        Expanded(
+                          child: _buildChartContainer(
+                            WorkActivityCircle(reports: reports),
+                          ),
                         ),
-                        WorkActivityCircle(reports: reports),
-                        StatusDistributionCircle(reports: reports),
+                        const SizedBox(width: AppPadding.medium),
+                        Expanded(
+                          child: _buildChartContainer(
+                            StatusDistributionCircle(reports: reports),
+                          ),
+                        ),
                       ],
                     );
                   } else {
                     return Center(
                       child: Column(
                         children: [
-                          DashboardCircle(
-                            icon: Icons.assignment_outlined,
-                            value: reports.length.toString(),
-                            label: "Total Reports",
+                          _buildChartContainer(
+                            WorkActivityCircle(reports: reports),
                           ),
                           const SizedBox(height: AppPadding.medium),
-                          WorkActivityCircle(reports: reports),
-                          const SizedBox(height: AppPadding.medium),
-                          StatusDistributionCircle(reports: reports),
+                          _buildChartContainer(
+                            StatusDistributionCircle(reports: reports),
+                          ),
                         ],
                       ),
                     );
@@ -410,11 +398,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
               ),
               const SizedBox(height: AppPadding.medium),
               RiskLeaderboardWidget(leaderboardData: leaderboard),
-              ReportTimelineWidget(
-                dates: last14Days,
-                totalReports: reports.length,
-                spots: timelineSpots,
-              ),
             ],
           ),
         ),
@@ -429,17 +412,126 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 
 // =====================================================
 
-class ReportTimelineWidget extends StatelessWidget {
-  final int totalReports;
-  final List<FlSpot> spots;
-  final List<DateTime> dates;
+class ReportTimelineWidget extends StatefulWidget {
+  final List<Map<String, dynamic>> reports;
 
-  const ReportTimelineWidget({
-    super.key,
-    required this.totalReports,
-    required this.spots,
-    required this.dates,
-  });
+  const ReportTimelineWidget({super.key, required this.reports});
+
+  @override
+  State<ReportTimelineWidget> createState() => _ReportTimelineWidgetState();
+}
+
+class _ReportTimelineWidgetState extends State<ReportTimelineWidget> {
+  ChartTimeframe _selectedTimeframe = ChartTimeframe.twoWeeks;
+
+  int _getDaysCount() {
+    switch (_selectedTimeframe) {
+      case ChartTimeframe.oneWeek:
+        return 7;
+      case ChartTimeframe.twoWeeks:
+        return 14;
+      case ChartTimeframe.oneMonth:
+        return 30;
+      case ChartTimeframe.oneYear:
+        return 365;
+    }
+  }
+
+  List<DateTime> _generateDates(int days) {
+    final now = DateTime.now();
+    return List.generate(
+      days,
+      (i) => now.subtract(Duration(days: (days - 1) - i)),
+    );
+  }
+
+  List<FlSpot> _getTimelineSpots(List<DateTime> datesList) {
+    Map<String, int> dailyCounts = {
+      for (var date in datesList) "${date.year}-${date.month}-${date.day}": 0,
+    };
+
+    for (var report in widget.reports) {
+      if (report['submitted_at'] == null) continue;
+      final date = DateTime.parse(report['submitted_at']);
+      final key = "${date.year}-${date.month}-${date.day}";
+      if (dailyCounts.containsKey(key)) {
+        dailyCounts[key] = (dailyCounts[key] ?? 0) + 1;
+      }
+    }
+
+    return dailyCounts.values.toList().asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), e.value.toDouble());
+    }).toList();
+  }
+
+  Widget _buildTimeframeSelector() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: ChartTimeframe.values.map((timeframe) {
+        bool isSelected = _selectedTimeframe == timeframe;
+        String label = '';
+        switch (timeframe) {
+          case ChartTimeframe.oneWeek:
+            label = "1W";
+            break;
+          case ChartTimeframe.twoWeeks:
+            label = "2W";
+            break;
+          case ChartTimeframe.oneMonth:
+            label = "1M";
+            break;
+          case ChartTimeframe.oneYear:
+            label = "1Y";
+            break;
+        }
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedTimeframe = timeframe;
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.black : Colors.transparent,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: isSelected ? Colors.black : Colors.black26,
+                width: 1,
+              ),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // Wraps the horizontal scroll view to permit mouse dragging on desktop
+  Widget _buildScrollableArea({required Widget child}) {
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+        },
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: child,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -450,7 +542,34 @@ class ReportTimelineWidget extends StatelessWidget {
           availableWidth = MediaQuery.of(context).size.width;
         }
 
-        bool isWide = availableWidth > 600;
+        bool isWide = availableWidth > 350;
+
+        final int days = _getDaysCount();
+        final List<DateTime> datesList = _generateDates(days);
+        final List<FlSpot> spotsList = _getTimelineSpots(datesList);
+
+        // Calculate maximum Y value and add 30% headroom to prevent tooltip clipping
+        double calculatedMaxY = 0;
+        for (var spot in spotsList) {
+          if (spot.y > calculatedMaxY) calculatedMaxY = spot.y;
+        }
+        // Force a minimum scale of 5, otherwise add a buffer above the highest peak
+        double chartMaxY = calculatedMaxY < 5
+            ? 5
+            : calculatedMaxY + (calculatedMaxY * 0.3);
+
+        double baseChartWidth = isWide
+            ? (availableWidth - 260)
+            : (availableWidth - 40);
+        double dynamicChartWidth = baseChartWidth;
+
+        if (_selectedTimeframe == ChartTimeframe.twoWeeks) {
+          dynamicChartWidth = max(baseChartWidth, 14 * 35.0);
+        } else if (_selectedTimeframe == ChartTimeframe.oneMonth) {
+          dynamicChartWidth = max(baseChartWidth, 30 * 30.0);
+        } else if (_selectedTimeframe == ChartTimeframe.oneYear) {
+          dynamicChartWidth = max(baseChartWidth, 365 * 14.0);
+        }
 
         return Container(
           width: availableWidth,
@@ -459,54 +578,76 @@ class ReportTimelineWidget extends StatelessWidget {
             color: AppColors.primaryTint,
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
           ),
-          child: isWide
-              ? Row(
-                  children: [
-                    _buildLeftSection(),
-                    const SizedBox(width: AppPadding.Largest),
-                    Expanded(
-                      child: SizedBox(
-                        height: 220,
-                        child: Center(child: _buildChart()),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: isWide
+                    ? MainAxisAlignment.spaceBetween
+                    : MainAxisAlignment.end,
+                children: [
+                  if (isWide)
+                    const Text(
+                      "Reports Timeline",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
                     ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    _buildLeftSection(),
-                    const SizedBox(height: 20),
-                    SizedBox(height: 220, child: _buildChart()),
-                  ],
+                  _buildTimeframeSelector(),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildLeftSection(),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 220,
+                child: _buildScrollableArea(
+                  child: SizedBox(
+                    width: dynamicChartWidth,
+                    child: _buildChart(spotsList, datesList, chartMaxY),
+                  ),
                 ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
   Widget _buildLeftSection() => SizedBox(
-    width: 200,
+    width: 150,
     child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         const Icon(Icons.assignment_outlined, size: 50),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppPadding.tight),
         Text(
-          totalReports.toString(),
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          widget.reports.length.toString(),
+          style: AppTypography.Blueheading,
         ),
         const Text("Total Reports"),
       ],
     ),
   );
 
-  Widget _buildChart() => LineChart(
+  Widget _buildChart(
+    List<FlSpot> spotsList,
+    List<DateTime> datesList,
+    double maxY,
+  ) => LineChart(
     LineChartData(
+      minY: 0,
+      maxY: maxY,
       lineBarsData: [
         LineChartBarData(
-          spots: spots,
+          spots: spotsList,
           isCurved: false,
           color: Colors.black,
           barWidth: 3,
+          preventCurveOverShooting: true,
         ),
       ],
       gridData: const FlGridData(show: true),
@@ -525,16 +666,46 @@ class ReportTimelineWidget extends StatelessWidget {
             getTitlesWidget: (double value, TitleMeta meta) {
               int index = value.toInt();
 
-              if (index < 0 || index >= dates.length) {
+              if (index < 0 || index >= datesList.length) {
                 return const SizedBox.shrink();
               }
 
-              if (index % 3 != 0 && index != dates.length - 1) {
-                return const SizedBox.shrink();
+              if (_selectedTimeframe == ChartTimeframe.twoWeeks) {
+                if (index % 2 != 0 && index != datesList.length - 1) {
+                  return const SizedBox.shrink();
+                }
+              } else if (_selectedTimeframe == ChartTimeframe.oneMonth) {
+                if (index % 5 != 0 && index != datesList.length - 1) {
+                  return const SizedBox.shrink();
+                }
+              } else if (_selectedTimeframe == ChartTimeframe.oneYear) {
+                if (index % 30 != 0 && index != datesList.length - 1) {
+                  return const SizedBox.shrink();
+                }
               }
 
-              DateTime date = dates[index];
-              String formattedDate = "${date.day}/${date.month}";
+              DateTime date = datesList[index];
+              String formattedDate;
+
+              if (_selectedTimeframe == ChartTimeframe.oneYear) {
+                List<String> months = [
+                  "Jan",
+                  "Feb",
+                  "Mar",
+                  "Apr",
+                  "May",
+                  "Jun",
+                  "Jul",
+                  "Aug",
+                  "Sep",
+                  "Oct",
+                  "Nov",
+                  "Dec",
+                ];
+                formattedDate = months[date.month - 1];
+              } else {
+                formattedDate = "${date.day}/${date.month}";
+              }
 
               return SideTitleWidget(
                 axisSide: meta.axisSide,
@@ -566,15 +737,31 @@ class RiskLeaderboardWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.primaryTint,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Risk Leaderboard", style: AppTypography.Bluesubheading),
-          const SizedBox(height: 16),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center, // Set to baseline
+            children: [
+              const Text(
+                'Risk Leaderboard',
+                style: AppTypography.Bluesubheading,
+              ),
+              IconButton(
+                icon: const Icon(Icons.help_outline),
+                iconSize: 20,
+                color: AppColors.primaryBlue,
+                tooltip: 'Explain',
+                onPressed: () => _showRiskExplanation(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppPadding.medium),
           ...leaderboardData.asMap().entries.map((entry) {
             int index = entry.key;
             var item = entry.value;
@@ -621,6 +808,68 @@ class RiskLeaderboardWidget extends StatelessWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  void _showRiskExplanation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Risk Scoring Explanation',
+            style: AppTypography.Bluesubheading,
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Safety reports for work at height are evaluated across four categories: Ladder Height, Area Hazards, PPE, and Buddy System.',
+                  style: TextStyle(fontSize: 14, color: Colors.black87),
+                ),
+                const SizedBox(height: AppPadding.medium),
+                const Text(
+                  'Scoring:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: AppPadding.tight),
+                _buildScoreRow('Dangerous', '+4'),
+                _buildScoreRow('Partially Compliant', '+2'),
+                _buildScoreRow('Compliant', '+1'),
+                _buildScoreRow('Safe', '+0'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper to keep the score rows consistent
+  Widget _buildScoreRow(String label, String points) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 14)),
+          Text(
+            points,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: points == '+4' ? Colors.red : Colors.blueGrey,
+            ),
+          ),
         ],
       ),
     );
@@ -706,10 +955,11 @@ class StatusDistributionCircle extends StatelessWidget {
       return PieChartSectionData(
         value: entry.value.toDouble(),
         color: statusColors[entry.key] ?? Colors.grey,
-        radius: 80,
+        radius: 90,
         title: '${entry.key}\n(${entry.value})', // Shows Label + Number
-        titleStyle: const TextStyle(
-          fontSize: 10,
+        titlePositionPercentageOffset: 0.3,
+        titleStyle: TextStyle(
+          fontSize: 12,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
@@ -722,25 +972,38 @@ class StatusDistributionCircle extends StatelessWidget {
     return Column(
       children: [
         SizedBox(
-          width: 180,
-          height: 180,
+          height: 200,
           child: PieChart(
-            PieChartData(sections: _generateChartData(), sectionsSpace: 2),
+            PieChartData(
+              sections: _generateChartData(),
+              sectionsSpace: 2,
+              centerSpaceRadius: 0,
+            ),
           ),
         ),
-        const SizedBox(height: AppPadding.medium),
-        const Text("Overall Safety Status", style: TextStyle(fontSize: 16)),
+        const SizedBox(height: AppPadding.tight),
+        const Text(
+          "Overall Safety Status for Work at height",
+          style: AppTypography.body,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
 }
 
-class WorkActivityCircle extends StatelessWidget {
+class WorkActivityCircle extends StatefulWidget {
   final List<Map<String, dynamic>> reports;
 
   const WorkActivityCircle({super.key, required this.reports});
 
-  // Helper function to turn "Work At Height" into "WAH"
+  @override
+  State<WorkActivityCircle> createState() => _WorkActivityCircleState();
+}
+
+class _WorkActivityCircleState extends State<WorkActivityCircle> {
+  int _touchedIndex = -1;
+
   String _getAcronym(String text) {
     if (text.isEmpty || text == 'Unknown') return 'N/A';
     return text
@@ -751,32 +1014,19 @@ class WorkActivityCircle extends StatelessWidget {
         .toUpperCase();
   }
 
-  List<PieChartSectionData> _generateChartData() {
-    // 1. Handle empty state gracefully
-    if (reports.isEmpty) {
-      return [
-        PieChartSectionData(
-          value: 1,
-          color: Colors.grey[300],
-          radius: 90,
-          title: 'No Data',
-          titleStyle: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
-          ),
-        ),
-      ];
-    }
-
-    // 2. Count frequencies of each category
-    Map<String, int> categoryCounts = {};
-    for (var report in reports) {
+  // Helper to extract map of counts to keep order consistent
+  Map<String, int> _getCategoryCounts() {
+    Map<String, int> counts = {};
+    for (var report in widget.reports) {
       final category = report['swp_templates']?['category'] ?? 'Unknown';
-      categoryCounts[category] = (categoryCounts[category] ?? 0) + 1;
+      counts[category] = (counts[category] ?? 0) + 1;
     }
+    return counts;
+  }
 
-    // 3. Define a nice color palette to cycle through
+  List<PieChartSectionData> _generateChartData(
+    Map<String, int> categoryCounts,
+  ) {
     final List<Color> palette = [
       Colors.blue,
       Colors.orange,
@@ -786,56 +1036,72 @@ class WorkActivityCircle extends StatelessWidget {
       Colors.teal,
     ];
 
-    // 4. Map the counts to pie chart sections
-    int colorIndex = 0;
+    int index = 0;
     return categoryCounts.entries.map((entry) {
-      final color = palette[colorIndex % palette.length];
-      colorIndex++;
+      final isTouched = index == _touchedIndex;
+      final fontSize = isTouched ? 18.0 : 15.0;
+      final radius = isTouched ? 110.0 : 90.0;
+      final color = palette[index % palette.length];
 
-      return PieChartSectionData(
-        value: entry.value
-            .toDouble(), // Ratios handled automatically by FL Chart
+      final section = PieChartSectionData(
+        value: entry.value.toDouble(),
         color: color,
-        radius: 90,
-        title: _getAcronym(entry.key), // E.g., 'CH' for Chemical Hazard
-        titleStyle: const TextStyle(
-          fontSize: 15,
+        radius: radius,
+        title:
+            _getAcronym(entry.key) +
+            "\n (" +
+            entry.value.toInt().toString() +
+            ")",
+        titleStyle: TextStyle(
+          fontSize: fontSize,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
       );
+      index++;
+      return section;
     }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final categoryCounts = _getCategoryCounts();
+    final keys = categoryCounts.keys.toList();
+
+    // Determine the label to show below the chart
+    String displayLabel = _touchedIndex >= 0 && _touchedIndex < keys.length
+        ? keys[_touchedIndex]
+        : "Tap a section for detais";
+
     return Column(
       children: [
-        Container(
-          width: 180,
-          height: 180,
-          decoration: const BoxDecoration(
-            color: AppColors.primaryTint,
-            shape: BoxShape.circle,
-          ),
-          padding: const EdgeInsets.all(12),
+        SizedBox(
+          height: 200,
           child: PieChart(
             PieChartData(
-              sectionsSpace: 1,
+              pieTouchData: PieTouchData(
+                touchCallback: (FlTouchEvent event, pieTouchResponse) {
+                  setState(() {
+                    if (!event.isInterestedForInteractions ||
+                        pieTouchResponse == null ||
+                        pieTouchResponse.touchedSection == null) {
+                      _touchedIndex = -1;
+                      return;
+                    }
+                    _touchedIndex =
+                        pieTouchResponse.touchedSection!.touchedSectionIndex;
+                  });
+                },
+              ),
+              sectionsSpace: 2,
               centerSpaceRadius: 0,
-              sections: _generateChartData(), // Feed dynamic data here
+              sections: _generateChartData(categoryCounts),
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        const Text("Work Activity", style: TextStyle(fontSize: 16)),
+        const SizedBox(height: AppPadding.tight),
+        Text(displayLabel, style: AppTypography.body),
       ],
     );
   }
 }
-
-// =====================================================
-
-// TASK CARD
-
-// =====================================================
