@@ -3,6 +3,7 @@ import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+
 class ReportsStatisticsPage extends StatefulWidget {
   const ReportsStatisticsPage({super.key});
 
@@ -18,7 +19,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   DateTimeRange? selectedRange;
   String? selectedCategory;
   String? selectedTitle;
-  
 
   final List<String> categories = [
     'Work At Height',
@@ -44,7 +44,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     setState(() => isLoading = true);
 
     try {
-      String selectQuery = '*, swp_templates!inner(id, category, title), WAH_safetyVariables(*)';
+      String selectQuery =
+          '*, swp_templates!inner(id, category, title), WAH_safetyVariables(*)';
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -80,8 +81,33 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     }
   }
 
+  List<FlSpot> _getTimelineSpots(List<DateTime> last14Days) {
+    Map<String, int> dailyCounts = {
+      for (var date in last14Days) "${date.year}-${date.month}-${date.day}": 0,
+    };
+    //creates a dict of key: datetime string and sets value of each key to 0,
+    //basically saying 0 reports that day
+
+    for (var report in reports) {
+      //loops through reports
+      final date = DateTime.parse(
+        report['submitted_at'],
+      ); //for each report, get date as a datetime object
+      final key =
+          "${date.year}-${date.month}-${date.day}"; //creates a string key of datetime string, for daily counts dict
+      if (dailyCounts.containsKey(key)) {
+        dailyCounts[key] =
+            (dailyCounts[key] ?? 0) +
+            1; //plus one for each day if there is a report on that day
+      }
+    }
+
+    return dailyCounts.values.toList().asMap().entries.map((e) {
+      return FlSpot(e.key.toDouble(), e.value.toDouble());
+    }).toList();
+  }
+
   void _showFilterDialog() async {
-    // Temporary variables to hold choices inside the dialog setup box
     DateTimeRange? tempRange = selectedRange;
     String? tempCategory = selectedCategory;
     String? tempTitle = selectedTitle;
@@ -228,11 +254,16 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     // Helper to map compliance status to score
     int _getScore(String? compliance) {
       switch (compliance?.toUpperCase()) {
-        case 'SAFE': return 0;
-        case 'COMPLIANT': return 1;
-        case 'PARTIALLY COMPLIANT': return 2;
-        case 'DANGEROUS': return 4;
-        default: return 0;
+        case 'SAFE':
+          return 0;
+        case 'COMPLIANT':
+          return 1;
+        case 'PARTIALLY COMPLIANT':
+          return 2;
+        case 'DANGEROUS':
+          return 4;
+        default:
+          return 0;
       }
     }
 
@@ -240,22 +271,25 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     // Adjust logic if data arrives as Map vs String
     int _extractScore(dynamic data) {
       if (data == null) return 0;
-      
+
       // If it is a string (JSON), decode it first
-      final Map<String, dynamic> parsed = (data is String) 
-          ? Map<String, dynamic>.from(jsonDecode(data)) 
+      final Map<String, dynamic> parsed = (data is String)
+          ? Map<String, dynamic>.from(jsonDecode(data))
           : Map<String, dynamic>.from(data);
-          
+
       return _getScore(parsed['compliance'] as String?);
     }
 
     for (var report in reports) {
       final vars = report['WAH_safetyVariables'];
       if (vars != null) {
-        scores['Ladder Height'] = scores['Ladder Height']! + _extractScore(vars['ladderheight']);
+        scores['Ladder Height'] =
+            scores['Ladder Height']! + _extractScore(vars['ladderheight']);
         scores['PPE'] = scores['PPE']! + _extractScore(vars['ppe']);
-        scores['Buddy System'] = scores['Buddy System']! + _extractScore(vars['buddySystem']);
-        scores['Area Hazards'] = scores['Area Hazards']! + _extractScore(vars['areaHazards']);
+        scores['Buddy System'] =
+            scores['Buddy System']! + _extractScore(vars['buddySystem']);
+        scores['Area Hazards'] =
+            scores['Area Hazards']! + _extractScore(vars['areaHazards']);
       }
     }
 
@@ -263,13 +297,26 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     List<Map<String, dynamic>> leaderboard = scores.entries
         .map((e) => {'category': e.key, 'score': e.value})
         .toList();
-    
-    leaderboard.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
+
+    leaderboard.sort(
+      (a, b) => (b['score'] as int).compareTo(a['score'] as int),
+    );
     return leaderboard;
   }
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now(); // gets current time
+    final last14Days = List.generate(
+      14,
+      (i) => now.subtract(
+        Duration(days: 13 - i),
+      ), // Makes a list of datetime object of the last 14 days.
+      // oldest date first and newest date first
+    );
+
+    final List<FlSpot> timelineSpots = _getTimelineSpots(last14Days);
+
     final bool isFiltering =
         selectedRange != null ||
         selectedCategory != null ||
@@ -323,50 +370,55 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: AppPadding.medium),
-            // ================= TOP STATS =================
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // If the screen is wider than 600px, use a row; otherwise, a column
-                bool isWide = constraints.maxWidth > 600;
+              // ================= TOP STATS =================
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  // If the screen is wider than 600px, use a row; otherwise, a column
+                  bool isWide = constraints.maxWidth > 600;
 
-                if (isWide) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      DashboardCircle(
-                        icon: Icons.assignment_outlined,
-                        value: reports.length.toString(),
-                        label: "Total Reports",
-                      ),
-                      WorkActivityCircle(reports: reports),
-                      StatusDistributionCircle(reports: reports),
-                    ],
-                  );
-                } else {
-                  return Center(
-                    child: Column(
+                  if (isWide) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         DashboardCircle(
                           icon: Icons.assignment_outlined,
                           value: reports.length.toString(),
                           label: "Total Reports",
                         ),
-                        const SizedBox(height: AppPadding.medium),
                         WorkActivityCircle(reports: reports),
-                        const SizedBox(height: AppPadding.medium),
                         StatusDistributionCircle(reports: reports),
                       ],
-                    ),
-                  );
-                }
-              },
-            ),
-            const SizedBox(height: AppPadding.medium),
-            RiskLeaderboardWidget(leaderboardData: leaderboard),
-          ],
+                    );
+                  } else {
+                    return Center(
+                      child: Column(
+                        children: [
+                          DashboardCircle(
+                            icon: Icons.assignment_outlined,
+                            value: reports.length.toString(),
+                            label: "Total Reports",
+                          ),
+                          const SizedBox(height: AppPadding.medium),
+                          WorkActivityCircle(reports: reports),
+                          const SizedBox(height: AppPadding.medium),
+                          StatusDistributionCircle(reports: reports),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: AppPadding.medium),
+              RiskLeaderboardWidget(leaderboardData: leaderboard),
+              ReportTimelineWidget(
+                dates: last14Days,
+                totalReports: reports.length,
+                spots: timelineSpots,
+              ),
+            ],
+          ),
         ),
       ),
-    )
     );
   }
 }
@@ -376,6 +428,133 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 // DASHBOARD CIRCLE
 
 // =====================================================
+
+class ReportTimelineWidget extends StatelessWidget {
+  final int totalReports;
+  final List<FlSpot> spots;
+  final List<DateTime> dates;
+
+  const ReportTimelineWidget({
+    super.key,
+    required this.totalReports,
+    required this.spots,
+    required this.dates,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double availableWidth = constraints.maxWidth;
+        if (availableWidth == double.infinity) {
+          availableWidth = MediaQuery.of(context).size.width;
+        }
+
+        bool isWide = availableWidth > 600;
+
+        return Container(
+          width: availableWidth,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.primaryTint,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+          ),
+          child: isWide
+              ? Row(
+                  children: [
+                    _buildLeftSection(),
+                    const SizedBox(width: AppPadding.Largest),
+                    Expanded(
+                      child: SizedBox(
+                        height: 220,
+                        child: Center(child: _buildChart()),
+                      ),
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    _buildLeftSection(),
+                    const SizedBox(height: 20),
+                    SizedBox(height: 220, child: _buildChart()),
+                  ],
+                ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLeftSection() => SizedBox(
+    width: 200,
+    child: Column(
+      children: [
+        const Icon(Icons.assignment_outlined, size: 50),
+        const SizedBox(height: 10),
+        Text(
+          totalReports.toString(),
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        const Text("Total Reports"),
+      ],
+    ),
+  );
+
+  Widget _buildChart() => LineChart(
+    LineChartData(
+      lineBarsData: [
+        LineChartBarData(
+          spots: spots,
+          isCurved: false,
+          color: Colors.black,
+          barWidth: 3,
+        ),
+      ],
+      gridData: const FlGridData(show: true),
+      borderData: FlBorderData(show: false),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 30,
+            interval: 1,
+            getTitlesWidget: (double value, TitleMeta meta) {
+              int index = value.toInt();
+
+              if (index < 0 || index >= dates.length) {
+                return const SizedBox.shrink();
+              }
+
+              if (index % 3 != 0 && index != dates.length - 1) {
+                return const SizedBox.shrink();
+              }
+
+              DateTime date = dates[index];
+              String formattedDate = "${date.day}/${date.month}";
+
+              return SideTitleWidget(
+                axisSide: meta.axisSide,
+                space: 8,
+                child: Text(
+                  formattedDate,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black54,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 class RiskLeaderboardWidget extends StatelessWidget {
   final List<Map<String, dynamic>> leaderboardData;
@@ -403,20 +582,38 @@ class RiskLeaderboardWidget extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    "${index + 1}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: Text(item['category'] as String, style: const TextStyle(fontSize: 16))),
+                  Expanded(
+                    child: Text(
+                      item['category'] as String,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: (item['score'] as int) > 10 ? Colors.red.shade100 : Colors.blue.shade50,
+                      color: (item['score'] as int) > 10
+                          ? Colors.red.shade100
+                          : Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       "${item['score']} pts",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: (item['score'] as int) > 10 ? Colors.red : Colors.blue,
+                        color: (item['score'] as int) > 10
+                            ? Colors.red
+                            : Colors.blue,
                       ),
                     ),
                   ),
@@ -495,7 +692,9 @@ class StatusDistributionCircle extends StatelessWidget {
     for (var report in reports) {
       if (report["WAH_safetyVariables"] != null) {
         final vars = report['WAH_safetyVariables'];
-        final status = (vars != null) ? (vars['Overall Status'] ?? 'N/A') : 'N/A';
+        final status = (vars != null)
+            ? (vars['Overall Status'] ?? 'N/A')
+            : 'N/A';
         if (status != null) {
           statusCounts[status] = (statusCounts[status] ?? 0) + 1;
         }
@@ -509,7 +708,11 @@ class StatusDistributionCircle extends StatelessWidget {
         color: statusColors[entry.key] ?? Colors.grey,
         radius: 80,
         title: '${entry.key}\n(${entry.value})', // Shows Label + Number
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       );
     }).toList();
   }
@@ -522,10 +725,7 @@ class StatusDistributionCircle extends StatelessWidget {
           width: 180,
           height: 180,
           child: PieChart(
-            PieChartData(
-              sections: _generateChartData(),
-              sectionsSpace: 2,
-            ),
+            PieChartData(sections: _generateChartData(), sectionsSpace: 2),
           ),
         ),
         const SizedBox(height: AppPadding.medium),
