@@ -1,15 +1,8 @@
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:kkhazardscan/services/gemini_service.dart';
 import 'package:kkhazardscan/widgets/swp_checklist.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/WAH_Permit.dart';
-import '../widgets/image_upload.dart';
 import '../Design/style_constant.dart';
-import '../widgets/App_Textfield.dart';
-import '../widgets/safety_status_widget.dart';
-import '../yolo/yolo_service.dart';
 
 class TechnicianSwpSection extends StatefulWidget {
   final int templateId;
@@ -18,17 +11,10 @@ class TechnicianSwpSection extends StatefulWidget {
   final String initialPtw;
   final bool initialAbove3m;
   final List<String> initialCheckedItems;
-  final Uint8List? initialImage;
-  final String initialDetails;
-  final Function(String details) onDetailsChanged;
 
   final Function(bool isAbove3m, String ptw) onPtwChanged;
   final Function(List<String> checkedItems) onChecklistChanged;
-
-  final Function(Uint8List bytes) onImageChanged;
   final Function(bool isCleared) onAllChecked;
-
-  final Function(Map<String, dynamic> aiData)? onAiAnalyzed;
 
   const TechnicianSwpSection({
     super.key,
@@ -37,14 +23,9 @@ class TechnicianSwpSection extends StatefulWidget {
     required this.onPtwChanged,
     required this.initialPtw,
     required this.initialCheckedItems,
-    required this.initialImage,
     required this.onChecklistChanged,
-    required this.onImageChanged,
     required this.initialAbove3m,
-    required this.initialDetails,
-    required this.onDetailsChanged,
     required this.onAllChecked,
-    this.onAiAnalyzed,
   });
 
   @override
@@ -57,17 +38,13 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
   bool isSafetyCleared = false;
   bool isPtwCleared = true;
   bool isLoading = true;
-  late final TextEditingController _detailsCtrl;
 
-  Map<String, dynamic>? aiData;
-  bool isAnalyzing = false;
   bool get isWAH => widget.categoryName.toLowerCase().contains("work at height");
 
   @override
   void initState() {
     super.initState();
     _loadItems();
-    _detailsCtrl = TextEditingController(text: widget.initialDetails);
 
     if (widget.categoryName.toLowerCase().contains("work at height")) {
       isPtwCleared = !widget.initialAbove3m || widget.initialPtw.isNotEmpty;
@@ -76,31 +53,18 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
     }
   }
 
-  @override
-  void dispose() {
-    _detailsCtrl.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadItems() async {
     final response = await supabase
         .from('swp_items')
         .select('description')
         .eq('template_id', widget.templateId);
 
-    setState(() {
-      items = List<String>.from(response.map((x) => x['description']));
-      isLoading = false;
-    });
-  }
-
-  String _formatCategoryKey(String key) {
-    if (key == 'ppe') return 'PPE';
-    final RegExp numUpperRegExp = RegExp(r'(?<=[a-z])(?=[A-Z])');
-    final words = key.split(numUpperRegExp);
-    return words
-        .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1))
-        .join(' ');
+    if (mounted) {
+      setState(() {
+        items = List<String>.from(response.map((x) => x['description']));
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -141,109 +105,6 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
                 onAllChecked: (status) {
                   setState(() => isSafetyCleared = status);
                   widget.onAllChecked(status);
-                },
-              ),
-              
-                AppImageUpload(
-                  label: "Site Photos",
-                  onImageSelected: (bytes) async {
-                    widget.onImageChanged(bytes as Uint8List);
-
-                    if (!isWAH) return;
-                    debugPrint("Starting AI Analysis for: ${widget.categoryName}...");
-                    setState(() {
-                      isAnalyzing = true;
-                    });
-                    
-                    final detections = await YoloService().yoloDetect(
-                      context,
-                      bytes,
-                    );
-                    debugPrint(detections.toString());
-                    
-                    try {
-                      final String rawResponse =
-                          await GeminiService.detectHazards(
-                        bytes as Uint8List,
-                        _detailsCtrl.text.trim(),
-                      );
-
-                      String cleanJson = rawResponse
-                          .replaceAll('```json', '')
-                          .replaceAll('```', '')
-                          .trim();
-
-                      final Map<String, dynamic> data = jsonDecode(cleanJson);
-
-                      if (widget.onAiAnalyzed != null) {
-                        widget.onAiAnalyzed!(data);
-                      }
-
-                      StringBuffer detailsBuffer = StringBuffer();
-                      final String aiStatus = data['overallStatus'] ?? "N/A";
-                      detailsBuffer.writeln("Overall Safety Status: $aiStatus\n");
-                      
-                      data.forEach((key, value) {
-                        if (value is Map<String, dynamic>) {
-                          detailsBuffer.writeln(
-                            "${_formatCategoryKey(key)}: ${value['compliance']}",
-                          );
-                          if (value['description'] != null) {
-                            detailsBuffer.writeln(" • Description: ${value['description']}");
-                          }
-                          if (value['reasoning'] != null) {
-                            detailsBuffer.writeln(" • Reasoning: ${value['reasoning']}");
-                          }
-                          if (value['advice'] != null) {
-                            detailsBuffer.writeln(" • Advice: ${value['advice']}");
-                          }
-                          detailsBuffer.writeln();
-                        }
-                      });
-
-                      setState(() {
-                        aiData = data;
-                        isAnalyzing = false;
-                      });
-                      
-                      widget.onDetailsChanged(_detailsCtrl.text);
-                    } catch (e) {
-                      debugPrint("AI Analysis failed: $e");
-                      setState(() {
-                        isAnalyzing = false;
-                        aiData = null;
-                      });
-                    }
-                  },
-                ),
-              if (isWAH) ...[
-                if (isAnalyzing)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppPadding.tight),
-                    child: Row(
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        SizedBox(width: 12),
-                        Text("Analyzing site safety..."),
-                      ],
-                    ),
-                  )
-                else
-                  SafetyStatusWidget(aiData: aiData),
-              ],
-
-              const SizedBox(height: AppPadding.medium),
-              AppTextfield(
-                label: "Details",
-                hint: "Enter details here / Take photo to output AI details",
-                controller: _detailsCtrl,
-                Maxlines: 5,
-                onChanged: (value) {
-                  widget.onDetailsChanged(value.trim());
                 },
               ),
             ],

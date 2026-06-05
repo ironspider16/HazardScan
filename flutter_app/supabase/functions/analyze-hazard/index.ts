@@ -250,8 +250,7 @@ serve(async (req: Request) => {
       );
     }
 
-    const prompt = `
-You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP).
+    const cleanBase64 = imageBase64.replace(/^data:image\/[a-z]+;base64,/, ""); 
 
 INPUT MODE:
 ${hasImage ? "Image analysis is available." : "No image was provided. Perform text-only safety analysis based on technician context."}
