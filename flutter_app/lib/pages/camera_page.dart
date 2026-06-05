@@ -1,11 +1,8 @@
 import "package:flutter/material.dart";
 import "package:image_picker/image_picker.dart";
-import 'result_screen.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:kkhazardscan/models/detection.dart';
 import 'package:kkhazardscan/llm/llm_service.dart';
 import 'package:kkhazardscan/llm/report_statistics_service.dart';
+import 'package:kkhazardscan/yolo/yolo_service.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -31,83 +28,6 @@ class _CameraPageState extends State<CameraPage> {
       setState(() {
         image = pickedFile;
       });
-    }
-  }
-
-  // YOLO Spreader Detection
-  Future<void> uploadImage(BuildContext context, String imagePath) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final imageBytes = await image!.readAsBytes();
-
-      var request = http.MultipartRequest(
-        'POST',
-        Uri.parse(
-          "https://hazardscan-yolo-663409506217.asia-southeast1.run.app/detect",
-        ),
-      );
-
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          imageBytes,
-          filename: image!.name,
-        ),
-      );
-
-      var response = await request.send();
-      var responseString = await response.stream.bytesToString();
-
-      print("Status: ${response.statusCode}");
-      print("Response: $responseString");
-
-      if (context.mounted) Navigator.pop(context);
-
-      if (response.statusCode != 200) {
-        throw Exception("Server error: ${response.statusCode}");
-      }
-
-      final data = jsonDecode(responseString);
-      final List detectionsJson = data['detections'];
-
-      final detections = detectionsJson.map((item) {
-        return Detection(
-          label: item['label'],
-          confidence: item['confidence'].toDouble(),
-          left: item['x1'].toDouble(),
-          top: item['y1'].toDouble(),
-          right: item['x2'].toDouble(),
-          bottom: item['y2'].toDouble(),
-        );
-      }).toList();
-
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResultScreen(
-              imagePath: imagePath,
-              imageBytes: imageBytes,
-              detections: detections,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("YOLO analysis failed: $e")));
-      }
-
-      print("YOLO analysis failed: $e");
     }
   }
 
@@ -170,7 +90,16 @@ class _CameraPageState extends State<CameraPage> {
                                 child: ElevatedButton(
                                   onPressed: image == null
                                       ? null
-                                      : () => uploadImage(context, image!.path),
+                                      : () async {
+                                          final imageBytes = await image!
+                                              .readAsBytes();
+
+                                          await YoloService().yoloDetect(
+                                            context,
+                                            imageBytes,
+                                            image!.path,
+                                          );
+                                        },
                                   child: const Text("Analysis Hazard"),
                                 ),
                               ),
@@ -219,7 +148,16 @@ class _CameraPageState extends State<CameraPage> {
                               ElevatedButton(
                                 onPressed: image == null
                                     ? null
-                                    : () => uploadImage(context, image!.path),
+                                    : () async {
+                                        final imageBytes = await image!
+                                            .readAsBytes();
+
+                                        await YoloService().yoloDetect(
+                                          context,
+                                          imageBytes,
+                                          image!.path,
+                                        );
+                                      },
                                 child: const Text("Analysis Hazard"),
                               ),
                               const SizedBox(width: 20),
