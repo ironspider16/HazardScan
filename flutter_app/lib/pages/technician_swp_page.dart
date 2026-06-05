@@ -46,6 +46,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   // --- NEW GLOBAL STATE VARIABLES ---
   Uint8List? _globalImageBytes;
+  Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
@@ -459,6 +460,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                         imageBytes: _globalImageBytes,
                                       );
 
+                                  setState(() {
+                                    _globalPdfBytes = pdfBytes;
+                                  });
+
                                   if (!context.mounted) return;
 
                                   if (kIsWeb) {
@@ -584,6 +589,18 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return false;
       }
 
+      Uint8List? finalPdfBytes = _globalPdfBytes;
+      if (finalPdfBytes == null) {
+        finalPdfBytes = await LocalReportCompiler.generateWshReport(
+          location: location,
+          supervisor: name,
+          employer: department,
+          manualNotes: _globalDetailsCtrl.text,
+          initialAiData: _globalAiData ?? {},
+          imageBytes: _globalImageBytes,
+        );
+      }
+
       final activeSubCategoryIds = selectedSubCategories.values
           .where((id) => id != null)
           .cast<int>()
@@ -645,6 +662,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           department: department,
           location: location,
           imageBytes: compressedImageBytes ?? _globalImageBytes,
+          pdfBytes: finalPdfBytes,
         );
       }
 
@@ -666,11 +684,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String category,
     required String location,
     Uint8List? imageBytes,
+    Uint8List? pdfBytes,
   }) async {
     try {
       String? base64Image;
       if (imageBytes != null) {
         base64Image = base64Encode(imageBytes);
+      }
+
+      String? base64Pdf;
+      if (pdfBytes != null) {
+        base64Pdf = base64Encode(pdfBytes);
       }
 
       // Route to Supabase Edge Function to protect API credentials
@@ -686,6 +710,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           "department": department,
           "location": location,
           "image": base64Image,
+          "pdf": base64Pdf,
         },
       );
 
