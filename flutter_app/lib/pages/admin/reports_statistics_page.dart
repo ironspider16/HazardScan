@@ -3,6 +3,7 @@ import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
+
 class ReportsStatisticsPage extends StatefulWidget {
   const ReportsStatisticsPage({super.key});
 
@@ -18,7 +19,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   DateTimeRange? selectedRange;
   String? selectedCategory;
   String? selectedTitle;
-  
 
   final List<String> categories = [
     'Work At Height',
@@ -44,7 +44,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     setState(() => isLoading = true);
 
     try {
-      String selectQuery = '*, swp_templates!inner(id, category, title), WAH_safetyVariables(*)';
+      String selectQuery =
+          '*, swp_templates!inner(id, category, title), WAH_safetyVariables(*)';
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -228,11 +229,16 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     // Helper to map compliance status to score
     int _getScore(String? compliance) {
       switch (compliance?.toUpperCase()) {
-        case 'SAFE': return 0;
-        case 'COMPLIANT': return 1;
-        case 'PARTIALLY COMPLIANT': return 2;
-        case 'DANGEROUS': return 4;
-        default: return 0;
+        case 'SAFE':
+          return 0;
+        case 'COMPLIANT':
+          return 1;
+        case 'PARTIALLY COMPLIANT':
+          return 2;
+        case 'DANGEROUS':
+          return 4;
+        default:
+          return 0;
       }
     }
 
@@ -240,22 +246,25 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     // Adjust logic if data arrives as Map vs String
     int _extractScore(dynamic data) {
       if (data == null) return 0;
-      
+
       // If it is a string (JSON), decode it first
-      final Map<String, dynamic> parsed = (data is String) 
-          ? Map<String, dynamic>.from(jsonDecode(data)) 
+      final Map<String, dynamic> parsed = (data is String)
+          ? Map<String, dynamic>.from(jsonDecode(data))
           : Map<String, dynamic>.from(data);
-          
+
       return _getScore(parsed['compliance'] as String?);
     }
 
     for (var report in reports) {
       final vars = report['WAH_safetyVariables'];
       if (vars != null) {
-        scores['Ladder Height'] = scores['Ladder Height']! + _extractScore(vars['ladderheight']);
+        scores['Ladder Height'] =
+            scores['Ladder Height']! + _extractScore(vars['ladderheight']);
         scores['PPE'] = scores['PPE']! + _extractScore(vars['ppe']);
-        scores['Buddy System'] = scores['Buddy System']! + _extractScore(vars['buddySystem']);
-        scores['Area Hazards'] = scores['Area Hazards']! + _extractScore(vars['areaHazards']);
+        scores['Buddy System'] =
+            scores['Buddy System']! + _extractScore(vars['buddySystem']);
+        scores['Area Hazards'] =
+            scores['Area Hazards']! + _extractScore(vars['areaHazards']);
       }
     }
 
@@ -263,8 +272,10 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     List<Map<String, dynamic>> leaderboard = scores.entries
         .map((e) => {'category': e.key, 'score': e.value})
         .toList();
-    
-    leaderboard.sort((a, b) => (b['score'] as int).compareTo(a['score'] as int));
+
+    leaderboard.sort(
+      (a, b) => (b['score'] as int).compareTo(a['score'] as int),
+    );
     return leaderboard;
   }
 
@@ -323,50 +334,50 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const SizedBox(height: AppPadding.medium),
-            // ================= TOP STATS =================
-            LayoutBuilder(
-              builder: (context, constraints) {
-                // If the screen is wider than 600px, use a row; otherwise, a column
-                bool isWide = constraints.maxWidth > 600;
+              // ================= TOP STATS =================
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  // If the screen is wider than 600px, use a row; otherwise, a column
+                  bool isWide = constraints.maxWidth > 600;
 
-                if (isWide) {
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      DashboardCircle(
-                        icon: Icons.assignment_outlined,
-                        value: reports.length.toString(),
-                        label: "Total Reports",
-                      ),
-                      WorkActivityCircle(reports: reports),
-                      StatusDistributionCircle(reports: reports),
-                    ],
-                  );
-                } else {
-                  return Center(
-                    child: Column(
+                  if (isWide) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         DashboardCircle(
                           icon: Icons.assignment_outlined,
                           value: reports.length.toString(),
                           label: "Total Reports",
                         ),
-                        const SizedBox(height: AppPadding.medium),
                         WorkActivityCircle(reports: reports),
-                        const SizedBox(height: AppPadding.medium),
                         StatusDistributionCircle(reports: reports),
                       ],
-                    ),
-                  );
-                }
-              },
-            ),
-            const SizedBox(height: AppPadding.medium),
-            RiskLeaderboardWidget(leaderboardData: leaderboard),
-          ],
+                    );
+                  } else {
+                    return Center(
+                      child: Column(
+                        children: [
+                          DashboardCircle(
+                            icon: Icons.assignment_outlined,
+                            value: reports.length.toString(),
+                            label: "Total Reports",
+                          ),
+                          const SizedBox(height: AppPadding.medium),
+                          WorkActivityCircle(reports: reports),
+                          const SizedBox(height: AppPadding.medium),
+                          StatusDistributionCircle(reports: reports),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: AppPadding.medium),
+              RiskLeaderboardWidget(leaderboardData: leaderboard),
+            ],
+          ),
         ),
       ),
-    )
     );
   }
 }
@@ -403,20 +414,38 @@ class RiskLeaderboardWidget extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(
+                    "${index + 1}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(width: 16),
-                  Expanded(child: Text(item['category'] as String, style: const TextStyle(fontSize: 16))),
+                  Expanded(
+                    child: Text(
+                      item['category'] as String,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: (item['score'] as int) > 10 ? Colors.red.shade100 : Colors.blue.shade50,
+                      color: (item['score'] as int) > 10
+                          ? Colors.red.shade100
+                          : Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       "${item['score']} pts",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: (item['score'] as int) > 10 ? Colors.red : Colors.blue,
+                        color: (item['score'] as int) > 10
+                            ? Colors.red
+                            : Colors.blue,
                       ),
                     ),
                   ),
@@ -495,7 +524,9 @@ class StatusDistributionCircle extends StatelessWidget {
     for (var report in reports) {
       if (report["WAH_safetyVariables"] != null) {
         final vars = report['WAH_safetyVariables'];
-        final status = (vars != null) ? (vars['Overall Status'] ?? 'N/A') : 'N/A';
+        final status = (vars != null)
+            ? (vars['Overall Status'] ?? 'N/A')
+            : 'N/A';
         if (status != null) {
           statusCounts[status] = (statusCounts[status] ?? 0) + 1;
         }
@@ -509,7 +540,11 @@ class StatusDistributionCircle extends StatelessWidget {
         color: statusColors[entry.key] ?? Colors.grey,
         radius: 80,
         title: '${entry.key}\n(${entry.value})', // Shows Label + Number
-        titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+        titleStyle: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
       );
     }).toList();
   }
@@ -634,9 +669,3 @@ class WorkActivityCircle extends StatelessWidget {
     );
   }
 }
-
-// =====================================================
-
-// TASK CARD
-
-// =====================================================
