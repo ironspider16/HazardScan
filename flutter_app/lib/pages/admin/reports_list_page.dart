@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../design/style_constant.dart';
 
@@ -19,7 +20,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
   String? selectedCategory;
   String? selectedTitle;
 
-  bool sortAscending = false; 
+  bool sortAscending = false;
 
   final List<String> categories = [
     'Work At Height',
@@ -46,7 +47,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
     try {
       // Include the foreign key join to load audit safety variables
-      String selectQuery = '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK(*)';
+      String selectQuery =
+          '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK(*)';
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -70,7 +72,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
         query = query.eq('swp_templates.title', selectedTitle!);
       }
 
-      final response = await query.order('submitted_at', ascending: sortAscending);
+      final response = await query.order(
+        'submitted_at',
+        ascending: sortAscending,
+      );
       setState(() {
         reports = List<Map<String, dynamic>>.from(response);
         isLoading = false;
@@ -87,7 +92,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
       return Colors.orange;
     } else if (upper.contains('COMPLIANT') || upper.contains('SAFE')) {
       return Colors.green;
-    } else if (upper.contains('NON') || upper.contains('DANGEROUS') || upper.contains('RISK')) {
+    } else if (upper.contains('NON') ||
+        upper.contains('DANGEROUS') ||
+        upper.contains('RISK')) {
       return Colors.red;
     }
     return Colors.grey;
@@ -100,7 +107,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
     void parseCategory(String label, dynamic categoryData) {
       if (categoryData == null) return;
       Map<String, dynamic> data = {};
-      
+
       if (categoryData is Map) {
         data = Map<String, dynamic>.from(categoryData);
       } else if (categoryData is String) {
@@ -142,7 +149,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
     final String date = report['submitted_at'] ?? '';
     final String department = report['department'] ?? 'N/A';
     final String SafetyProcedure = report['swp_templates']['category'] ?? 'N/A';
-    final String SafetyProcedure_category = report['swp_templates']['title'] ?? 'N/A';
+    final String SafetyProcedure_category =
+        report['swp_templates']['title'] ?? 'N/A';
     final String designation = report["designation"] ?? 'N/A';
     final String permit_Number = report['wah_permit_numbers'] ?? "";
     final String location = report['location'] ?? 'No location';
@@ -178,7 +186,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           const SizedBox(height: AppPadding.tight),
           _buildInfoRow(Icons.calendar_today, date),
           const SizedBox(height: AppPadding.tight),
-          
+
           Container(
             color: AppColors.primaryTint,
             child: ExpansionTile(
@@ -205,7 +213,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
                 border: Border.all(color: AppColors.borderGrey.withAlpha(75)),
               ),
               child: Theme(
-                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(
+                  context,
+                ).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -213,11 +223,19 @@ class _ReportsListPageState extends State<ReportsListPage> {
                       Row(
                         children: [
                           Icon(
-                            (safetyVar['Overall Status'] ?? '').toString().toUpperCase().contains('DANGEROUS') ||
-                                    (safetyVar['Overall Status'] ?? '').toString().toUpperCase().contains('NON')
+                            (safetyVar['Overall Status'] ?? '')
+                                        .toString()
+                                        .toUpperCase()
+                                        .contains('DANGEROUS') ||
+                                    (safetyVar['Overall Status'] ?? '')
+                                        .toString()
+                                        .toUpperCase()
+                                        .contains('NON')
                                 ? Icons.report_problem_rounded
                                 : Icons.assignment_turned_in_rounded,
-                            color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN'),
+                            color: _getColorFromRawString(
+                              safetyVar['Overall Status'] ?? 'UNKNOWN',
+                            ),
                             size: 20,
                           ),
                           const SizedBox(width: AppPadding.tight),
@@ -228,16 +246,30 @@ class _ReportsListPageState extends State<ReportsListPage> {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN').withValues(alpha: 0.15),
+                          color: _getColorFromRawString(
+                            safetyVar['Overall Status'] ?? 'UNKNOWN',
+                          ).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN'), width: 1),
+                          border: Border.all(
+                            color: _getColorFromRawString(
+                              safetyVar['Overall Status'] ?? 'UNKNOWN',
+                            ),
+                            width: 1,
+                          ),
                         ),
                         child: Text(
-                          (safetyVar['Overall Status'] ?? 'UNKNOWN').toString().toUpperCase(),
+                          (safetyVar['Overall Status'] ?? 'UNKNOWN')
+                              .toString()
+                              .toUpperCase(),
                           style: TextStyle(
-                            color: _getColorFromRawString(safetyVar['Overall Status'] ?? 'UNKNOWN'),
+                            color: _getColorFromRawString(
+                              safetyVar['Overall Status'] ?? 'UNKNOWN',
+                            ),
                             fontWeight: FontWeight.bold,
                             fontSize: 10,
                             letterSpacing: 0.5,
@@ -257,30 +289,43 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
                           final String upperReason = trimmed.toUpperCase();
 
-                          final bool isRecommendation = trimmed.startsWith("Recommendation:") || 
-                              upperReason.startsWith("• ADVICE:") || 
+                          final bool isRecommendation =
+                              trimmed.startsWith("Recommendation:") ||
+                              upperReason.startsWith("• ADVICE:") ||
                               upperReason.contains("ADVICE:");
 
-                          final bool isCategoryHeader = !trimmed.startsWith("•") && 
-                              !trimmed.startsWith("[") && 
-                              !isRecommendation && 
+                          final bool isCategoryHeader =
+                              !trimmed.startsWith("•") &&
+                              !trimmed.startsWith("[") &&
+                              !isRecommendation &&
                               trimmed.contains(":") &&
-                              (upperReason.contains("COMPLIANT") || upperReason.contains("DANGEROUS") || upperReason.contains("SAFE"));
+                              (upperReason.contains("COMPLIANT") ||
+                                  upperReason.contains("DANGEROUS") ||
+                                  upperReason.contains("SAFE"));
 
-                          final bool isBulletDetail = trimmed.startsWith("•") || 
-                              upperReason.startsWith("DESCRIPTION:") || 
+                          final bool isBulletDetail =
+                              trimmed.startsWith("•") ||
+                              upperReason.startsWith("DESCRIPTION:") ||
                               upperReason.startsWith("REASONING:");
 
                           if (isCategoryHeader) {
                             final parts = trimmed.split(":");
                             final String categoryName = parts[0].trim();
-                            final String complianceStatus = parts.length > 1 ? parts[1].trim() : "UNKNOWN";
-                            final Color subStatusColor = _getColorFromRawString(complianceStatus);
+                            final String complianceStatus = parts.length > 1
+                                ? parts[1].trim()
+                                : "UNKNOWN";
+                            final Color subStatusColor = _getColorFromRawString(
+                              complianceStatus,
+                            );
 
                             return Padding(
-                              padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
+                              padding: const EdgeInsets.only(
+                                top: AppPadding.medium,
+                                bottom: AppPadding.tight,
+                              ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     categoryName.toUpperCase(),
@@ -291,9 +336,14 @@ class _ReportsListPageState extends State<ReportsListPage> {
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: subStatusColor.withValues(alpha: 0.12),
+                                      color: subStatusColor.withValues(
+                                        alpha: 0.12,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -311,7 +361,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
                           } else if (isRecommendation) {
                             String adviceText = trimmed;
                             if (adviceText.startsWith("Recommendation:")) {
-                              adviceText = adviceText.replaceFirst("Recommendation:", "").trim();
+                              adviceText = adviceText
+                                  .replaceFirst("Recommendation:", "")
+                                  .trim();
                             } else if (adviceText.startsWith("•")) {
                               String temp = adviceText.substring(1).trim();
                               if (temp.toUpperCase().startsWith("ADVICE:")) {
@@ -319,10 +371,12 @@ class _ReportsListPageState extends State<ReportsListPage> {
                               } else {
                                 adviceText = temp;
                               }
-                            } else if (adviceText.toUpperCase().startsWith("ADVICE:")) {
+                            } else if (adviceText.toUpperCase().startsWith(
+                              "ADVICE:",
+                            )) {
                               adviceText = adviceText.substring(7).trim();
                             }
-                            
+
                             return Container(
                               width: double.infinity,
                               margin: const EdgeInsets.only(bottom: 8, top: 4),
@@ -331,7 +385,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
                                 color: Colors.blueAccent.withOpacity(0.04),
                                 borderRadius: BorderRadius.circular(8),
                                 border: const Border(
-                                  left: BorderSide(color: Colors.blueAccent, width: 3),
+                                  left: BorderSide(
+                                    color: Colors.blueAccent,
+                                    width: 3,
+                                  ),
                                 ),
                               ),
                               child: Column(
@@ -365,11 +422,21 @@ class _ReportsListPageState extends State<ReportsListPage> {
                             }
 
                             return Padding(
-                              padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                              padding: const EdgeInsets.only(
+                                left: 6,
+                                bottom: 6,
+                                right: 6,
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                                  const Text(
+                                    "• ",
+                                    style: TextStyle(
+                                      color: Colors.black45,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                   Expanded(
                                     child: Text(
                                       bodyText,
@@ -386,12 +453,17 @@ class _ReportsListPageState extends State<ReportsListPage> {
                           } else {
                             String category = "OBSERVATION";
                             String bodyText = trimmed;
-                            
+
                             if (trimmed.startsWith("[")) {
                               final closingBracketIdx = trimmed.indexOf("]");
                               if (closingBracketIdx != -1) {
-                                category = trimmed.substring(1, closingBracketIdx);
-                                bodyText = trimmed.substring(closingBracketIdx + 1).trim();
+                                category = trimmed.substring(
+                                  1,
+                                  closingBracketIdx,
+                                );
+                                bodyText = trimmed
+                                    .substring(closingBracketIdx + 1)
+                                    .trim();
                               }
                             }
 
@@ -402,7 +474,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
                               decoration: BoxDecoration(
                                 color: AppColors.backgroundWhite,
                                 borderRadius: BorderRadius.circular(4),
-                                border: Border.all(color: AppColors.borderGrey, width: 0.5),
+                                border: Border.all(
+                                  color: AppColors.borderGrey,
+                                  width: 0.5,
+                                ),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -565,8 +640,13 @@ class _ReportsListPageState extends State<ReportsListPage> {
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Cancel'),
                 ),
-                ElevatedButton(
-                  onPressed: () {
+                MenuButton(
+                  label: 'Apply Filters',
+                  isPrimary: true,
+                  width:
+                      120, // Set a fixed width that fits the dialog action area
+                  height: 40,
+                  onTap: () {
                     setState(() {
                       selectedRange = tempRange;
                       selectedCategory = tempCategory;
@@ -575,7 +655,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
                     Navigator.pop(context);
                     loadReports();
                   },
-                  child: const Text('Apply Filters'),
                 ),
               ],
             );
@@ -622,7 +701,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
                       Icons.swap_vert_rounded,
                       color: Colors.black,
                     ),
-                    tooltip: sortAscending ? 'Showing Oldest First' : 'Showing Newest First',
+                    tooltip: sortAscending
+                        ? 'Showing Oldest First'
+                        : 'Showing Newest First',
                     onPressed: () {
                       setState(() {
                         sortAscending = !sortAscending;

@@ -9,6 +9,8 @@ class MenuButton extends StatefulWidget {
   final bool isMini;
   final bool isDelete;
   final bool isDisabled;
+  final double? width;
+  final double? height;
 
   const MenuButton({
     super.key,
@@ -19,6 +21,8 @@ class MenuButton extends StatefulWidget {
     this.isDelete = false,
     this.isDisabled = false,
     this.icon,
+    this.width,
+    this.height,
   });
 
   @override
@@ -79,8 +83,9 @@ class _MenuButtonState extends State<MenuButton> {
           : () => setState(() => _pressed = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
-        width: double.infinity,
-        height: widget.isMini ? 40 : 52, // Standardized touch target height
+        width: widget.width ?? double.infinity,
+        height: widget.isMini ? 40 : (widget.height ?? 52),
+         // Standardized touch target height
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: backgroundColor,

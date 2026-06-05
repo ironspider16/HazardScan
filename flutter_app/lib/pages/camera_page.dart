@@ -4,6 +4,8 @@ import 'result_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:kkhazardscan/models/detection.dart';
+import 'package:kkhazardscan/llm/llm_service.dart';
+import 'package:kkhazardscan/llm/report_statistics_service.dart';
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -168,9 +170,40 @@ class _CameraPageState extends State<CameraPage> {
                                 child: ElevatedButton(
                                   onPressed: image == null
                                       ? null
-                                      // : () => _runAnalysis(context),
                                       : () => uploadImage(context, image!.path),
                                   child: const Text("Analysis Hazard"),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    final stats =
+                                        await ReportStatisticsService.getRiskScores();
+                                    final totalReports =
+                                        stats['totalReports'] as int;
+                                    final scores = Map<String, int>.from(
+                                      stats['scores'],
+                                    );
+
+                                    final report =
+                                        await LlmService.generateWeeklyReport(
+                                          totalInspections: totalReports,
+                                          missingPPE: scores['PPE'] ?? 0,
+                                          buddySystem:
+                                              scores['Buddy System'] ?? 0,
+                                          ladderIssues:
+                                              scores['Ladder Height'] ?? 0,
+                                          areaHazards:
+                                              scores['Area Hazards'] ?? 0,
+                                          startDate: '2026-06-01',
+                                          endDate: '2026-06-07',
+                                        );
+
+                                    print(report);
+                                  },
+                                  child: const Text("Generate Report"),
                                 ),
                               ),
                             ],
@@ -186,9 +219,34 @@ class _CameraPageState extends State<CameraPage> {
                               ElevatedButton(
                                 onPressed: image == null
                                     ? null
-                                    // : () => _runAnalysis(context),
                                     : () => uploadImage(context, image!.path),
                                 child: const Text("Analysis Hazard"),
+                              ),
+                              const SizedBox(width: 20),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  final scores =
+                                      await ReportStatisticsService.getRiskScores();
+
+                                  final report =
+                                      await LlmService.generateWeeklyReport(
+                                        totalInspections: scores.values.reduce(
+                                          (a, b) => a + b,
+                                        ),
+                                        missingPPE: scores['PPE'] ?? 0,
+                                        buddySystem:
+                                            scores['Buddy System'] ?? 0,
+                                        ladderIssues:
+                                            scores['Ladder Height'] ?? 0,
+                                        areaHazards:
+                                            scores['Area Hazards'] ?? 0,
+                                        startDate: '2026-06-01',
+                                        endDate: '2026-06-07',
+                                      );
+
+                                  print(report);
+                                },
+                                child: const Text("Generate Report"),
                               ),
                             ],
                           ),
