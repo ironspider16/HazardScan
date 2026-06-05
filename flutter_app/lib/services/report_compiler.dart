@@ -3,6 +3,44 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 class LocalReportCompiler {
+  // --- COLOUR PALETTE (mirrors app theme) ---
+  static const PdfColor _blue = PdfColor.fromInt(0xFF1A56DB);
+  static const PdfColor _blueTint = PdfColor.fromInt(0xFFEBF2FF);
+  static const PdfColor _red = PdfColor.fromInt(0xFFB91C1C);
+  static const PdfColor _redTint = PdfColor.fromInt(0xFFFEE2E2);
+  static const PdfColor _orange = PdfColor.fromInt(0xFFC2410C);
+  static const PdfColor _orangeTint = PdfColor.fromInt(0xFFFFEDD5);
+  static const PdfColor _green = PdfColor.fromInt(0xFF15803D);
+  static const PdfColor _greenTint = PdfColor.fromInt(0xFFDCFCE7);
+  static const PdfColor _grey = PdfColor.fromInt(0xFF6B7280);
+  static const PdfColor _greyTint = PdfColor.fromInt(0xFFF3F4F6);
+  static const PdfColor _white = PdfColor.fromInt(0xFFFFFFFF);
+  static const PdfColor _textMain = PdfColor.fromInt(0xFF111827);
+  static const PdfColor _textFaint = PdfColor.fromInt(0xFF6B7280);
+  static const PdfColor _border = PdfColor.fromInt(0xFFE5E7EB);
+
+  // --- STATUS HELPERS ---
+  static PdfColor _statusColor(String status) {
+    switch (status.trim().toUpperCase()) {
+      case 'DANGEROUS': return _red;
+      case 'PARTIALLY COMPLIANT': return _orange;
+      case 'COMPLIANT': return _blue;
+      case 'SAFE': return _green;
+      default: return _grey;
+    }
+  }
+
+  static PdfColor _statusTint(String status) {
+    switch (status.trim().toUpperCase()) {
+      case 'DANGEROUS': return _redTint;
+      case 'PARTIALLY COMPLIANT': return _orangeTint;
+      case 'COMPLIANT': return _blueTint;
+      case 'SAFE': return _greenTint;
+      default: return _greyTint;
+    }
+  }
+
+  // --- MAIN GENERATOR (signature unchanged) ---
   static Future<Uint8List> generateWshReport({
     required String location,
     required String supervisor,
@@ -25,9 +63,9 @@ class LocalReportCompiler {
 
     final String currentDate = DateTime.now().toIso8601String().split('T')[0];
     final String currentTime =
-        "${DateTime.now().hour.toString().padLeft(2, '0')}:${DateTime.now().minute.toString().padLeft(2, '0')}";
+        "${DateTime.now().hour.toString().padLeft(2, '0')}:"
+        "${DateTime.now().minute.toString().padLeft(2, '0')}";
 
-    // Decode image if present
     pw.MemoryImage? siteImage;
     if (imageBytes != null) {
       siteImage = pw.MemoryImage(imageBytes);
@@ -36,60 +74,55 @@ class LocalReportCompiler {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(32),
+        margin: pw.EdgeInsets.zero,
+        header: (_) => _pageHeader(currentDate, currentTime),
+        footer: (ctx) => _pageFooter(ctx),
         build: (pw.Context context) => [
-          // Header
-          pw.Text(
-            'WSH INSPECTION REPORT',
-            style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
-          ),
-          pw.SizedBox(height: 4),
-          pw.Divider(),
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 16),
 
-          // Section 1
-          _sectionHeader('1. Site and Personnel Details'),
-          _field('Date & Time', '$currentDate at $currentTime SGT'),
-          _field('Location', location.isEmpty ? 'Not Declared' : location),
-          _field('Supervisor', supervisor.isEmpty ? 'Unassigned' : supervisor),
-          _field('Employer', employer.isEmpty ? 'Not Declared' : employer),
-          pw.SizedBox(height: 12),
+          // --- OVERALL STATUS BANNER ---
+          _statusBanner(overallStatus),
+          pw.SizedBox(height: 16),
 
-          // Section 2
+          // --- SECTION 1: Site Details ---
+          _sectionHeader('1. Site & Personnel Details'),
+          pw.SizedBox(height: 8),
+          _infoGrid([
+            ['Location', location.isEmpty ? 'Not Declared' : location],
+            ['Supervisor', supervisor.isEmpty ? 'Unassigned' : supervisor],
+            ['Employer / Contractor', employer.isEmpty ? 'Not Declared' : employer],
+            ['Inspection Time', '$currentDate  $currentTime SGT'],
+          ]),
+          pw.SizedBox(height: 16),
+
+          // --- SECTION 2: Hazard Identification ---
           _sectionHeader('2. Hazard Identification'),
-          _field('Working at Heights', getField(ladder, 'description')),
-          _field('PPE', getField(ppe, 'description')),
-          _field('Area Hazards', getField(hazards, 'description')),
-          _field('Manual Notes', manualNotes.isEmpty ? 'None' : manualNotes),
-          pw.SizedBox(height: 12),
+          pw.SizedBox(height: 8),
+          _hazardCard('Working at Heights', ladder, getField),
+          pw.SizedBox(height: 8),
+          _hazardCard('Personal Protective Equipment (PPE)', ppe, getField),
+          pw.SizedBox(height: 8),
+          _hazardCard('Buddy System', buddy, getField),
+          pw.SizedBox(height: 8),
+          _hazardCard('Area & Environmental Hazards', hazards, getField),
+          pw.SizedBox(height: 8),
 
-          // Section 3
-          _sectionHeader('3. Risk Assessment'),
-          _field('Overall Status', overallStatus),
-          _field('Heights Compliance', getField(ladder, 'compliance')),
-          _field('Heights Reasoning', getField(ladder, 'reasoning')),
-          _field('PPE Compliance', getField(ppe, 'compliance')),
-          _field('PPE Reasoning', getField(ppe, 'reasoning')),
-          _field('Buddy System Compliance', getField(buddy, 'compliance')),
-          _field('Buddy System Reasoning', getField(buddy, 'reasoning')),
-          pw.SizedBox(height: 12),
-
-          // Section 4
-          _sectionHeader('4. Corrective Measures'),
-          _field('Heights Advice', getField(ladder, 'advice')),
-          _field('PPE Advice', getField(ppe, 'advice')),
-          _field('Area Advice', getField(hazards, 'advice')),
-          pw.SizedBox(height: 12),
-
-          // Section 5 - Image
-          _sectionHeader('5. Photo Evidence'),
-          if (siteImage != null) ...[
-            pw.SizedBox(height: 8),
-            pw.Center(
-              child: pw.Image(siteImage, width: 400, fit: pw.BoxFit.contain),
-            ),
+          // Manual notes box
+          if (manualNotes.isNotEmpty) ...[
+            _notesBox(manualNotes),
+            pw.SizedBox(height: 16),
           ] else
-            pw.Text('No image captured.', style: const pw.TextStyle(fontSize: 11)),
+            pw.SizedBox(height: 8),
+
+          // --- SECTION 3: Photo Evidence ---
+          _sectionHeader('3. Photo Evidence'),
+          pw.SizedBox(height: 8),
+          if (siteImage != null)
+            _imageBlock(siteImage)
+          else
+            _emptyImageBlock(),
+
+          pw.SizedBox(height: 24),
         ],
       ),
     );
@@ -97,32 +130,428 @@ class LocalReportCompiler {
     return pdf.save();
   }
 
-  static pw.Widget _sectionHeader(String title) => pw.Padding(
-        padding: const pw.EdgeInsets.only(bottom: 6),
-        child: pw.Text(
-          title,
-          style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
-        ),
-      );
-
-  static pw.Widget _field(String label, String value) => pw.Padding(
-        padding: const pw.EdgeInsets.only(bottom: 4),
-        child: pw.RichText(
-          text: pw.TextSpan(
+  // ─────────────────────────────────────────
+  // PAGE HEADER
+  // ─────────────────────────────────────────
+  static pw.Widget _pageHeader(String date, String time) {
+    return pw.Container(
+      color: _blue,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.TextSpan(
-                text: '$label: ',
+              pw.Text(
+                'WSH INSPECTION REPORT',
                 style: pw.TextStyle(
-                  fontSize: 11,
+                  fontSize: 16,
                   fontWeight: pw.FontWeight.bold,
+                  color: _white,
                 ),
               ),
-              pw.TextSpan(
-                text: value,
-                style: const pw.TextStyle(fontSize: 11),
+              pw.SizedBox(height: 2),
+              pw.Text(
+                'Workplace Safety & Health — Site Audit',
+                style: pw.TextStyle(fontSize: 9, color: _white),
               ),
             ],
           ),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Text(
+                date,
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _white,
+                ),
+              ),
+              pw.Text(
+                '$time SGT',
+                style: pw.TextStyle(fontSize: 9, color: _white),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // PAGE FOOTER
+  // ─────────────────────────────────────────
+  static pw.Widget _pageFooter(pw.Context ctx) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(top: pw.BorderSide(color: _border, width: 1)),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(
+            'CONFIDENTIAL — WSH Inspection Report',
+            style: pw.TextStyle(fontSize: 8, color: _textFaint),
+          ),
+          pw.Text(
+            'Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+            style: pw.TextStyle(fontSize: 8, color: _textFaint),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // STATUS BANNER
+  // ─────────────────────────────────────────
+  static pw.Widget _statusBanner(String status) {
+    final color = _statusColor(status);
+    final tint = _statusTint(status);
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: pw.BoxDecoration(
+          color: tint,
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+          border: pw.Border.all(color: color, width: 1.5),
         ),
-      );
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text(
+              'OVERALL COMPLIANCE STATUS',
+              style: pw.TextStyle(
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+                color: _textFaint,
+              ),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
+              decoration: pw.BoxDecoration(
+                color: color,
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Text(
+                status.toUpperCase(),
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: _white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // SECTION HEADER
+  // ─────────────────────────────────────────
+  static pw.Widget _sectionHeader(String title) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: const pw.BoxDecoration(
+          color: _blueTint,
+          borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
+          border: pw.Border(left: pw.BorderSide(color: _blue, width: 4)),
+        ),
+        child: pw.Text(
+          title.toUpperCase(),
+          style: pw.TextStyle(
+            fontSize: 10,
+            fontWeight: pw.FontWeight.bold,
+            color: _blue,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // INFO GRID (2-column layout for site details)
+  // ─────────────────────────────────────────
+  static pw.Widget _infoGrid(List<List<String>> rows) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Table(
+        border: pw.TableBorder.all(color: _border, width: 0.5),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(1.2),
+          1: const pw.FlexColumnWidth(2.8),
+        },
+        children: rows.map((row) {
+          return pw.TableRow(
+            children: [
+              pw.Container(
+                color: _greyTint,
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                child: pw.Text(
+                  row[0],
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _textFaint,
+                  ),
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 7,
+                ),
+                child: pw.Text(
+                  row[1],
+                  style: pw.TextStyle(fontSize: 10, color: _textMain),
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // HAZARD CARD
+  // ─────────────────────────────────────────
+  static pw.Widget _hazardCard(
+    String title,
+    Map<String, dynamic> block,
+    String Function(Map<String, dynamic>, String) getField,
+  ) {
+    final compliance = getField(block, 'compliance');
+    final color = _statusColor(compliance);
+    final tint = _statusTint(compliance);
+
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: _border, width: 0.5),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Card header row
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: pw.BoxDecoration(
+                color: _greyTint,
+                borderRadius: const pw.BorderRadius.only(
+                  topLeft: pw.Radius.circular(6),
+                  topRight: pw.Radius.circular(6),
+                ),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(
+                    title,
+                    style: pw.TextStyle(
+                      fontSize: 10,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _textMain,
+                    ),
+                  ),
+                  // Compliance badge
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      color: tint,
+                      borderRadius:
+                          const pw.BorderRadius.all(pw.Radius.circular(4)),
+                      border: pw.Border.all(color: color, width: 0.5),
+                    ),
+                    child: pw.Text(
+                      compliance.toUpperCase(),
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        fontWeight: pw.FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Description
+            _cardRow('Observation', getField(block, 'description'), false),
+            _cardRow('Reasoning', getField(block, 'reasoning'), false),
+
+            // Advice row — highlighted
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 8,
+              ),
+              decoration: const pw.BoxDecoration(
+                color: _blueTint,
+                border: pw.Border(top: pw.BorderSide(color: _border, width: 0.5)),
+                borderRadius: pw.BorderRadius.only(
+                  bottomLeft: pw.Radius.circular(6),
+                  bottomRight: pw.Radius.circular(6),
+                ),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    'CORRECTIVE ADVICE',
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _blue,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  pw.SizedBox(height: 3),
+                  pw.Text(
+                    getField(block, 'advice'),
+                    style: pw.TextStyle(fontSize: 9, color: _textMain),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // CARD ROW (inside hazard card)
+  // ─────────────────────────────────────────
+  static pw.Widget _cardRow(String label, String value, bool isLast) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: const pw.BoxDecoration(
+        border: pw.Border(top: pw.BorderSide(color: _border, width: 0.5)),
+      ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.SizedBox(
+            width: 80,
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(
+                fontSize: 9,
+                fontWeight: pw.FontWeight.bold,
+                color: _textFaint,
+              ),
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(
+              value,
+              style: pw.TextStyle(fontSize: 9, color: _textMain),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // MANUAL NOTES BOX
+  // ─────────────────────────────────────────
+  static pw.Widget _notesBox(String notes) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          color: _greyTint,
+          border: pw.Border.all(color: _border, width: 0.5),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'SITE CONTEXT & MANUAL NOTES',
+              style: pw.TextStyle(
+                fontSize: 8,
+                fontWeight: pw.FontWeight.bold,
+                color: _textFaint,
+                letterSpacing: 0.5,
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            pw.Text(
+              notes,
+              style: pw.TextStyle(fontSize: 10, color: _textMain),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // IMAGE BLOCK
+  // ─────────────────────────────────────────
+  static pw.Widget _imageBlock(pw.MemoryImage image) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: _border, width: 1),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        ),
+        child: pw.ClipRRect(
+          horizontalRadius: 6,
+          verticalRadius: 6,
+          child: pw.Image(image, fit: pw.BoxFit.contain),
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _emptyImageBlock() {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        height: 60,
+        decoration: pw.BoxDecoration(
+          color: _greyTint,
+          border: pw.Border.all(color: _border, width: 0.5),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+        ),
+        child: pw.Center(
+          child: pw.Text(
+            'No site image captured.',
+            style: pw.TextStyle(fontSize: 10, color: _textFaint),
+          ),
+        ),
+      ),
+    );
+  }
 }
