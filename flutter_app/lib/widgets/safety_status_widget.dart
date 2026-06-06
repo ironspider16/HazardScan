@@ -5,10 +5,12 @@ enum SafetyStatus { dangerous, partiallyCompliant, compliant, safe, na }
 
 class SafetyStatusWidget extends StatelessWidget {
   final Map<String, dynamic>? aiData;
+  final bool? isSpreaderUnlocked;
 
   const SafetyStatusWidget({
     super.key,
     required this.aiData,
+    required this.isSpreaderUnlocked,
   });
 
   SafetyStatus get _status {
@@ -97,16 +99,77 @@ class SafetyStatusWidget extends StatelessWidget {
       builder: (BuildContext context) {
         List<Widget> dialogItems = [];
 
+        if (isSpreaderUnlocked == true) {
+          dialogItems.add(
+            Container(
+              margin: const EdgeInsets.only(bottom: AppPadding.medium),
+              padding: const EdgeInsets.all(AppPadding.medium),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2), 
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                border: Border.all(color: const Color(0xFFFCA5A5), width: 1),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red,
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: const Icon(
+                      Icons.priority_high_rounded,
+                      color: Colors.white,
+                      size: 14,
+                    ),
+                  ),
+                  const SizedBox(width: AppPadding.medium),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Ladder spreader is unlocked",
+                          style: AppTypography.body.copyWith(
+                            color: Colors.red[900],
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Please lock the ladder's spreader",
+                          style: AppTypography.faintbody.copyWith(
+                            color: Colors.red[700],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         if (aiData != null) {
           aiData!.forEach((key, value) {
             if (value is Map<String, dynamic>) {
               final String categoryName = _formatCategoryKey(key);
-              final String complianceStatus = value['compliance']?.toString() ?? 'UNKNOWN';
-              final Color subStatusColor = _getColorFromRawString(complianceStatus);
+              final String complianceStatus =
+                  value['compliance']?.toString() ?? 'UNKNOWN';
+              final Color subStatusColor = _getColorFromRawString(
+                complianceStatus,
+              );
 
               dialogItems.add(
                 Padding(
-                  padding: const EdgeInsets.only(top: AppPadding.medium, bottom: AppPadding.tight),
+                  padding: const EdgeInsets.only(
+                    top: AppPadding.medium,
+                    bottom: AppPadding.tight,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -124,7 +187,9 @@ class SafetyStatusWidget extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: subStatusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.radiusSmall,
+                          ),
                         ),
                         child: Text(
                           complianceStatus.toUpperCase(),
@@ -140,14 +205,22 @@ class SafetyStatusWidget extends StatelessWidget {
                 ),
               );
 
-              if (value['description'] != null && value['description'].toString().trim().isNotEmpty) {
+              if (value['description'] != null &&
+                  value['description'].toString().trim().isNotEmpty) {
                 dialogItems.add(
                   Padding(
-                    padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                    padding: const EdgeInsets.only(
+                      left: 6,
+                      bottom: 6,
+                      right: 6,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                        const Text(
+                          "• ",
+                          style: TextStyle(color: Colors.black45, fontSize: 12),
+                        ),
                         Expanded(
                           child: Text(
                             "Description: ${value['description']}",
@@ -164,14 +237,22 @@ class SafetyStatusWidget extends StatelessWidget {
                 );
               }
 
-              if (value['reasoning'] != null && value['reasoning'].toString().trim().isNotEmpty) {
+              if (value['reasoning'] != null &&
+                  value['reasoning'].toString().trim().isNotEmpty) {
                 dialogItems.add(
                   Padding(
-                    padding: const EdgeInsets.only(left: 6, bottom: 6, right: 6),
+                    padding: const EdgeInsets.only(
+                      left: 6,
+                      bottom: 6,
+                      right: 6,
+                    ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("• ", style: TextStyle(color: Colors.black45, fontSize: 12)),
+                        const Text(
+                          "• ",
+                          style: TextStyle(color: Colors.black45, fontSize: 12),
+                        ),
                         Expanded(
                           child: Text(
                             "Reasoning: ${value['reasoning']}",
@@ -188,7 +269,8 @@ class SafetyStatusWidget extends StatelessWidget {
                 );
               }
 
-              if (value['advice'] != null && value['advice'].toString().trim().isNotEmpty) {
+              if (value['advice'] != null &&
+                  value['advice'].toString().trim().isNotEmpty) {
                 dialogItems.add(
                   Container(
                     width: double.infinity,
@@ -257,10 +339,15 @@ class SafetyStatusWidget extends StatelessWidget {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppPadding.tight, vertical: AppPadding.tight),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppPadding.tight,
+                  vertical: AppPadding.tight,
+                ),
                 decoration: BoxDecoration(
                   color: themeColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.radiusMedium,
+                  ),
                   border: Border.all(color: themeColor, width: 1),
                 ),
                 child: Text(
@@ -308,8 +395,9 @@ class SafetyStatusWidget extends StatelessWidget {
     final statusType = _status;
     final statusColor = _getStatusColor(statusType);
 
-    final String buttonLabel = (statusType == SafetyStatus.dangerous || 
-                                statusType == SafetyStatus.partiallyCompliant)
+    final String buttonLabel =
+        (statusType == SafetyStatus.dangerous ||
+            statusType == SafetyStatus.partiallyCompliant)
         ? "Why?"
         : "View Log";
 
@@ -319,16 +407,20 @@ class SafetyStatusWidget extends StatelessWidget {
       decoration: BoxDecoration(
         color: statusColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-        border: Border.all(width: 1.5, color: statusColor.withValues(alpha: 0.3)),
+        border: Border.all(
+          width: 1.5,
+          color: statusColor.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [
           Icon(
-            statusType == SafetyStatus.safe || statusType == SafetyStatus.compliant
+            statusType == SafetyStatus.safe ||
+                    statusType == SafetyStatus.compliant
                 ? Icons.check_circle
                 : (statusType == SafetyStatus.na
-                    ? Icons.help_outline
-                    : Icons.warning),
+                      ? Icons.help_outline
+                      : Icons.warning),
             color: statusColor,
             size: 28,
           ),
@@ -355,9 +447,10 @@ class SafetyStatusWidget extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => _showReasonsDialog(context),
               icon: Icon(
-                statusType == SafetyStatus.dangerous || statusType == SafetyStatus.partiallyCompliant
+                statusType == SafetyStatus.dangerous ||
+                        statusType == SafetyStatus.partiallyCompliant
                     ? Icons.info_outline
-                    : Icons.analytics_outlined, 
+                    : Icons.analytics_outlined,
                 size: 16,
               ),
               label: Text(buttonLabel),

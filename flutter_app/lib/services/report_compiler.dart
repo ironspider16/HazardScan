@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 class LocalReportCompiler {
   // --- COLOUR PALETTE (mirrors app theme) ---
@@ -22,21 +23,31 @@ class LocalReportCompiler {
   // --- STATUS HELPERS ---
   static PdfColor _statusColor(String status) {
     switch (status.trim().toUpperCase()) {
-      case 'DANGEROUS': return _red;
-      case 'PARTIALLY COMPLIANT': return _orange;
-      case 'COMPLIANT': return _blue;
-      case 'SAFE': return _green;
-      default: return _grey;
+      case 'DANGEROUS':
+        return _red;
+      case 'PARTIALLY COMPLIANT':
+        return _orange;
+      case 'COMPLIANT':
+        return _blue;
+      case 'SAFE':
+        return _green;
+      default:
+        return _grey;
     }
   }
 
   static PdfColor _statusTint(String status) {
     switch (status.trim().toUpperCase()) {
-      case 'DANGEROUS': return _redTint;
-      case 'PARTIALLY COMPLIANT': return _orangeTint;
-      case 'COMPLIANT': return _blueTint;
-      case 'SAFE': return _greenTint;
-      default: return _greyTint;
+      case 'DANGEROUS':
+        return _redTint;
+      case 'PARTIALLY COMPLIANT':
+        return _orangeTint;
+      case 'COMPLIANT':
+        return _blueTint;
+      case 'SAFE':
+        return _greenTint;
+      default:
+        return _greyTint;
     }
   }
 
@@ -50,6 +61,7 @@ class LocalReportCompiler {
     Uint8List? imageBytes,
   }) async {
     final pdf = pw.Document();
+    final font = await PdfGoogleFonts.notoSansRegular();
 
     // Extract blocks
     final Map<String, dynamic> ladder = initialAiData['ladderHeight'] ?? {};
@@ -73,6 +85,7 @@ class LocalReportCompiler {
 
     pdf.addPage(
       pw.MultiPage(
+        theme: pw.ThemeData.withFont(base: font),
         pageFormat: PdfPageFormat.a4,
         margin: pw.EdgeInsets.zero,
         header: (_) => _pageHeader(currentDate, currentTime),
@@ -90,7 +103,10 @@ class LocalReportCompiler {
           _infoGrid([
             ['Location', location.isEmpty ? 'Not Declared' : location],
             ['Supervisor', supervisor.isEmpty ? 'Unassigned' : supervisor],
-            ['Employer / Contractor', employer.isEmpty ? 'Not Declared' : employer],
+            [
+              'Employer / Contractor',
+              employer.isEmpty ? 'Not Declared' : employer,
+            ],
             ['Inspection Time', '$currentDate  $currentTime SGT'],
           ]),
           pw.SizedBox(height: 16),
@@ -117,10 +133,7 @@ class LocalReportCompiler {
           // --- SECTION 3: Photo Evidence ---
           _sectionHeader('3. Photo Evidence'),
           pw.SizedBox(height: 8),
-          if (siteImage != null)
-            _imageBlock(siteImage)
-          else
-            _emptyImageBlock(),
+          if (siteImage != null) _imageBlock(siteImage) else _emptyImageBlock(),
 
           pw.SizedBox(height: 24),
         ],
@@ -186,8 +199,8 @@ class LocalReportCompiler {
   static pw.Widget _pageFooter(pw.Context ctx) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: _border, width: 1)),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: _border, width: 1),
       ),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -263,10 +276,10 @@ class LocalReportCompiler {
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: const pw.BoxDecoration(
+        decoration: pw.BoxDecoration(
           color: _blueTint,
           borderRadius: pw.BorderRadius.all(pw.Radius.circular(6)),
-          border: pw.Border(left: pw.BorderSide(color: _blue, width: 4)),
+          border: pw.Border.all(color: PdfColors.blue, width: 2),
         ),
         child: pw.Text(
           title.toUpperCase(),
@@ -358,10 +371,7 @@ class LocalReportCompiler {
               ),
               decoration: pw.BoxDecoration(
                 color: _greyTint,
-                borderRadius: const pw.BorderRadius.only(
-                  topLeft: pw.Radius.circular(6),
-                  topRight: pw.Radius.circular(6),
-                ),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
               ),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -382,8 +392,9 @@ class LocalReportCompiler {
                     ),
                     decoration: pw.BoxDecoration(
                       color: tint,
-                      borderRadius:
-                          const pw.BorderRadius.all(pw.Radius.circular(4)),
+                      borderRadius: const pw.BorderRadius.all(
+                        pw.Radius.circular(4),
+                      ),
                       border: pw.Border.all(color: color, width: 0.5),
                     ),
                     child: pw.Text(
@@ -410,13 +421,10 @@ class LocalReportCompiler {
                 horizontal: 12,
                 vertical: 8,
               ),
-              decoration: const pw.BoxDecoration(
+              decoration: pw.BoxDecoration(
                 color: _blueTint,
-                border: pw.Border(top: pw.BorderSide(color: _border, width: 0.5)),
-                borderRadius: pw.BorderRadius.only(
-                  bottomLeft: pw.Radius.circular(6),
-                  bottomRight: pw.Radius.circular(6),
-                ),
+                border: pw.Border.all(color: _border, width: 0.5),
+                borderRadius: pw.BorderRadius.circular(8),
               ),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -450,8 +458,8 @@ class LocalReportCompiler {
   static pw.Widget _cardRow(String label, String value, bool isLast) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: const pw.BoxDecoration(
-        border: pw.Border(top: pw.BorderSide(color: _border, width: 0.5)),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: _border, width: 0.5),
       ),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -505,10 +513,7 @@ class LocalReportCompiler {
               ),
             ),
             pw.SizedBox(height: 4),
-            pw.Text(
-              notes,
-              style: pw.TextStyle(fontSize: 10, color: _textMain),
-            ),
+            pw.Text(notes, style: pw.TextStyle(fontSize: 10, color: _textMain)),
           ],
         ),
       ),

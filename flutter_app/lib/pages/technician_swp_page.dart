@@ -16,7 +16,9 @@ import 'dart:ui';
 import 'package:kkhazardscan/widgets/safety_status_widget.dart'; // adjust pat
 import 'package:printing/printing.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html show Blob, Url, window;
+import 'package:http/http.dart' as http;
+import 'package:kkhazardscan/yolo/yolo_service.dart';
+import 'package:universal_html/html.dart' as html;
 
 class TechnicianSWPPage extends StatefulWidget {
   final List<String> selectedCategories;
@@ -34,6 +36,7 @@ class TechnicianSWPPage extends StatefulWidget {
 
 class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final supabase = Supabase.instance.client;
+  final YoloService _yoloService = YoloService();
 
   List<Map<String, dynamic>> allTemplates = [];
   Map<String, int?> selectedSubCategories = {};
@@ -48,6 +51,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   Uint8List? _globalImageBytes;
   Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
+  List<dynamic> _globalYoloDetections = [];
+  bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
   // ----------------------------------
@@ -123,7 +128,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     return compressed;
   }
 
-  // --- NEW GLOBAL IMAGE METHODS ---
   Future<void> _pickGlobalImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
@@ -132,17 +136,38 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _globalImageBytes = bytes;
-        _globalAiData = null; // Reset analysis if image changes
+        _globalAiData = null;
+        _globalYoloDetections = [];
       });
     }
   }
 
   Future<void> _analyzeGlobalImage() async {
+    dynamic decodedData;
     if (_globalImageBytes == null) return;
 
     setState(() => _isAnalyzing = true);
 
     try {
+      final detections = await _yoloService.runYoloDetect(
+        imageBytes: _globalImageBytes!,
+        isMounted: () => mounted,
+        context: context,
+      );
+
+      if (!mounted) return;
+
+      bool status = false;
+      if (detections.isNotEmpty) {
+        double confidence = detections[0]["confidence"];
+        status = confidence > 0.55;
+      }
+
+      setState(() {
+        _globalYoloDetections = detections;
+        _isSpreaderUnlocked = status;
+      });
+
       final String rawResponse = await GeminiService.detectHazards(
         _globalImageBytes!,
         _globalDetailsCtrl.text,
@@ -150,10 +175,24 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       if (!mounted) return;
 
-      final decodedData = jsonDecode(rawResponse);
+      final String sanitizedResponse = rawResponse
+          .replaceAll(RegExp(r'^```json\s*', caseSensitive: false), '')
+          .replaceAll(RegExp(r'^```\s*', caseSensitive: false), '')
+          .replaceAll(RegExp(r'```$'), '')
+          .trim();
 
-      // --- NEW: ERROR INTERCEPTOR ---
-      // Check if backend returned our diagnostic failure schema
+      try {
+        decodedData = jsonDecode(sanitizedResponse);
+      } catch (e) {
+        // Handle the case where JSON is malformed
+        _showErrorDialog(
+          "Analysis Error",
+          "The server returned an invalid response.",
+        );
+        setState(() => _isAnalyzing = false);
+        return;
+      }
+
       if (decodedData['overallStatus'] == 'N/A') {
         final diagnosticTitle =
             decodedData['ladderHeight']?['description'] ?? "Error";
@@ -162,10 +201,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
         setState(() {
           _isAnalyzing = false;
-          _globalAiData = null; // Clear data so they have to try again
+          _globalAiData = null; 
         });
 
-        // Parse specific error types based on backend messages
         if (diagnosticTitle.contains("Exhaustion") ||
             diagnosticReason.contains("quota")) {
           _showErrorDialog(
@@ -590,16 +628,14 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
 
       Uint8List? finalPdfBytes = _globalPdfBytes;
-      if (finalPdfBytes == null) {
-        finalPdfBytes = await LocalReportCompiler.generateWshReport(
-          location: location,
-          supervisor: name,
-          employer: department,
-          manualNotes: _globalDetailsCtrl.text,
-          initialAiData: _globalAiData ?? {},
-          imageBytes: _globalImageBytes,
-        );
-      }
+      finalPdfBytes ??= await LocalReportCompiler.generateWshReport(
+        location: location,
+        supervisor: name,
+        employer: department,
+        manualNotes: _globalDetailsCtrl.text,
+        initialAiData: _globalAiData ?? {},
+        imageBytes: _globalImageBytes,
+      );
 
       final activeSubCategoryIds = selectedSubCategories.values
           .where((id) => id != null)
@@ -1046,7 +1082,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               ),
                             ],
                             const SizedBox(height: AppPadding.medium),
-                            SafetyStatusWidget(aiData: _globalAiData),
+                            SafetyStatusWidget(aiData: _globalAiData, isSpreaderUnlocked : _isSpreaderUnlocked),
                           ],
                         ),
                       ),
