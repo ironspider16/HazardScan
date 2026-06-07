@@ -159,8 +159,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       bool status = false;
       if (detections.isNotEmpty) {
-        double confidence = detections[0]["confidence"];
-        status = confidence > 0.55;
+        for (var detection in detections) {
+          if (detection['label'] == 'ladder' && (detection['confidence'] as num) > 0.55) {
+            status = true;
+          break;
+          }
+        }
       }
 
       setState(() {
@@ -201,7 +205,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
         setState(() {
           _isAnalyzing = false;
-          _globalAiData = null; 
+          _globalAiData = null;
         });
 
         if (diagnosticTitle.contains("Exhaustion") ||
@@ -659,6 +663,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
               'mhi': _globalAiData!['mhi'] ?? {},
+              'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
             .single();
@@ -1082,7 +1087,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               ),
                             ],
                             const SizedBox(height: AppPadding.medium),
-                            SafetyStatusWidget(aiData: _globalAiData, isSpreaderUnlocked : _isSpreaderUnlocked),
+                            SafetyStatusWidget(
+                              aiData: _globalAiData,
+                              isSpreaderUnlocked: _isSpreaderUnlocked,
+                            ),
                           ],
                         ),
                       ),

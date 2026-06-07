@@ -15,6 +15,7 @@ class SafetyStatusWidget extends StatelessWidget {
 
   SafetyStatus get _status {
     if (aiData == null) return SafetyStatus.na;
+    
     final String rawStatus = aiData!['overallStatus']?.toString() ?? 'N/A';
     switch (rawStatus.trim().toUpperCase()) {
       case 'DANGEROUS':
