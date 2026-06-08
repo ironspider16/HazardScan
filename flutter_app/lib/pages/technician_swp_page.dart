@@ -160,9 +160,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       bool status = false;
       if (detections.isNotEmpty) {
         for (var detection in detections) {
-          if (detection['label'] == 'ladder' && (detection['confidence'] as num) > 0.55) {
+          if (detection['label'] == 'ladder' &&
+              (detection['confidence'] as num) > 0.55) {
             status = true;
-          break;
+            break;
           }
         }
       }
@@ -793,8 +794,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             }
 
             final status = _globalAiData?['overallStatus'];
-            if (status == "DANGEROUS" || status == "N/A" || status == null) {
-              return "Photo analysis required or shows non-compliance. Please analyze/retake.";
+            if (status == "N/A" || status == null) {
+              return "Photo analysis required or shows N/A. Please analyze/retake.";
             }
           }
           return null;
@@ -812,10 +813,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             bool isPtwValid = ptw.trim().isNotEmpty;
             bool hasImage = _globalImageBytes != null;
             final status = _globalAiData?['overallStatus'];
-            bool isCompliant =
-                status != null && status != "DANGEROUS" && status != "N/A";
+            // bool isCompliant =
+            //     status != null && status != "DANGEROUS" && status != "N/A";
+            bool hasValidStatus = status != null && status != "N/A";
 
-            return isChecklistDone && isPtwValid && hasImage && isCompliant;
+            return isChecklistDone && isPtwValid && hasImage && hasValidStatus;
           } else {
             return isChecklistDone;
           }
@@ -1012,79 +1014,53 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: ElevatedButton.icon(
-                                    icon: const Icon(Icons.camera_alt),
-                                    label: const Text(
-                                      "Select Image",
-                                      style: TextStyle(fontSize: 12),
-                                    ),
-                                    onPressed: _pickGlobalImage,
+                                  child: MenuButton(
+                                    label: "Select Image",
+                                    onTap: _pickGlobalImage,
+                                    isPrimary: true,
+                                    height: 32,
+                                    icon: Icons.camera_alt,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  child: ElevatedButton.icon(
-                                    icon: _isAnalyzing
+                                  child: MenuButton(
+                                    height: 32,
+                                    label: _isAnalyzing
+                                        ? "Analyzing..."
+                                        : "Analyze Image",
+                                    isPrimary: true,
+                                    isDisabled:
+                                        _globalImageBytes == null ||
+                                        _isAnalyzing,
+                                    onTap: _analyzeGlobalImage,
+                                    leading: _isAnalyzing
                                         ? const SizedBox(
                                             width: 16,
                                             height: 16,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
                                             ),
                                           )
-                                        : const Icon(Icons.analytics),
-                                    label: Text(
-                                      _isAnalyzing
-                                          ? "Analyzing..."
-                                          : "Analyze Image",
-                                      style: const TextStyle(fontSize: 12),
-                                    ),
-                                    onPressed:
-                                        (_globalImageBytes != null &&
-                                            !_isAnalyzing)
-                                        ? _analyzeGlobalImage
                                         : null,
+                                    icon: _isAnalyzing ? null : Icons.analytics,
                                   ),
                                 ),
                               ],
                             ),
                             if (_globalImageBytes != null) ...[
                               const SizedBox(height: AppPadding.medium),
-                              InkWell(
-                                onTap:
-                                    _showImagePreviewDialog, // Opens blurred popup
-                                child: Container(
-                                  padding: const EdgeInsets.all(
-                                    AppPadding.tight,
+                              MenuButton(
+                                    height: 44,
+                                    label: "View Captured Image",
+                                    isPrimary: false,
+                                    onTap: _showImagePreviewDialog,
+                                    icon: Icons.image
                                   ),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: AppColors.borderGrey.withAlpha(
-                                        100,
-                                      ),
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                      AppDimensions.radiusSmall,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.image,
-                                        color: AppColors.primaryBlue,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        "View Captured Image",
-                                        style: AppTypography.body.copyWith(
-                                          color: AppColors.primaryBlue,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
                             ],
                             const SizedBox(height: AppPadding.medium),
                             SafetyStatusWidget(

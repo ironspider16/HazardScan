@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../design/style_constant.dart';
@@ -19,8 +20,12 @@ class _ReportsListPageState extends State<ReportsListPage> {
   DateTimeRange? selectedRange;
   String? selectedCategory;
   String? selectedTitle;
+  String? selectedComplianceLevel;
 
   bool sortAscending = false;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   final List<String> categories = [
     'Work At Height',
@@ -36,10 +41,68 @@ class _ReportsListPageState extends State<ReportsListPage> {
     'General',
   ];
 
+  final List<String> complianceLevels = [
+    'SAFE',
+    'COMPLIANT',
+    'PARTIALLY COMPLIANT',
+    'DANGEROUS',
+  ];
+
   @override
   void initState() {
     super.initState();
     loadReports();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> get _filteredReports {
+    if (_searchQuery.trim().isEmpty) {
+      return reports;
+    }
+    final query = _searchQuery.trim().toLowerCase();
+    return reports.where((report) {
+      final String techName = (report['technician_name'] ?? '')
+          .toString()
+          .toLowerCase();
+      final String details = (report['Details'] ?? '').toString().toLowerCase();
+      final String department = (report['department'] ?? '')
+          .toString()
+          .toLowerCase();
+      final String designation = (report['designation'] ?? '')
+          .toString()
+          .toLowerCase();
+      final String permitNumber = (report['wah_permit_numbers'] ?? '')
+          .toString()
+          .toLowerCase();
+      final String location = (report['location'] ?? '')
+          .toString()
+          .toLowerCase();
+      final swpTemplate = report['swp_templates'];
+      final String templateCategory = swpTemplate != null
+          ? (swpTemplate['category'] ?? '').toString().toLowerCase()
+          : '';
+      final String templateTitle = swpTemplate != null
+          ? (swpTemplate['title'] ?? '').toString().toLowerCase()
+          : '';
+      final safetyVar = report['WAH_safetyVariables_FK'];
+      final String overallStatus = safetyVar != null
+          ? (safetyVar['Overall Status'] ?? '').toString().toLowerCase()
+          : '';
+      return techName.contains(query) ||
+          details.contains(query) ||
+          department.contains(query) ||
+          designation.contains(query) ||
+          permitNumber.contains(query) ||
+          location.contains(query) ||
+          templateCategory.contains(query) ||
+          templateTitle.contains(query) ||
+          overallStatus.contains(query);
+    }).toList();
   }
 
   Future<void> loadReports() async {
@@ -47,8 +110,13 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
     try {
       // Include the foreign key join to load audit safety variables
+      String complianceJoinModifier = selectedComplianceLevel != null
+          ? '!inner'
+          : '';
+
       String selectQuery =
-          '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK(*)';
+          '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK$complianceJoinModifier(*)';
+
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -70,6 +138,14 @@ class _ReportsListPageState extends State<ReportsListPage> {
       // Filter by SWP Template Title
       if (selectedTitle != null) {
         query = query.eq('swp_templates.title', selectedTitle!);
+      }
+
+      if (selectedComplianceLevel != null) {
+        query = query.eq('swp_templates.category', 'Work At Height');
+        query = query.eq(
+          'WAH_safetyVariables_FK.Overall Status',
+          selectedComplianceLevel!,
+        );
       }
 
       final response = await query.order(
@@ -207,11 +283,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           if (safetyVar != null) ...[
             const SizedBox(height: AppPadding.tight),
             Container(
-              decoration: BoxDecoration(
-                color: AppColors.backgroundWhite,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                border: Border.all(color: AppColors.borderGrey.withAlpha(75)),
-              ),
+              decoration: BoxDecoration(color: AppColors.primaryTint),
               child: Theme(
                 data: Theme.of(
                   context,
@@ -222,23 +294,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(
-                            (safetyVar['Overall Status'] ?? '')
-                                        .toString()
-                                        .toUpperCase()
-                                        .contains('DANGEROUS') ||
-                                    (safetyVar['Overall Status'] ?? '')
-                                        .toString()
-                                        .toUpperCase()
-                                        .contains('NON')
-                                ? Icons.report_problem_rounded
-                                : Icons.assignment_turned_in_rounded,
-                            color: _getColorFromRawString(
-                              safetyVar['Overall Status'] ?? 'UNKNOWN',
-                            ),
-                            size: 20,
-                          ),
-                          const SizedBox(width: AppPadding.tight),
                           const Text(
                             "AI Safety Audit",
                             style: AppTypography.body,
@@ -533,6 +588,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
     DateTimeRange? tempRange = selectedRange;
     String? tempCategory = selectedCategory;
     String? tempTitle = selectedTitle;
+    String? tempComplianceLevel = selectedComplianceLevel;
 
     await showDialog(
       context: context,
@@ -619,6 +675,26 @@ class _ReportsListPageState extends State<ReportsListPage> {
                         setDialogState(() => tempTitle = newValue);
                       },
                     ),
+                    Text(
+                      'Compliance Level',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempComplianceLevel,
+                      hint: const Text('All Levels'),
+                      items: complianceLevels.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempComplianceLevel = newValue);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -628,6 +704,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                     setDialogState(() {
                       tempRange = null;
                       tempCategory = null;
+                      tempComplianceLevel = null;
                       tempTitle = null;
                     });
                   },
@@ -651,6 +728,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                       selectedRange = tempRange;
                       selectedCategory = tempCategory;
                       selectedTitle = tempTitle;
+                      selectedComplianceLevel = tempComplianceLevel;
                     });
                     Navigator.pop(context);
                     loadReports();
@@ -669,7 +747,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
     final bool isFiltering =
         selectedRange != null ||
         selectedCategory != null ||
-        selectedTitle != null;
+        selectedTitle != null ||
+        selectedComplianceLevel != null;
+
+    final filteredData = _filteredReports;
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
       body: SafeArea(
@@ -728,6 +809,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                           selectedRange = null;
                           selectedCategory = null;
                           selectedTitle = null;
+                          selectedComplianceLevel = null;
                         });
                         loadReports();
                       },
@@ -735,15 +817,38 @@ class _ReportsListPageState extends State<ReportsListPage> {
                 ],
               ),
               const SizedBox(height: AppPadding.Largest),
+              AppTextfield(
+                label:
+                    'Search Reports', // Or use '' if you do not want a label heading
+                hint: 'Search fields, tags, statuses...',
+                controller: _searchController,
+                prefixIcon: Icons.search,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, color: Colors.grey),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchQuery = '';
+                          });
+                        },
+                      )
+                    : null,
+              ),
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())
-                    : reports.isEmpty
+                    : filteredData.isEmpty
                     ? const Center(child: Text('No reports found'))
                     : ListView.builder(
-                        itemCount: reports.length,
+                        itemCount: filteredData.length,
                         itemBuilder: (context, index) =>
-                            _reportCard(reports[index]),
+                            _reportCard(filteredData[index]),
                       ),
               ),
             ],

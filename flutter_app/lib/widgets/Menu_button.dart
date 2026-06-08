@@ -11,6 +11,7 @@ class MenuButton extends StatefulWidget {
   final bool isDisabled;
   final double? width;
   final double? height;
+  final Widget? leading;
 
   const MenuButton({
     super.key,
@@ -23,6 +24,7 @@ class MenuButton extends StatefulWidget {
     this.icon,
     this.width,
     this.height,
+    this.leading,
   });
 
   @override
@@ -85,7 +87,7 @@ class _MenuButtonState extends State<MenuButton> {
         duration: const Duration(milliseconds: 100),
         width: widget.width ?? double.infinity,
         height: widget.isMini ? 40 : (widget.height ?? 52),
-         // Standardized touch target height
+        // Standardized touch target height
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: backgroundColor,
@@ -106,7 +108,10 @@ class _MenuButtonState extends State<MenuButton> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (widget.icon != null) ...[
+            if (widget.leading != null) ...[
+              widget.leading!,
+              const SizedBox(width: AppPadding.tight),
+            ] else if (widget.icon != null) ...[
               Icon(widget.icon, size: 20, color: contentColor),
               const SizedBox(
                 width: AppPadding.tight,

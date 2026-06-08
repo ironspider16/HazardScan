@@ -24,6 +24,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   DateTimeRange? selectedRange;
   String? selectedCategory;
   String? selectedTitle;
+  String? selectedComplianceLevel;
 
   final List<String> categories = [
     'Work At Height',
@@ -39,6 +40,13 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     'General',
   ];
 
+  final List<String> complianceLevels = [
+    'SAFE',
+    'COMPLIANT',
+    'PARTIALLY COMPLIANT',
+    'DANGEROUS',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -49,8 +57,13 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     setState(() => isLoading = true);
 
     try {
+      String complianceJoinModifier = selectedComplianceLevel != null
+          ? '!inner'
+          : '';
+
       String selectQuery =
-          '*, swp_templates!inner(id, category, title), WAH_safetyVariables(*)';
+          '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK$complianceJoinModifier(*)';
+
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
           .select(selectQuery);
@@ -74,6 +87,14 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
         query = query.eq('swp_templates.title', selectedTitle!);
       }
 
+      if (selectedComplianceLevel != null) {
+        query = query.eq('swp_templates.category', 'Work At Height');
+        query = query.eq(
+          'WAH_safetyVariables_FK.Overall Status',
+          selectedComplianceLevel!,
+        );
+      }
+
       final response = await query.order('submitted_at', ascending: false);
       setState(() {
         reports = List<Map<String, dynamic>>.from(response);
@@ -90,7 +111,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     DateTimeRange? tempRange = selectedRange;
     String? tempCategory = selectedCategory;
     String? tempTitle = selectedTitle;
-
+    String? tempComplianceLevel = selectedComplianceLevel;
     await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -179,6 +200,26 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                         setDialogState(() => tempTitle = newValue);
                       },
                     ),
+                    Text(
+                      'Compliance Level',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempComplianceLevel,
+                      hint: const Text('All Levels'),
+                      items: complianceLevels.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempComplianceLevel = newValue);
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -190,6 +231,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       tempRange = null;
                       tempCategory = null;
                       tempTitle = null;
+                      tempComplianceLevel = null;
                     });
                   },
                   child: const Text(
@@ -212,6 +254,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       selectedRange = tempRange;
                       selectedCategory = tempCategory;
                       selectedTitle = tempTitle;
+                      selectedComplianceLevel = tempComplianceLevel;
                     });
                     Navigator.pop(context);
                     loadReports();
@@ -274,7 +317,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     }
 
     for (var report in reports) {
-      final vars = report['WAH_safetyVariables'];
+      final vars = report['WAH_safetyVariables_FK'];
       if (vars != null) {
         scores['Ladder Height'] =
             scores['Ladder Height']! + _extractScore(vars['ladderheight']);
@@ -304,7 +347,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     final bool isFiltering =
         selectedRange != null ||
         selectedCategory != null ||
-        selectedTitle != null;
+        selectedTitle != null ||
+        selectedComplianceLevel != null;
 
     final List<Map<String, dynamic>> leaderboard = _calculateRiskLeaderboard();
 
@@ -339,6 +383,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                   selectedRange = null;
                   selectedCategory = null;
                   selectedTitle = null;
+                  selectedComplianceLevel = null;
                 });
                 loadReports();
               },
@@ -397,7 +442,9 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                 },
               ),
               const SizedBox(height: AppPadding.medium),
-              _buildChartContainer(UnlockedSpreaderDistributionCircle(reports: reports)),
+              _buildChartContainer(
+                UnlockedSpreaderDistributionCircle(reports: reports),
+              ),
               const SizedBox(height: AppPadding.medium),
               RiskLeaderboardWidget(leaderboardData: leaderboard),
             ],
@@ -941,8 +988,8 @@ class StatusDistributionCircle extends StatelessWidget {
     // 2. Count statuses
     Map<String, int> statusCounts = {};
     for (var report in reports) {
-      if (report["WAH_safetyVariables"] != null) {
-        final vars = report['WAH_safetyVariables'];
+      if (report["WAH_safetyVariables_FK"] != null) {
+        final vars = report['WAH_safetyVariables_FK'];
         final status = (vars != null)
             ? (vars['Overall Status'] ?? 'N/A')
             : 'N/A';
@@ -1010,7 +1057,7 @@ class UnlockedSpreaderDistributionCircle extends StatelessWidget {
     Map<bool, int> statusCounts = {true: 0, false: 0};
 
     for (var report in reports) {
-      final vars = report['WAH_safetyVariables'];
+      final vars = report['WAH_safetyVariables_FK'];
       if (vars != null) {
         final bool isUnlocked = vars['spreaderUnlocked'] ?? false;
         statusCounts[isUnlocked] = (statusCounts[isUnlocked] ?? 0) + 1;
@@ -1140,7 +1187,7 @@ class _WorkActivityCircleState extends State<WorkActivityCircle> {
     // Determine the label to show below the chart
     String displayLabel = _touchedIndex >= 0 && _touchedIndex < keys.length
         ? keys[_touchedIndex]
-        : "Tap a section for detais";
+        : "Tap a section for details";
 
     return Column(
       children: [
