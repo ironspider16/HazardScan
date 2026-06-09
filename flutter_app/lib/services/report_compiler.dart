@@ -51,14 +51,14 @@ class LocalReportCompiler {
     }
   }
 
-  // --- MAIN GENERATOR (signature unchanged) ---
+// --- MAIN GENERATOR ---
   static Future<Uint8List> generateWshReport({
     required String location,
     required String supervisor,
     required String employer,
     required Map<String, dynamic> initialAiData,
     required String manualNotes,
-    Uint8List? imageBytes,
+    List<Uint8List>? imagesBytes, 
   }) async {
     final pdf = pw.Document();
     final font = await PdfGoogleFonts.notoSansRegular();
@@ -78,9 +78,10 @@ class LocalReportCompiler {
         "${DateTime.now().hour.toString().padLeft(2, '0')}:"
         "${DateTime.now().minute.toString().padLeft(2, '0')}";
 
-    pw.MemoryImage? siteImage;
-    if (imageBytes != null) {
-      siteImage = pw.MemoryImage(imageBytes);
+    // Convert all captured image streams into a PDF layout array
+    List<pw.MemoryImage> siteImages = [];
+    if (imagesBytes != null) {
+      siteImages = imagesBytes.map((bytes) => pw.MemoryImage(bytes)).toList();
     }
 
     pdf.addPage(
@@ -133,7 +134,15 @@ class LocalReportCompiler {
           // --- SECTION 3: Photo Evidence ---
           _sectionHeader('3. Photo Evidence'),
           pw.SizedBox(height: 8),
-          if (siteImage != null) _imageBlock(siteImage) else _emptyImageBlock(),
+          if (siteImages.isNotEmpty) ...[
+            pw.Column(
+              children: siteImages.map((img) => pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 12),
+                child: _imageBlock(img),
+              )).toList(),
+            )
+          ] else
+            _emptyImageBlock(),
 
           pw.SizedBox(height: 24),
         ],
