@@ -3,17 +3,19 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 
 class GeminiService {
-  /// Sends the compressed image data along with an optional on-site environmental 
-  /// context string down to the hosted serverless analyzer endpoint.
+  /// Sends an array of compressed multi-angle image data along with an optional 
+  /// on-site environmental context string down to the hosted serverless analyzer endpoint.
   /// [userContext] is optional. If left out, it defaults to an empty string ("").
-  static Future<String> detectHazards(Uint8List imageBytes, [String userContext = ""]) async {
+  static Future<String> detectHazards(List<Uint8List> imagesBytes, [String userContext = ""]) async {
     try {
-      final base64Image = base64Encode(imageBytes);
+      // 1. Map over all images in the list and encode each to base64
+      final base64Images = imagesBytes.map((bytes) => base64Encode(bytes)).toList();
 
+      // 2. Invoke the edge function with the array payload matching the backend structure
       final response = await Supabase.instance.client.functions.invoke(
         'analyze-hazard',
         body: {
-          'imageBase64': base64Image,
+          'imagesBase64': base64Images,
           'userContext': userContext,
         },
       );

@@ -48,7 +48,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, bool> _checklistCompletionStates = {};
 
   // --- NEW GLOBAL STATE VARIABLES ---
-  Uint8List? _globalImageBytes;
+  List<Uint8List> _globalImageBytes =
+      []; // Stores raw bytes of all captured images for analysis and reporting
   Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
   List<dynamic> _globalYoloDetections = [];
@@ -121,13 +122,14 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
     final compressed = await FlutterImageCompress.compressWithList(
       orginalBytes,
-      quality: 30,
+      quality: 60,
       minWidth: 500,
       minHeight: 500,
     );
     return compressed;
   }
 
+  // --- CAMERA: CAPTURE AND APPEND MULTIPLE PHOTOS ---
   Future<void> _pickGlobalImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
@@ -135,7 +137,32 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
-        _globalImageBytes = bytes;
+        // Appends the new photo bytes to the list array instead of overwriting it
+        _globalImageBytes.add(bytes);
+
+        // Reset old AI data states so user is forced to re-analyze the new batch
+        _globalAiData = null;
+        _globalYoloDetections = [];
+      });
+    }
+  }
+
+  // --- GALLERY: SELECT MULTIPLE IMAGES AT ONCE ---
+  Future<void> _pickGlobalImagesFromGallery() async {
+    final picker = ImagePicker();
+    // Native multi-image selection screen
+    final List<XFile> pickedFiles = await picker.pickMultiImage();
+
+    if (pickedFiles.isNotEmpty) {
+      setState(() {
+        for (var file in pickedFiles) {
+          // Read bytes asynchronously and add to the list
+          file.readAsBytes().then((bytes) {
+            setState(() {
+              _globalImageBytes.add(bytes);
+            });
+          });
+        }
         _globalAiData = null;
         _globalYoloDetections = [];
       });
@@ -144,13 +171,14 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   Future<void> _analyzeGlobalImage() async {
     dynamic decodedData;
-    if (_globalImageBytes == null) return;
+    if (_globalImageBytes.isEmpty)
+      return; // Guard against no images before analysis
 
     setState(() => _isAnalyzing = true);
 
     try {
       final detections = await _yoloService.runYoloDetect(
-        imageBytes: _globalImageBytes!,
+        imageBytes: _globalImageBytes.first, // Pass raw bytes to YOLO service
         isMounted: () => mounted,
         context: context,
       );
@@ -173,8 +201,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         _isSpreaderUnlocked = status;
       });
 
+    final List<Uint8List> compressedImages = await Future.wait(
+      _globalImageBytes.map((bytes) => _prepareEmailImage(bytes)),
+    );
+
+      // pass full list to match updated GeminiService signature
       final String rawResponse = await GeminiService.detectHazards(
-        _globalImageBytes!,
+        compressedImages, //submit temporarily compressed images for faster analysis while retaining original raw images in state for highest quality reporting and email attachments
         _globalDetailsCtrl.text,
       );
 
@@ -244,7 +277,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   // --------------------------------
 
   void _showImagePreviewDialog() {
-    if (_globalImageBytes == null) return;
+    if (_globalImageBytes.isEmpty)
+      return; // Guard against empty list before trying to access .last
     showDialog(
       context: context,
       builder: (context) => BackdropFilter(
@@ -257,7 +291,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             children: [
               InteractiveViewer(
                 // Allows pinching to zoom
-                child: Image.memory(_globalImageBytes!, fit: BoxFit.contain),
+                // .last to show most recently added image
+                child: Image.memory(
+                  _globalImageBytes.last,
+                  fit: BoxFit.contain,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white, size: 30),
@@ -495,12 +533,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 onTap: () async {
                                   final Uint8List pdfBytes =
                                       await LocalReportCompiler.generateWshReport(
+                                        //call report compiler with global state
                                         location: locationCtrl.text,
                                         supervisor: nameCtrl.text,
                                         employer: deptCtrl.text,
                                         manualNotes: _globalDetailsCtrl.text,
                                         initialAiData: _globalAiData ?? {},
-                                        imageBytes: _globalImageBytes,
+                                        imagesBytes: _globalImageBytes,
                                       );
 
                                   setState(() {
@@ -638,8 +677,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         supervisor: name,
         employer: department,
         manualNotes: _globalDetailsCtrl.text,
-        initialAiData: _globalAiData ?? {},
-        imageBytes: _globalImageBytes,
+        initialAiData:
+            _globalAiData ??
+            {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
+        imagesBytes:
+            _globalImageBytes, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
       );
 
       final activeSubCategoryIds = selectedSubCategories.values
@@ -650,8 +692,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       int? globalWahSafetyForeignKey;
       Uint8List? compressedImageBytes;
 
-      if (_globalImageBytes != null) {
-        compressedImageBytes = await _prepareEmailImage(_globalImageBytes!);
+      if (_globalImageBytes.isNotEmpty) {
+        // Ensure there's at least one image before trying to compress
+        compressedImageBytes = await _prepareEmailImage(
+          _globalImageBytes.first,
+        );
       }
 
       if (_globalAiData != null) {
@@ -703,7 +748,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           designation: designation,
           department: department,
           location: location,
-          imageBytes: compressedImageBytes ?? _globalImageBytes,
+          imageBytes:
+              compressedImageBytes ??
+              (_globalImageBytes.isNotEmpty
+                  ? _globalImageBytes.first
+                  : null), // Pass compressed image bytes if available, otherwise fallback to first raw image bytes if any exist
           pdfBytes: finalPdfBytes,
         );
       }
@@ -789,7 +838,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             if (ptw.trim().isEmpty)
               return "Permit To Work (PTW) number is required.";
 
-            if (_globalImageBytes == null) {
+            if (_globalImageBytes.isEmpty) {
               return "Please upload a site photo for Work at Height tasks.";
             }
 
@@ -811,7 +860,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
           if (isAbove3m) {
             bool isPtwValid = ptw.trim().isNotEmpty;
-            bool hasImage = _globalImageBytes != null;
+            bool hasImage = _globalImageBytes.isNotEmpty;
             final status = _globalAiData?['overallStatus'];
             // bool isCompliant =
             //     status != null && status != "DANGEROUS" && status != "N/A";
@@ -1015,7 +1064,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               children: [
                                 Expanded(
                                   child: MenuButton(
-                                    label: "Select Image",
+                                    label: "Add Image",
                                     onTap: _pickGlobalImage,
                                     isPrimary: true,
                                     height: 32,
@@ -1028,10 +1077,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     height: 32,
                                     label: _isAnalyzing
                                         ? "Analyzing..."
-                                        : "Analyze Image",
+                                        : "Analyze Images",
                                     isPrimary: true,
                                     isDisabled:
-                                        _globalImageBytes == null ||
+                                        _globalImageBytes.isEmpty ||
                                         _isAnalyzing,
                                     onTap: _analyzeGlobalImage,
                                     leading: _isAnalyzing
@@ -1052,15 +1101,94 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 ),
                               ],
                             ),
-                            if (_globalImageBytes != null) ...[
+                            // Horizontal thumbnail preview engine
+                            if (_globalImageBytes.isNotEmpty) ...[
                               const SizedBox(height: AppPadding.medium),
-                              MenuButton(
-                                    height: 44,
-                                    label: "View Captured Image",
-                                    isPrimary: false,
-                                    onTap: _showImagePreviewDialog,
-                                    icon: Icons.image
-                                  ),
+                              Text(
+                                "Captured Workspace Images (${_globalImageBytes.length})",
+                                style: AppTypography.body.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: AppPadding.tight),
+                              SizedBox(
+                                height: 86,
+                                child: ListView.builder(
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: _globalImageBytes.length,
+                                  itemBuilder: (context, index) {
+                                    return Padding(
+                                      padding: const EdgeInsets.only(
+                                        right: 10.0,
+                                      ),
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          GestureDetector(
+                                            onTap: _showImagePreviewDialog,
+                                            child: Container(
+                                              width: 86,
+                                              height: 86,
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                      AppDimensions
+                                                          .radiusMedium,
+                                                    ),
+                                                border: Border.all(
+                                                  color: AppColors.borderGrey
+                                                      .withAlpha(80),
+                                                  width: 1,
+                                                ),
+                                                image: DecorationImage(
+                                                  image: MemoryImage(
+                                                    _globalImageBytes[index],
+                                                  ),
+                                                  fit: BoxFit.cover,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          // Delete badge handler
+                                          Positioned(
+                                            top: -5,
+                                            right: -5,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  _globalImageBytes.removeAt(
+                                                    index,
+                                                  );
+                                                  if (_globalImageBytes
+                                                      .isEmpty) {
+                                                    _globalAiData = null;
+                                                    _globalYoloDetections = [];
+                                                  }
+                                                });
+                                              },
+                                              child: Container(
+                                                padding: const EdgeInsets.all(
+                                                  3,
+                                                ),
+                                                decoration: const BoxDecoration(
+                                                  color: Colors.redAccent,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.close_rounded,
+                                                  size: 12,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ), 
+                                    );
+                                  },
+                                ),
+                              ),
                             ],
                             const SizedBox(height: AppPadding.medium),
                             SafetyStatusWidget(
