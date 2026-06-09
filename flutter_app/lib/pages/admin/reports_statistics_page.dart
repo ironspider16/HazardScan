@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -279,6 +280,71 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     );
   }
 
+  Map<String, Map<String, int>> _calculateComplianceRatios() {
+    final Map<String, Map<String, int>> breakdown = {
+      'Ladder Height': {
+        'SAFE': 0,
+        'COMPLIANT': 0,
+        'PARTIALLY COMPLIANT': 0,
+        'DANGEROUS': 0,
+      },
+      'PPE': {
+        'SAFE': 0,
+        'COMPLIANT': 0,
+        'PARTIALLY COMPLIANT': 0,
+        'DANGEROUS': 0,
+      },
+      'Buddy System': {
+        'SAFE': 0,
+        'COMPLIANT': 0,
+        'PARTIALLY COMPLIANT': 0,
+        'DANGEROUS': 0,
+      },
+      'Area Hazards': {
+        'SAFE': 0,
+        'COMPLIANT': 0,
+        'PARTIALLY COMPLIANT': 0,
+        'DANGEROUS': 0,
+      },
+    };
+
+    String _getComplianceString(dynamic data) {
+      if (data == null) return 'SAFE';
+      final Map<String, dynamic> parsed = (data is String)
+          ? Map<String, dynamic>.from(jsonDecode(data))
+          : Map<String, dynamic>.from(data);
+      return (parsed['compliance'] as String? ?? 'SAFE').toUpperCase();
+    }
+
+    for (var report in reports) {
+      final vars = report['WAH_safetyVariables_FK'];
+      if (vars != null) {
+        final lh = _getComplianceString(vars['ladderheight']);
+        if (breakdown['Ladder Height']!.containsKey(lh)) {
+          breakdown['Ladder Height']![lh] =
+              breakdown['Ladder Height']![lh]! + 1;
+        }
+
+        final ppe = _getComplianceString(vars['ppe']);
+        if (breakdown['PPE']!.containsKey(ppe)) {
+          breakdown['PPE']![ppe] = breakdown['PPE']![ppe]! + 1;
+        }
+
+        final bs = _getComplianceString(vars['buddySystem']);
+        if (breakdown['Buddy System']!.containsKey(bs)) {
+          breakdown['Buddy System']![bs] = breakdown['Buddy System']![bs]! + 1;
+        }
+
+        final ah = _getComplianceString(vars['areaHazards']);
+        if (breakdown['Area Hazards']!.containsKey(ah)) {
+          breakdown['Area Hazards']![ah] = breakdown['Area Hazards']![ah]! + 1;
+        }
+      }
+    }
+
+    return breakdown;
+  }
+
   List<Map<String, dynamic>> _calculateRiskLeaderboard() {
     Map<String, int> scores = {
       'Ladder Height': 0,
@@ -286,6 +352,10 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       'Buddy System': 0,
       'Area Hazards': 0,
     };
+
+    int totalWahReports = reports
+        .where((r) => r["WAH_safetyVariables_FK"] != null)
+        .length;
 
     // Helper to map compliance status to score
     int _getScore(String? compliance) {
@@ -331,7 +401,13 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 
     // Convert to list and sort by score descending
     List<Map<String, dynamic>> leaderboard = scores.entries
-        .map((e) => {'category': e.key, 'score': e.value})
+        .map(
+          (e) => {
+            'category': e.key,
+            'score': e.value,
+            "totalWah": totalWahReports,
+          },
+        )
         .toList();
 
     leaderboard.sort(
@@ -351,6 +427,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
         selectedComplianceLevel != null;
 
     final List<Map<String, dynamic>> leaderboard = _calculateRiskLeaderboard();
+
+    final ratioData = _calculateComplianceRatios();
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
@@ -446,6 +524,30 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                 UnlockedSpreaderDistributionCircle(reports: reports),
               ),
               const SizedBox(height: AppPadding.medium),
+              Padding(
+                padding: const EdgeInsets.all(AppPadding.medium),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Compliance Distribution', style: AppTypography.body),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildHorizontalStackedBar(
+                      'Ladder Height',
+                      ratioData['Ladder Height']!,
+                    ),
+                    _buildHorizontalStackedBar('PPE', ratioData['PPE']!),
+                    _buildHorizontalStackedBar(
+                      'Buddy System',
+                      ratioData['Buddy System']!,
+                    ),
+                    _buildHorizontalStackedBar(
+                      'Area Hazards',
+                      ratioData['Area Hazards']!,
+                    ),
+                    const Divider(height: 24),
+                  ],
+                ),
+              ),
               RiskLeaderboardWidget(leaderboardData: leaderboard),
             ],
           ),
@@ -460,6 +562,127 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 // DASHBOARD CIRCLE
 
 // =====================================================
+
+Widget _buildHorizontalStackedBar(
+  String categoryName,
+  Map<String, int> counts,
+) {
+  final int safe = counts['SAFE'] ?? 0;
+  final int compliant = counts['COMPLIANT'] ?? 0;
+  final int partial = counts['PARTIALLY COMPLIANT'] ?? 0;
+  final int dangerous = counts['DANGEROUS'] ?? 0;
+
+  final int total = safe + compliant + partial + dangerous;
+
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: AppPadding.tight),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              categoryName,
+              style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+            ),
+            Text(
+              '$total Audits',
+              style: AppTypography.body.copyWith(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppPadding.tight),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            height: 26,
+            width: double.infinity,
+            color: Colors.grey.shade100,
+            child: total == 0
+                ? const Center(
+                    child: Text(
+                      'No record entries available',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  )
+                : Row(
+                    children: [
+                      if (safe > 0)
+                        Expanded(
+                          flex: safe,
+                          child: Container(
+                            color: Colors.green.shade600,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$safe',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (compliant > 0)
+                        Expanded(
+                          flex: compliant,
+                          child: Container(
+                            color: Colors.green.shade300,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$compliant',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (partial > 0)
+                        Expanded(
+                          flex: partial,
+                          child: Container(
+                            color: Colors.orange,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$partial',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (dangerous > 0)
+                        Expanded(
+                          flex: dangerous,
+                          child: Container(
+                            color: Colors.red,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '$dangerous',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
 class ReportTimelineWidget extends StatefulWidget {
   final List<Map<String, dynamic>> reports;
@@ -690,6 +913,13 @@ class _ReportTimelineWidgetState extends State<ReportTimelineWidget> {
     LineChartData(
       minY: 0,
       maxY: maxY,
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (touchedSpot) {
+            return AppColors.primaryTint;
+          },
+        ),
+      ),
       lineBarsData: [
         LineChartBarData(
           spots: spotsList,
@@ -814,49 +1044,133 @@ class RiskLeaderboardWidget extends StatelessWidget {
           ...leaderboardData.asMap().entries.map((entry) {
             int index = entry.key;
             var item = entry.value;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Text(
-                    "${index + 1}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      item['category'] as String,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: (item['score'] as int) > 10
-                          ? Colors.red.shade100
-                          : Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      "${item['score']} pts",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: (item['score'] as int) > 10
-                            ? Colors.red
-                            : Colors.blue,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            return _buildRiskLeaderboardItem(
+              item["category"],
+              item["score"],
+              item["totalWah"],
             );
+            //Padding(
+            //   padding: const EdgeInsets.only(bottom: 12),
+            //   child: Row(
+            //     children: [
+            //       Text(
+            //         "${index + 1}",
+            //         style: const TextStyle(
+            //           fontWeight: FontWeight.bold,
+            //           fontSize: 16,
+            //         ),
+            //       ),
+            //       const SizedBox(width: 16),
+            //       Expanded(
+            //         child: Text(
+            //           item['category'] as String,
+            //           style: const TextStyle(fontSize: 16),
+            //         ),
+            //       ),
+            //       Container(
+            //         padding: const EdgeInsets.symmetric(
+            //           horizontal: 12,
+            //           vertical: 4,
+            //         ),
+            //         decoration: BoxDecoration(
+            //           color: (item['score'] as int) > 10
+            //               ? Colors.red.shade100
+            //               : Colors.blue.shade50,
+            //           borderRadius: BorderRadius.circular(8),
+            //         ),
+            //         child: Text(
+            //           "${item['score']} pts",
+            //           style: TextStyle(
+            //             fontWeight: FontWeight.bold,
+            //             color: (item['score'] as int) > 10
+            //                 ? Colors.red
+            //                 : Colors.blue,
+            //           ),
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRiskLeaderboardItem(
+    String categoryName,
+    int rawScore,
+    int totalWahReports,
+  ) {
+    final int maxScore = totalWahReports * 4;
+
+    final double riskRatio = maxScore > 0 ? rawScore / maxScore : 0.0;
+
+    final int riskPercentage = (riskRatio * 100).round();
+
+    Color statusColor;
+    Color backgroundColor;
+
+    if (riskPercentage <= 33) {
+      statusColor = Colors.green;
+      backgroundColor = Colors.green.shade50;
+    } else if (riskPercentage <= 66) {
+      statusColor = Colors.orange;
+      backgroundColor = Colors.orange.shade50;
+    } else {
+      statusColor = Colors.red;
+      backgroundColor = Colors.red.shade100;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppPadding.tight),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Text descriptive row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                categoryName,
+                style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  "$rawScore/$maxScore [$riskPercentage%]",
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppPadding.tight),
+
+          // Visual progress row
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: riskRatio,
+                    backgroundColor: AppColors.borderGrey.withValues(
+                      alpha: 0.3,
+                    ),
+                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                    minHeight: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -877,12 +1191,28 @@ class RiskLeaderboardWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Safety reports for work at height are evaluated across four categories: Ladder Height, Area Hazards, PPE, and Buddy System.',
+                  'This leaderboard tracks cumulative safety risks across all Work At Height audits. Higher scores indicate areas with more frequent or severe safety violations.',
                   style: TextStyle(fontSize: 14, color: Colors.black87),
                 ),
                 const SizedBox(height: AppPadding.medium),
                 const Text(
-                  'Scoring:',
+                  'How Risk is measured',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                const SizedBox(height: AppPadding.tight),
+                const Text(
+                  '• Raw Score: The total risk points accumulated from all reports.\n'
+                  '• Max Score: Calculated as (Total WAH Reports × 4 points).\n'
+                  '• Risk Percentage: Shows how close a category is to the worst-case scenario (100% risk).',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: AppPadding.medium),
+                const Text(
+                  'Point Weighting per Report:',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: AppPadding.tight),
