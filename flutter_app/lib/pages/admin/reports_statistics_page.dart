@@ -524,30 +524,33 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                 UnlockedSpreaderDistributionCircle(reports: reports),
               ),
               const SizedBox(height: AppPadding.medium),
-              Padding(
-                padding: const EdgeInsets.all(AppPadding.medium),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Compliance Distribution', style: AppTypography.body),
-                    const SizedBox(height: AppPadding.medium),
-                    _buildHorizontalStackedBar(
-                      'Ladder Height',
-                      ratioData['Ladder Height']!,
+              _buildChartContainer(
+                Padding(
+                  padding: const EdgeInsets.all(AppPadding.medium),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Compliance Distribution', style: AppTypography.body),
+                        const SizedBox(height: AppPadding.medium),
+                        _buildHorizontalStackedBar(
+                          'Ladder Height',
+                          ratioData['Ladder Height']!,
+                        ),
+                        _buildHorizontalStackedBar('PPE', ratioData['PPE']!),
+                        _buildHorizontalStackedBar(
+                          'Buddy System',
+                          ratioData['Buddy System']!,
+                        ),
+                        _buildHorizontalStackedBar(
+                          'Area Hazards',
+                          ratioData['Area Hazards']!,
+                        ),
+                        const Divider(height: 24),
+                      ],
                     ),
-                    _buildHorizontalStackedBar('PPE', ratioData['PPE']!),
-                    _buildHorizontalStackedBar(
-                      'Buddy System',
-                      ratioData['Buddy System']!,
-                    ),
-                    _buildHorizontalStackedBar(
-                      'Area Hazards',
-                      ratioData['Area Hazards']!,
-                    ),
-                    const Divider(height: 24),
-                  ],
-                ),
+                  ),
               ),
+              const SizedBox(height: AppPadding.medium),
               RiskLeaderboardWidget(leaderboardData: leaderboard),
             ],
           ),
@@ -599,7 +602,7 @@ Widget _buildHorizontalStackedBar(
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: Container(
-            height: 26,
+            height: 50,
             width: double.infinity,
             color: Colors.grey.shade100,
             child: total == 0

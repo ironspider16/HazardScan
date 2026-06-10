@@ -188,8 +188,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       bool status = false;
       if (detections.isNotEmpty) {
         for (var detection in detections) {
-          if (detection['label'] == 'ladder' &&
-              (detection['confidence'] as num) > 0.55) {
+          if (detection['label'] == 'spreader_unlocked') {
             status = true;
             break;
           }
