@@ -26,7 +26,7 @@ class AppTextfield extends StatelessWidget {
     this.validator,
     this.Maxlines,
     this.onChanged,
-    this.islabel = false,
+    this.islabel,
   });
 
   @override

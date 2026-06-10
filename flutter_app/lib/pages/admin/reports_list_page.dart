@@ -318,7 +318,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                           ),
                         ),
                         child: Text(
-                          (safetyVar['Overall Status'] ?? 'UNKNOWN')
+                          (safetyVar['Overall Status'] == "PARTIALLY COMPLIANT" ? "PARTIAL" : (safetyVar["Overall Status"] ?? "UNKNOWN"))
                               .toString()
                               .toUpperCase(),
                           style: TextStyle(
