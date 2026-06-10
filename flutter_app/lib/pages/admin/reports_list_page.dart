@@ -816,11 +816,11 @@ class _ReportsListPageState extends State<ReportsListPage> {
                     ),
                 ],
               ),
-              const SizedBox(height: AppPadding.Largest),
+              const SizedBox(height: AppPadding.tight),
               AppTextfield(
-                label:
-                    'Search Reports', // Or use '' if you do not want a label heading
-                hint: 'Search fields, tags, statuses...',
+                label: "reports",
+                islabel: false,
+                hint: 'Search location, department, name...',
                 controller: _searchController,
                 prefixIcon: Icons.search,
                 onChanged: (value) {

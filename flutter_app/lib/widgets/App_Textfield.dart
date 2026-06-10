@@ -8,6 +8,7 @@ class AppTextfield extends StatelessWidget {
   final TextEditingController controller;
   final bool obscureText;
   final bool enabled;
+  final bool? islabel;
   final IconData? prefixIcon;
   final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
@@ -25,6 +26,7 @@ class AppTextfield extends StatelessWidget {
     this.validator,
     this.Maxlines,
     this.onChanged,
+    this.islabel = false,
   });
 
   @override
@@ -32,14 +34,13 @@ class AppTextfield extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label using the standard body style but slightly bolder
-        Text(
-          label,
-          style: AppTypography.body.copyWith(
-            fontWeight: FontWeight.w600,
-            color: enabled ? AppColors.textMain : AppColors.textSecondary,
+        if (islabel ?? true) Text(
+            label,
+            style: AppTypography.body.copyWith(
+              fontWeight: FontWeight.w600,
+              color: enabled ? AppColors.textMain : AppColors.textSecondary,
+            ),
           ),
-        ),
         const SizedBox(height: AppPadding.tight),
         TextFormField(
           // Using TextFormField for better integration with Forms

@@ -525,30 +525,31 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
               ),
               const SizedBox(height: AppPadding.medium),
               _buildChartContainer(
-                Padding(
-                  padding: const EdgeInsets.all(AppPadding.medium),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Compliance Distribution', style: AppTypography.body),
-                        const SizedBox(height: AppPadding.medium),
-                        _buildHorizontalStackedBar(
-                          'Ladder Height',
-                          ratioData['Ladder Height']!,
-                        ),
-                        _buildHorizontalStackedBar('PPE', ratioData['PPE']!),
-                        _buildHorizontalStackedBar(
-                          'Buddy System',
-                          ratioData['Buddy System']!,
-                        ),
-                        _buildHorizontalStackedBar(
-                          'Area Hazards',
-                          ratioData['Area Hazards']!,
-                        ),
-                        const Divider(height: 24),
-                      ],
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Compliance Distribution',
+                      style: AppTypography.Bluesubheading,
                     ),
-                  ),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildHorizontalStackedBar(
+                      'Ladder Height',
+                      ratioData['Ladder Height']!,
+                    ),
+                    _buildHorizontalStackedBar('PPE', ratioData['PPE']!),
+                    _buildHorizontalStackedBar(
+                      'Buddy System',
+                      ratioData['Buddy System']!,
+                    ),
+                    _buildHorizontalStackedBar(
+                      'Area Hazards',
+                      ratioData['Area Hazards']!,
+                    ),
+                    const Divider(height: 24),
+                    _buildComplianceLegend(),
+                  ],
+                ),
               ),
               const SizedBox(height: AppPadding.medium),
               RiskLeaderboardWidget(leaderboardData: leaderboard),
@@ -682,6 +683,39 @@ Widget _buildHorizontalStackedBar(
                   ),
           ),
         ),
+      ],
+    ),
+  );
+}
+
+Widget _buildComplianceLegend() {
+  Widget _legenedItem(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.all(AppPadding.tight),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(width: 12, height: 12, color: color),
+          const SizedBox(width: AppPadding.tight),
+          Text(label, style: AppTypography.body),
+        ],
+      ),
+    );
+  }
+
+  return SizedBox(
+    child: Wrap(
+      spacing: AppPadding.tight,
+      runSpacing: AppPadding.tight,
+      children: [
+        _legenedItem("Safe", Colors.green.shade600),
+        _legenedItem("Compliant", Colors.green.shade300),
+        _legenedItem("Partial", Colors.orange),
+        _legenedItem("Dangerous", Colors.red),
       ],
     ),
   );
