@@ -778,7 +778,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK': globalWahSafetyForeignKey,
+          'WAH_safetyVariables_FK': category == "Work At Height" ? globalWahSafetyForeignKey : null,
         });
 
         // Trigger edge function email process
@@ -1095,18 +1095,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(
-                              "Site Condition Validation",
-                              style: AppTypography.body.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: AppPadding.tight),
                             AppTextfield(
-                              label: "Site Context / Notes",
+                              label: "User Context / Details Box",
                               controller: _globalDetailsCtrl,
+                              Maxlines: 4,
                               hint:
-                                  "Enter site conditions to assist AI context...",
+                                  "Enter Details to be submitted and to assist AI context...",
                             ),
                             const SizedBox(height: AppPadding.medium),
                             Row(
