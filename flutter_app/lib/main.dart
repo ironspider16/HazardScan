@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/config/language_manager.dart';
 import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'Design/style_constant.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:kkhazardscan/yolo/yolo_service.dart';
-
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'config/language_manager.dart';
 void main() async {
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,8 +24,21 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
+    return ValueListenableBuilder<Locale>(
+    valueListenable: AppLanguageManager.localeNotifier, 
+    builder: (context, currentLocale, child) {
     return MaterialApp(
       title: 'Safety App Login',
+      locale :currentLocale,
+      supportedLocales: const [
+        Locale('en'),
+        Locale('zh'),
+      ],
+      localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -92,4 +107,6 @@ class MyApp extends StatelessWidget {
       home: const LoginScreen(),
     );
   }
+    );
+}
 }

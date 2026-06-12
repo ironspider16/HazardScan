@@ -1,0 +1,57 @@
+{
+  "1": [
+    "Inspect ladder condition (no broken steps, cracks, bends).",
+    "PPE worn (helmet, bump hat, safety shoes).",
+    "No carrying items when climbing ladder, maintaining 3 point contact.",
+    "Not standing on the top step of the ladder.",
+    "Using ladder in a fully open position.",
+    "Ladder spreaders locked in open position.",
+    "Buddy system in place."
+  ],
+  "2": [
+    "WAH Permit displayed.",
+    "Authorised examiner cert updated.",
+    "Pre-use check list displayed.",
+    "Lifter set up properly: (Outriggers inserted fully, outriggers locked, base wheels are clear of the floor, lifter set up on even and hard surface)",
+    "Platform is maintained: (cleaned, no materials debris on the platform.)",
+    "PPE worn (helmet, safety shoes, fall protection system, body harness and lanyard)",
+    "Operator not stepping on the guardrail.",
+    "Safety harness is hooked.",
+    "Work area is cordoned.",
+    "Warning signage displayed.",
+    "watchman in place.",
+    "Authorised entry into work area."
+  ],
+  "3": [
+    "WAH Permit To Work displayed.",
+    "Scaffold is inspected before use.",
+    "Scaffold tag display SAFE or UNSAFE to use.",
+    "Scaffold components are in good condition.",
+    "PPE worn (helmet, safety shoes, safety harness)",
+    "Platform is maintained (Cleaned, No materials and debris on the platform.",
+    "Display of warning signage.",
+    "Work area cordoned."
+  ],
+  "4": [
+    "Delivery person conducts checks on LN2 cylinder.",
+    "Transportation route is clear and unobstructed.",
+    "Delivery person has proper PPE: (cryogenic gloves, apron, face shield, safety shoes, oxygen monitoring device)",
+    "LN2 cylinder trolley wheels in good condition"
+  ],
+  "5": [
+    "Delivery person conducts checks on LN2 cylinder.",
+    "Delivery person has proper PPE: (cryogenic gloves, apron, face shield, safety shoes, ear plugs, oxygen monitoring device)",
+    "Warning signage displayed to inform on-coming vehicles.",
+    "Refilling area is cordoned.",
+    "Authorised entry into refilling area."
+  ],
+  "6": [
+    "Display of signage and confined space PTW.",
+    "Atmospheric gas check carried out by contractor.",
+    "Attendant assigned.",
+    "Authorised entrant name list.",
+    "Ventilation provided.",
+    "Proper PPE: safety helmet, safety shoes, Rubber boots (water tank), safety harness (if required), respirator (if required)",
+    "Entry / exit unobstructed. Proper access."
+  ]
+}

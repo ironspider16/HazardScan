@@ -32,6 +32,9 @@ dependencies:
     sdk: flutter
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2 
   path_provider: ^2.1.0
   camera: ^0.11.3
   #onnxruntime: ^1.4.1
@@ -75,11 +78,13 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  generate: true 
 
   # To add assets to your application, add an assets section, like this:
   assets:
   - assets/models/best.onnx
   - assets/images/KKHlogo.svg
+  - assets/checklists/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

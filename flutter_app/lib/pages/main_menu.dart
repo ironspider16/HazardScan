@@ -4,6 +4,7 @@ import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
+import '../config/language_manager.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import 'admin/reports_statistics_page.dart';
@@ -53,29 +54,84 @@ class MainMenu extends StatelessWidget {
                           AppDimensions.radiusLarge,
                         ),
                       ),
-                    child: SvgPicture.asset(
-                    'assets/images/KKHlogo.svg',
-                    width: 100,
-                    height: 100,
-                    semanticsLabel: 'Company Logo',
-                  ),
+                      child: SvgPicture.asset(
+                        'assets/images/KKHlogo.svg',
+                        width: 100,
+                        height: 100,
+                        semanticsLabel: 'Company Logo',
+                      ),
                     ),
 
                     const SizedBox(height: AppPadding.medium),
+                    
                     const Text("HazardScan", style: AppTypography.Blueheading),
 
                     const SizedBox(height: AppPadding.tight),
 
                     Text("Hi, $roleText", style: AppTypography.Bluesubheading),
 
-                    const SizedBox(height: AppPadding.extraLarge),
+                    const SizedBox(height: AppPadding.medium),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Language",
+                          style: AppTypography.body.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMain,
+                          ),
+                        ),
+                        const SizedBox(height: AppPadding.tight),
+                        ValueListenableBuilder<Locale>(
+                          valueListenable: AppLanguageManager.localeNotifier,
+                          builder: (context, currentLocale, child) {
+                            return DropdownButtonFormField<String>(
+                              value: currentLocale.languageCode,
+                              dropdownColor: Colors.white,
+                              icon: const Icon(
+                                Icons.arrow_drop_down,
+                                color: AppColors.textSecondary,
+                              ),
+                              style: AppTypography.body.copyWith(
+                                color: AppColors.textMain,
+                              ),
+                              decoration: const InputDecoration(
+                                prefixIcon: Icon(Icons.language, size: 20),
+                                fillColor: AppColors.backgroundWhite,
+                              ),
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'en',
+                                  child: Text("English"),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'zh',
+                                  child: Text("中文"),
+                                ),
+                              ],
+                              onChanged: (String? newLanguageCode) {
+                                if (newLanguageCode != null) {
+                                  AppLanguageManager.changeLanguage(
+                                    newLanguageCode,
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppPadding.medium),
                     if (isAdmin) ...[
                       MenuButton(
                         label: "Reports Statistics",
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => ReportsStatisticsPage()),
+                            MaterialPageRoute(
+                              builder: (_) => ReportsStatisticsPage(),
+                            ),
                           );
                         },
                       ),
@@ -86,7 +142,9 @@ class MainMenu extends StatelessWidget {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => ReportsListPage()),
+                            MaterialPageRoute(
+                              builder: (_) => ReportsListPage(),
+                            ),
                           );
                         },
                       ),

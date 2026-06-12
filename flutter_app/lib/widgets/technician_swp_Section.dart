@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:kkhazardscan/widgets/swp_checklist.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/WAH_Permit.dart';
@@ -38,8 +40,10 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
   bool isSafetyCleared = false;
   bool isPtwCleared = true;
   bool isLoading = true;
+  bool _hasLoadedData = false;
 
-  bool get isWAH => widget.categoryName.toLowerCase().contains("work at height");
+  bool get isWAH =>
+      widget.categoryName.toLowerCase().contains("work at height");
 
   @override
   void initState() {
@@ -53,17 +57,49 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
     }
   }
 
-  Future<void> _loadItems() async {
-    final response = await supabase
-        .from('swp_items')
-        .select('description')
-        .eq('template_id', widget.templateId);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Ensures data is only fetched once when the context becomes available
+    if (!_hasLoadedData) {
+      _hasLoadedData = true;
+      _loadItems();
+    }
+  }
 
-    if (mounted) {
-      setState(() {
-        items = List<String>.from(response.map((x) => x['description']));
-        isLoading = false;
-      });
+  Future<void> _loadItems() async {
+    try {
+      final String languageCode = Localizations.localeOf(context).languageCode;
+
+      String jsonString;
+      try {
+        jsonString = await rootBundle.loadString(
+          'assets/checklists/checklists_$languageCode.json',
+        );
+      } catch (_) {
+        jsonString = await rootBundle.loadString(
+          'assets/checklists/checklists_en.json',
+        );
+      }
+
+      final Map<String, dynamic> data = json.decode(jsonString);
+      final List<dynamic>? checklistForTemplate =
+          data[widget.templateId.toString()];
+
+      if (mounted) {
+        setState(() {
+          items = checklistForTemplate != null
+              ? List<String>.from(checklistForTemplate)
+              : [];
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 

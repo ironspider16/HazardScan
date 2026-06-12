@@ -881,378 +881,380 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           }
         });
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundWhite,
-      appBar: AppBar(
-        title: Text(
-          widget.task != null
-              ? "Task SWPs: ${widget.task!['workorder_id']}"
-              : "Activity Checklists",
-          style: AppTypography.Bluesubheading,
-        ),
-        foregroundColor: AppColors.textMain,
+    return SelectionArea(
+      child: Scaffold(
         backgroundColor: AppColors.backgroundWhite,
-        elevation: 0,
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              // Makes the whole page scroll together
-              child: Column(
-                children: [
-                  // 1. Checklist Iteration Area
-                  ListView.builder(
-                    shrinkWrap: true, // Lets the list size itself
-                    physics:
-                        const NeverScrollableScrollPhysics(), // Prevents inner scrolling conflicts
-                    padding: const EdgeInsets.fromLTRB(
-                      AppPadding.tight,
-                      AppPadding.page,
-                      AppPadding.tight,
-                      AppPadding.tight,
+        appBar: AppBar(
+          title: Text(
+            widget.task != null
+                ? "Task SWPs: ${widget.task!['workorder_id']}"
+                : "Activity Checklists",
+            style: AppTypography.Bluesubheading,
+          ),
+          foregroundColor: AppColors.textMain,
+          backgroundColor: AppColors.backgroundWhite,
+          elevation: 0,
+        ),
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                // Makes the whole page scroll together
+                child: Column(
+                  children: [
+                    // 1. Checklist Iteration Area
+                    ListView.builder(
+                      shrinkWrap: true, // Lets the list size itself
+                      physics:
+                          const NeverScrollableScrollPhysics(), // Prevents inner scrolling conflicts
+                      padding: const EdgeInsets.fromLTRB(
+                        AppPadding.tight,
+                        AppPadding.page,
+                        AppPadding.tight,
+                        AppPadding.tight,
+                      ),
+                      itemCount: widget.selectedCategories.length,
+                      itemBuilder: (context, index) {
+                        final category = widget.selectedCategories[index];
+      
+                        // FIX: Derive local variables from category so they are defined in this scope
+                        final int? currentSelectedId =
+                            selectedSubCategories[category];
+                        final List<Map<String, dynamic>> categoryTemplates =
+                            allTemplates
+                                .where((t) => t['category'] == category)
+                                .toList();
+      
+                        return Card(
+                          color: AppColors.primaryTint,
+                          margin: const EdgeInsets.only(
+                            bottom: AppPadding.medium,
+                          ),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppDimensions.radiusMedium,
+                            ),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: ExpansionTile(
+                            maintainState: true,
+                            initiallyExpanded: true,
+                            backgroundColor: AppColors.primaryTint.withAlpha(10),
+                            title: Text(category, style: AppTypography.body),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppPadding.medium,
+                                  vertical: AppPadding.tight,
+                                ),
+                                child: DropdownButtonFormField<int>(
+                                  value: currentSelectedId,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: "Select Specific Activity Type",
+                                    filled: true,
+                                  ),
+                                  items: categoryTemplates.map((t) {
+                                    return DropdownMenuItem<int>(
+                                      value: t['id'] as int,
+                                      child: Text(
+                                        t['title']?.toString().trim() ??
+                                            'Untitled',
+                                        style: AppTypography.body,
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (newValue) {
+                                    setState(() {
+                                      selectedSubCategories[category] = newValue;
+                                      if (newValue != null) {
+                                        _savedPtwNumbers.putIfAbsent(
+                                          newValue,
+                                          () => "",
+                                        );
+                                        _savedAbove3m.putIfAbsent(
+                                          newValue,
+                                          () => false,
+                                        );
+                                        _savedChecklists.putIfAbsent(
+                                          newValue,
+                                          () => [],
+                                        );
+                                        _checklistCompletionStates.putIfAbsent(
+                                          newValue,
+                                          () => false,
+                                        );
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                              if (currentSelectedId != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(
+                                    top: AppPadding.tight,
+                                  ),
+                                  child: TechnicianSwpSection(
+                                    key: ValueKey(currentSelectedId),
+                                    templateId: currentSelectedId,
+                                    categoryName: category,
+                                    initialPtw:
+                                        _savedPtwNumbers[currentSelectedId] ?? "",
+                                    initialAbove3m:
+                                        _savedAbove3m[currentSelectedId] ?? false,
+                                    initialCheckedItems:
+                                        _savedChecklists[currentSelectedId] ?? [],
+                                    onPtwChanged: (isAbove3m, ptw) {
+                                      setState(() {
+                                        _savedPtwNumbers[currentSelectedId] = ptw;
+                                        _savedAbove3m[currentSelectedId] =
+                                            isAbove3m;
+                                      });
+                                    },
+                                    onChecklistChanged: (checkedList) {
+                                      setState(() {
+                                        _savedChecklists[currentSelectedId] =
+                                            checkedList;
+                                      });
+                                    },
+                                    onAllChecked: (isCleared) {
+                                      setState(() {
+                                        _checklistCompletionStates[currentSelectedId] =
+                                            isCleared;
+                                      });
+                                    },
+                                  ),
+                                )
+                              else
+                                const Padding(
+                                  padding: EdgeInsets.all(AppPadding.medium),
+                                  child: Text(
+                                    "No specific activities configured for this field.",
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                    itemCount: widget.selectedCategories.length,
-                    itemBuilder: (context, index) {
-                      final category = widget.selectedCategories[index];
-
-                      // FIX: Derive local variables from category so they are defined in this scope
-                      final int? currentSelectedId =
-                          selectedSubCategories[category];
-                      final List<Map<String, dynamic>> categoryTemplates =
-                          allTemplates
-                              .where((t) => t['category'] == category)
-                              .toList();
-
-                      return Card(
-                        color: AppColors.primaryTint,
-                        margin: const EdgeInsets.only(
-                          bottom: AppPadding.medium,
-                        ),
-                        elevation: 0,
+      
+                    // Global Image Analysis Block
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        // horizontal: AppPadding.page,
+                        horizontal: AppPadding.tight,
+                      ),
+                      child: Card(
+                        color: AppColors.backgroundWhite,
+                        elevation: 1,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(
                             AppDimensions.radiusMedium,
                           ),
+                          side: BorderSide(
+                            color: AppColors.borderGrey.withAlpha(50),
+                          ),
                         ),
-                        clipBehavior: Clip.antiAlias,
-                        child: ExpansionTile(
-                          maintainState: true,
-                          initiallyExpanded: true,
-                          backgroundColor: AppColors.primaryTint.withAlpha(10),
-                          title: Text(category, style: AppTypography.body),
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppPadding.medium,
-                                vertical: AppPadding.tight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppPadding.medium),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              AppTextfield(
+                                label: "User Context / Details Box",
+                                controller: _globalDetailsCtrl,
+                                Maxlines: 4,
+                                hint:
+                                    "Enter Details to be submitted and to assist AI context...",
                               ),
-                              child: DropdownButtonFormField<int>(
-                                value: currentSelectedId,
-                                isExpanded: true,
-                                decoration: const InputDecoration(
-                                  labelText: "Select Specific Activity Type",
-                                  filled: true,
-                                ),
-                                items: categoryTemplates.map((t) {
-                                  return DropdownMenuItem<int>(
-                                    value: t['id'] as int,
-                                    child: Text(
-                                      t['title']?.toString().trim() ??
-                                          'Untitled',
-                                      style: AppTypography.body,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
+                              const SizedBox(height: AppPadding.medium),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: MenuButton(
+                                      label: "Add Image",
+                                      onTap: _pickGlobalImage,
+                                      isPrimary: true,
+                                      height: 32,
+                                      icon: Icons.camera_alt,
                                     ),
-                                  );
-                                }).toList(),
-                                onChanged: (newValue) {
-                                  setState(() {
-                                    selectedSubCategories[category] = newValue;
-                                    if (newValue != null) {
-                                      _savedPtwNumbers.putIfAbsent(
-                                        newValue,
-                                        () => "",
-                                      );
-                                      _savedAbove3m.putIfAbsent(
-                                        newValue,
-                                        () => false,
-                                      );
-                                      _savedChecklists.putIfAbsent(
-                                        newValue,
-                                        () => [],
-                                      );
-                                      _checklistCompletionStates.putIfAbsent(
-                                        newValue,
-                                        () => false,
-                                      );
-                                    }
-                                  });
-                                },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: MenuButton(
+                                      height: 32,
+                                      label: _isAnalyzing
+                                          ? "Analyzing..."
+                                          : "Analyze",
+                                      isPrimary: true,
+                                      isDisabled:
+                                          _globalImageBytes.isEmpty ||
+                                          _isAnalyzing,
+                                      onTap: _analyzeGlobalImage,
+                                      leading: _isAnalyzing
+                                          ? const SizedBox(
+                                              width: 16,
+                                              height: 16,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor:
+                                                    AlwaysStoppedAnimation<Color>(
+                                                      Colors.white,
+                                                    ),
+                                              ),
+                                            )
+                                          : null,
+                                      icon: _isAnalyzing ? null : Icons.analytics,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            if (currentSelectedId != null)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: AppPadding.tight,
-                                ),
-                                child: TechnicianSwpSection(
-                                  key: ValueKey(currentSelectedId),
-                                  templateId: currentSelectedId,
-                                  categoryName: category,
-                                  initialPtw:
-                                      _savedPtwNumbers[currentSelectedId] ?? "",
-                                  initialAbove3m:
-                                      _savedAbove3m[currentSelectedId] ?? false,
-                                  initialCheckedItems:
-                                      _savedChecklists[currentSelectedId] ?? [],
-                                  onPtwChanged: (isAbove3m, ptw) {
-                                    setState(() {
-                                      _savedPtwNumbers[currentSelectedId] = ptw;
-                                      _savedAbove3m[currentSelectedId] =
-                                          isAbove3m;
-                                    });
-                                  },
-                                  onChecklistChanged: (checkedList) {
-                                    setState(() {
-                                      _savedChecklists[currentSelectedId] =
-                                          checkedList;
-                                    });
-                                  },
-                                  onAllChecked: (isCleared) {
-                                    setState(() {
-                                      _checklistCompletionStates[currentSelectedId] =
-                                          isCleared;
-                                    });
-                                  },
-                                ),
-                              )
-                            else
-                              const Padding(
-                                padding: EdgeInsets.all(AppPadding.medium),
-                                child: Text(
-                                  "No specific activities configured for this field.",
-                                ),
-                              ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Global Image Analysis Block
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      // horizontal: AppPadding.page,
-                      horizontal: AppPadding.tight,
-                    ),
-                    child: Card(
-                      color: AppColors.backgroundWhite,
-                      elevation: 1,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppDimensions.radiusMedium,
-                        ),
-                        side: BorderSide(
-                          color: AppColors.borderGrey.withAlpha(50),
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppPadding.medium),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            AppTextfield(
-                              label: "User Context / Details Box",
-                              controller: _globalDetailsCtrl,
-                              Maxlines: 4,
-                              hint:
-                                  "Enter Details to be submitted and to assist AI context...",
-                            ),
-                            const SizedBox(height: AppPadding.medium),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: MenuButton(
-                                    label: "Add Image",
-                                    onTap: _pickGlobalImage,
-                                    isPrimary: true,
-                                    height: 32,
-                                    icon: Icons.camera_alt,
+                              // Horizontal thumbnail preview engine
+                              if (_globalImageBytes.isNotEmpty) ...[
+                                const SizedBox(height: AppPadding.medium),
+                                Text(
+                                  "Captured Workspace Images (${_globalImageBytes.length})",
+                                  style: AppTypography.body.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
                                   ),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: MenuButton(
-                                    height: 32,
-                                    label: _isAnalyzing
-                                        ? "Analyzing..."
-                                        : "Analyze",
-                                    isPrimary: true,
-                                    isDisabled:
-                                        _globalImageBytes.isEmpty ||
-                                        _isAnalyzing,
-                                    onTap: _analyzeGlobalImage,
-                                    leading: _isAnalyzing
-                                        ? const SizedBox(
-                                            width: 16,
-                                            height: 16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                    Colors.white,
+                                const SizedBox(height: AppPadding.tight),
+                                SizedBox(
+                                  height: 86,
+                                  child: ListView.builder(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: _globalImageBytes.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.only(
+                                          right: 10.0,
+                                        ),
+                                        child: Stack(
+                                          clipBehavior: Clip.none,
+                                          children: [
+                                            GestureDetector(
+                                              onTap: _showImagePreviewDialog,
+                                              child: Container(
+                                                width: 86,
+                                                height: 86,
+                                                decoration: BoxDecoration(
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                        AppDimensions
+                                                            .radiusMedium,
+                                                      ),
+                                                  border: Border.all(
+                                                    color: AppColors.borderGrey
+                                                        .withAlpha(80),
+                                                    width: 1,
                                                   ),
+                                                  image: DecorationImage(
+                                                    image: MemoryImage(
+                                                      _globalImageBytes[index],
+                                                    ),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                          )
-                                        : null,
-                                    icon: _isAnalyzing ? null : Icons.analytics,
+                                            // Delete badge handler
+                                            Positioned(
+                                              top: -5,
+                                              right: -5,
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  setState(() {
+                                                    _globalImageBytes.removeAt(
+                                                      index,
+                                                    );
+                                                    if (_globalImageBytes
+                                                        .isEmpty) {
+                                                      _globalAiData = null;
+                                                      _globalYoloDetections = [];
+                                                    }
+                                                  });
+                                                },
+                                                child: Container(
+                                                  padding: const EdgeInsets.all(
+                                                    3,
+                                                  ),
+                                                  decoration: const BoxDecoration(
+                                                    color: Colors.redAccent,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                  child: const Icon(
+                                                    Icons.close_rounded,
+                                                    size: 12,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ],
-                            ),
-                            // Horizontal thumbnail preview engine
-                            if (_globalImageBytes.isNotEmpty) ...[
                               const SizedBox(height: AppPadding.medium),
-                              Text(
-                                "Captured Workspace Images (${_globalImageBytes.length})",
-                                style: AppTypography.body.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              const SizedBox(height: AppPadding.tight),
-                              SizedBox(
-                                height: 86,
-                                child: ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: _globalImageBytes.length,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.only(
-                                        right: 10.0,
-                                      ),
-                                      child: Stack(
-                                        clipBehavior: Clip.none,
-                                        children: [
-                                          GestureDetector(
-                                            onTap: _showImagePreviewDialog,
-                                            child: Container(
-                                              width: 86,
-                                              height: 86,
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(
-                                                      AppDimensions
-                                                          .radiusMedium,
-                                                    ),
-                                                border: Border.all(
-                                                  color: AppColors.borderGrey
-                                                      .withAlpha(80),
-                                                  width: 1,
-                                                ),
-                                                image: DecorationImage(
-                                                  image: MemoryImage(
-                                                    _globalImageBytes[index],
-                                                  ),
-                                                  fit: BoxFit.cover,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          // Delete badge handler
-                                          Positioned(
-                                            top: -5,
-                                            right: -5,
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  _globalImageBytes.removeAt(
-                                                    index,
-                                                  );
-                                                  if (_globalImageBytes
-                                                      .isEmpty) {
-                                                    _globalAiData = null;
-                                                    _globalYoloDetections = [];
-                                                  }
-                                                });
-                                              },
-                                              child: Container(
-                                                padding: const EdgeInsets.all(
-                                                  3,
-                                                ),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.redAccent,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.close_rounded,
-                                                  size: 12,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
+                              SafetyStatusWidget(
+                                aiData: _globalAiData,
+                                isSpreaderUnlocked: _isSpreaderUnlocked,
                               ),
                             ],
-                            const SizedBox(height: AppPadding.medium),
-                            SafetyStatusWidget(
-                              aiData: _globalAiData,
-                              isSpreaderUnlocked: _isSpreaderUnlocked,
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-
-                  // 3. Final Continue Button Block
-                  Padding(
-                    padding: const EdgeInsets.all(AppPadding.page),
-                    child: Column(
-                      children: [
-                        SizedBox(
-                          width: fieldWidth,
-                          child: const Divider(
-                            height: AppPadding.large,
-                            thickness: 1,
-                            color: AppColors.borderGrey,
-                          ),
-                        ),
-                        const SizedBox(height: AppPadding.tight),
-                        if (errorMessage != null && !canSubmitReport)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Text(
-                              errorMessage,
-                              style: AppTypography.faintbody.copyWith(
-                                color: Colors.red,
-                              ),
-                              textAlign: TextAlign.center,
+      
+                    // 3. Final Continue Button Block
+                    Padding(
+                      padding: const EdgeInsets.all(AppPadding.page),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            width: fieldWidth,
+                            child: const Divider(
+                              height: AppPadding.large,
+                              thickness: 1,
+                              color: AppColors.borderGrey,
                             ),
                           ),
-                        SizedBox(
-                          width: fieldWidth,
-                          child: MenuButton(
-                            label: "Continue",
-                            onTap: canSubmitReport
-                                ? _showAcknowledgementDialog
-                                : () => {},
-                            isPrimary: true,
-                            icon: Icons.arrow_forward_rounded,
-                            isDisabled: !canSubmitReport,
+                          const SizedBox(height: AppPadding.tight),
+                          if (errorMessage != null && !canSubmitReport)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Text(
+                                errorMessage,
+                                style: AppTypography.faintbody.copyWith(
+                                  color: Colors.red,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          SizedBox(
+                            width: fieldWidth,
+                            child: MenuButton(
+                              label: "Continue",
+                              onTap: canSubmitReport
+                                  ? _showAcknowledgementDialog
+                                  : () => {},
+                              isPrimary: true,
+                              icon: Icons.arrow_forward_rounded,
+                              isDisabled: !canSubmitReport,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 }
