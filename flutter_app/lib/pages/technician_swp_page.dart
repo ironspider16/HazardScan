@@ -205,60 +205,83 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       );
 
       // pass full list to match updated GeminiService signature
-      final String rawResponse = await GeminiService.detectHazards(
-        compressedImages, //submit temporarily compressed images for faster analysis while retaining original raw images in state for highest quality reporting and email attachments
+      final analysisResult = await GeminiService.detectHazards(
+        compressedImages,
         _globalDetailsCtrl.text,
       );
 
       if (!mounted) return;
 
-      final String sanitizedResponse = rawResponse
-          .replaceAll(RegExp(r'^```json\s*', caseSensitive: false), '')
-          .replaceAll(RegExp(r'^```\s*', caseSensitive: false), '')
-          .replaceAll(RegExp(r'```$'), '')
-          .trim();
+      // ── Routing telemetry log (visible in your debug console) ──
+      debugPrint(
+        "[ROUTING] Key Slot: ${analysisResult.keySlot} | "
+        "Model: ${analysisResult.modelUsed} | "
+        "Error: ${analysisResult.errorType ?? 'none'}",
+      );
 
-      try {
-        decodedData = jsonDecode(sanitizedResponse);
-      } catch (e) {
-        // Handle the case where JSON is malformed
-        _showErrorDialog(
-          "Analysis Error",
-          "The server returned an invalid response.",
-        );
-        setState(() => _isAnalyzing = false);
-        return;
-      }
-
-      if (decodedData['overallStatus'] == 'N/A') {
-        final diagnosticTitle =
-            decodedData['ladderHeight']?['description'] ?? "Error";
-        final diagnosticReason =
-            decodedData['ladderHeight']?['reasoning'] ?? "";
-
+      // ── Hard error — named errorType from edge function ──
+      if (analysisResult.isError) {
         setState(() {
           _isAnalyzing = false;
           _globalAiData = null;
         });
 
-        if (diagnosticTitle.contains("Exhaustion") ||
-            diagnosticReason.contains("quota")) {
+        final errorType = analysisResult.errorType ?? "";
+
+        if (errorType == "EXHAUSTION_ERROR") {
           _showErrorDialog(
             "API Quota Warning",
-            "API limit reached. If you are experiencing this, you are nearing your quota limit (approx. 75%+ utilization across rotating keys). Please wait a moment and try again.",
+            "All API keys and fallback models are currently exhausted. "
+                "You are likely near quota limits. Please wait a moment and try again.",
           );
-        } else if (diagnosticReason.contains("503") ||
-            diagnosticReason.contains("overloaded")) {
+        } else if (errorType == "SDK_ERROR") {
           _showErrorDialog(
-            "Service Unavailable",
-            "Gemini servers are temporarily overloaded or unavailable. Please try your analysis again in 30 seconds.",
+            "Analysis Error — Key Slot ${analysisResult.keySlot}, Model: ${analysisResult.modelUsed}",
+            analysisResult.errorDetail ??
+                "The analysis engine returned an unexpected error.",
+          );
+        } else if (errorType == "SETUP_ERROR") {
+          _showErrorDialog(
+            "Configuration Error",
+            "No API keys are configured on the server. Contact your administrator.",
+          );
+        } else if (errorType == "CONNECTION_ERROR") {
+          _showErrorDialog(
+            "Connection Failed",
+            analysisResult.errorDetail ??
+                "Could not reach the analysis server. Check your connection.",
           );
         } else {
-          _showErrorDialog("Analysis Failed", diagnosticReason);
+          _showErrorDialog(
+            analysisResult.errorTitle ?? "Analysis Failed",
+            analysisResult.errorDetail ?? "An unknown error occurred.",
+          );
         }
         return;
       }
-      // ------------------------------
+
+      // ── Soft notice — backup model was used, analysis still succeeded ──
+      if (analysisResult.systemNotice != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(analysisResult.systemNotice!),
+            backgroundColor: Colors.orange.shade700,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      }
+
+      // ── Success — parse and store as before ──
+      try {
+        decodedData = jsonDecode(analysisResult.jsonPayload);
+      } catch (e) {
+        _showErrorDialog(
+          "Parse Error",
+          "The server returned an unreadable response.",
+        );
+        setState(() => _isAnalyzing = false);
+        return;
+      }
 
       setState(() {
         _globalAiData = decodedData;
@@ -423,7 +446,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              insetPadding: const EdgeInsets.symmetric(horizontal: AppPadding.tight, vertical: AppPadding.medium), 
+              insetPadding: const EdgeInsets.symmetric(
+                horizontal: AppPadding.tight,
+                vertical: AppPadding.medium,
+              ),
               backgroundColor: AppColors.backgroundWhite,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -540,24 +566,25 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                             location: locationCtrl.text,
                                             supervisor: nameCtrl.text,
                                             employer: deptCtrl.text,
-                                            manualNotes: _globalDetailsCtrl.text,
+                                            manualNotes:
+                                                _globalDetailsCtrl.text,
                                             initialAiData: _globalAiData ?? {},
                                             imagesBytes: _globalImageBytes,
                                           );
-                            
+
                                       setState(() {
                                         _globalPdfBytes = pdfBytes;
                                       });
-                            
+
                                       if (!context.mounted) return;
-                            
+
                                       if (kIsWeb) {
                                         // On web: open PDF as blob URL in a new browser tab
                                         final blob = html.Blob([
                                           pdfBytes,
                                         ], 'application/pdf');
-                                        final url =
-                                            html.Url.createObjectUrlFromBlob(blob);
+                                        final url = html
+                                            .Url.createObjectUrlFromBlob(blob);
                                         html.window.open(url, '_blank');
                                         html.Url.revokeObjectUrl(url);
                                       } else {
@@ -567,7 +594,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                           MaterialPageRoute(
                                             builder: (_) => Scaffold(
                                               appBar: AppBar(
-                                                title: const Text("Report Preview"),
+                                                title: const Text(
+                                                  "Report Preview",
+                                                ),
                                                 backgroundColor: Colors.white,
                                                 foregroundColor: Colors.black,
                                                 elevation: 1,
@@ -588,10 +617,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 const SizedBox(width: 8),
                               ],
                             ),
-                          const SizedBox(height: AppPadding.tight),
-                          Row(
-                            children: [
-                              Expanded(
+                            const SizedBox(height: AppPadding.tight),
+                            Row(
+                              children: [
+                                Expanded(
                                   child: MenuButton(
                                     label: "Submit",
                                     isPrimary: true,
@@ -601,19 +630,23 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                       if (!(formKey.currentState?.validate() ??
                                           false))
                                         return;
-                              
-                                      setDialogState(() => dialogSubmitting = true);
-                              
+
+                                      setDialogState(
+                                        () => dialogSubmitting = true,
+                                      );
+
                                       bool success = await _executeSubmitReport(
                                         name: nameCtrl.text.trim(),
                                         designation: desigCtrl.text.trim(),
                                         department: deptCtrl.text.trim(),
                                         location: locationCtrl.text.trim(),
                                       );
-                              
+
                                       if (success && mounted) {
                                         Navigator.pop(dialogContext);
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           const SnackBar(
                                             content: Text(
                                               "All safety checks successfully submitted!",
@@ -621,19 +654,20 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                             backgroundColor: Colors.green,
                                           ),
                                         );
-                              
+
                                         final anonymousTechnician = AppUser(
                                           id: 0,
                                           email: "technician@example.com",
                                           password: '',
                                           role: UserRole.user,
                                         );
-                              
+
                                         Navigator.pushAndRemoveUntil(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) =>
-                                                MainMenu(user: anonymousTechnician),
+                                            builder: (_) => MainMenu(
+                                              user: anonymousTechnician,
+                                            ),
                                           ),
                                           (route) => false,
                                         );
@@ -645,8 +679,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     },
                                   ),
                                 ),
-                            ],
-                          ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
