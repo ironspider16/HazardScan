@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:kkhazardscan/pages/admin/weekly_report_detail.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
@@ -48,10 +49,35 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     'DANGEROUS',
   ];
 
+  Map<String, dynamic>? weeklyReport;
+  bool isWeeklyReportLoading = true;
+
   @override
   void initState() {
     super.initState();
+    loadWeeklyReport();
     loadReports();
+  }
+
+  Future<void> loadWeeklyReport() async {
+    setState(() => isWeeklyReportLoading = true);
+    try {
+      // Format the current date to match the YYYY-MM-DD structure used in the database
+      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+
+      final response = await supabase
+          .from('weekly_reports')
+          .select()
+          .eq('end_date', todayStr)
+          .maybeSingle();
+
+      setState(() {
+        weeklyReport = response;
+        isWeeklyReportLoading = false;
+      });
+    } catch (e) {
+      setState(() => isWeeklyReportLoading = false);
+    }
   }
 
   Future<void> loadReports() async {
@@ -553,9 +579,90 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
               ),
               const SizedBox(height: AppPadding.medium),
               RiskLeaderboardWidget(leaderboardData: leaderboard),
+              const SizedBox(height: AppPadding.medium),
+              _buildWeeklyReportSection(),
+              const SizedBox(height: AppPadding.medium),
             ],
           ),
         ),
+      ),
+    );
+  }
+  
+
+  Widget _buildWeeklyReportSection() {
+    if (isWeeklyReportLoading) {
+      return _buildChartContainer(
+        const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (weeklyReport == null) {
+      return _buildChartContainer(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Weekly Safety Report",
+              style: AppTypography.Bluesubheading,
+            ),
+            const SizedBox(height: AppPadding.tight),
+            Text(
+              "No management report has been generated for today yet.",
+              style: AppTypography.body.copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final content = weeklyReport!['report_content'] as String? ?? '';
+    final startDate = weeklyReport!['start_date'] as String? ?? '';
+    final endDate = weeklyReport!['end_date'] as String? ?? '';
+
+    return _buildChartContainer(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Weekly Safety Report",
+                style: AppTypography.Bluesubheading,
+              ),
+              Text(
+                "$startDate to $endDate",
+                style: AppTypography.body.copyWith(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppPadding.medium),
+          Text(
+            content.length > 180 ? '${content.substring(0, 180)}...' : content,
+            style: AppTypography.body,
+          ),
+          const SizedBox(height: AppPadding.medium),
+          MenuButton(
+            label: "View Full Report",
+            isPrimary: true,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => WeeklyReportDetailScreen(
+                    content: content,
+                    startDate: startDate,
+                    endDate: endDate,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
