@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
+import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../design/style_constant.dart';
 
@@ -318,7 +319,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
                           ),
                         ),
                         child: Text(
-                          (safetyVar['Overall Status'] == "PARTIALLY COMPLIANT" ? "PARTIAL" : (safetyVar["Overall Status"] ?? "UNKNOWN"))
+                          (safetyVar['Overall Status'] == "PARTIALLY COMPLIANT"
+                                  ? "PARTIAL"
+                                  : (safetyVar["Overall Status"] ?? "UNKNOWN"))
                               .toString()
                               .toUpperCase(),
                           style: TextStyle(
@@ -753,69 +756,50 @@ class _ReportsListPageState extends State<ReportsListPage> {
     final filteredData = _filteredReports;
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
+      appBar: UniversalAppBar(
+        title: "All Reports",
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.swap_vert_rounded, color: Colors.black),
+            tooltip: sortAscending
+                ? 'Showing Oldest First'
+                : 'Showing Newest First',
+            onPressed: () {
+              setState(() {
+                sortAscending = !sortAscending;
+              });
+              loadReports();
+            },
+          ),
+
+          IconButton(
+            icon: Icon(
+              Icons.filter_list_alt,
+              color: isFiltering ? AppColors.primaryBlue : Colors.black,
+            ),
+            onPressed: _showFilterDialog,
+          ),
+
+          if (isFiltering)
+            IconButton(
+              icon: const Icon(Icons.clear, color: Colors.red),
+              onPressed: () {
+                setState(() {
+                  selectedRange = null;
+                  selectedCategory = null;
+                  selectedTitle = null;
+                  selectedComplianceLevel = null;
+                });
+                loadReports();
+              },
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppPadding.page),
           child: Column(
             children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Icon(
-                      Icons.arrow_back,
-                      size: 31,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'All Reports',
-                        style: AppTypography.Bluesubheading,
-                      ),
-                    ),
-                  ),
-
-                  IconButton(
-                    icon: const Icon(
-                      Icons.swap_vert_rounded,
-                      color: Colors.black,
-                    ),
-                    tooltip: sortAscending
-                        ? 'Showing Oldest First'
-                        : 'Showing Newest First',
-                    onPressed: () {
-                      setState(() {
-                        sortAscending = !sortAscending;
-                      });
-                      loadReports();
-                    },
-                  ),
-
-                  IconButton(
-                    icon: Icon(
-                      Icons.filter_list_alt,
-                      color: isFiltering ? AppColors.primaryBlue : Colors.black,
-                    ),
-                    onPressed: _showFilterDialog,
-                  ),
-
-                  if (isFiltering)
-                    IconButton(
-                      icon: const Icon(Icons.clear, color: Colors.red),
-                      onPressed: () {
-                        setState(() {
-                          selectedRange = null;
-                          selectedCategory = null;
-                          selectedTitle = null;
-                          selectedComplianceLevel = null;
-                        });
-                        loadReports();
-                      },
-                    ),
-                ],
-              ),
               const SizedBox(height: AppPadding.tight),
               AppTextfield(
                 label: "reports",
@@ -840,6 +824,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                       )
                     : null,
               ),
+
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator())

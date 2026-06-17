@@ -1,4 +1,5 @@
 import 'package:kkhazardscan/pages/technician_swp_page.dart';
+import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 import '../../widgets/swp_category_card.dart';
 import '../../widgets/Menu_button.dart';
 import '../../Design/style_constant.dart';
@@ -72,19 +73,7 @@ class _TechnicianSelectSwpState extends State<TechnicianSelectSwp> {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
-      appBar: AppBar(
-        backgroundColor: AppColors.backgroundWhite,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          "Select Work Activity",
-          style: AppTypography.Blacksubheading,
-        ),
-        centerTitle: true,
-      ),
+      appBar: UniversalAppBar(title: "Select Work Activity"),
       body: SafeArea(
         child: Column(
           children: [

@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/main_menu.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
+import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
@@ -778,7 +779,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK': category == "Work At Height" ? globalWahSafetyForeignKey : null,
+          'WAH_safetyVariables_FK': category == "Work At Height"
+              ? globalWahSafetyForeignKey
+              : null,
         });
 
         // Trigger edge function email process
@@ -918,17 +921,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     return SelectionArea(
       child: Scaffold(
         backgroundColor: AppColors.backgroundWhite,
-        appBar: AppBar(
-          title: Text(
-            widget.task != null
-                ? "Task SWPs: ${widget.task!['workorder_id']}"
-                : "Activity Checklists",
-            style: AppTypography.Bluesubheading,
-          ),
-          foregroundColor: AppColors.textMain,
-          backgroundColor: AppColors.backgroundWhite,
-          elevation: 0,
-        ),
+        appBar: UniversalAppBar(title: "Activity Checklists"),
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
@@ -949,7 +942,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                       itemCount: widget.selectedCategories.length,
                       itemBuilder: (context, index) {
                         final category = widget.selectedCategories[index];
-      
+
                         // FIX: Derive local variables from category so they are defined in this scope
                         final int? currentSelectedId =
                             selectedSubCategories[category];
@@ -957,7 +950,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                             allTemplates
                                 .where((t) => t['category'] == category)
                                 .toList();
-      
+
                         return Card(
                           color: AppColors.primaryTint,
                           margin: const EdgeInsets.only(
@@ -973,7 +966,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                           child: ExpansionTile(
                             maintainState: true,
                             initiallyExpanded: true,
-                            backgroundColor: AppColors.primaryTint.withAlpha(10),
+                            backgroundColor: AppColors.primaryTint.withAlpha(
+                              10,
+                            ),
                             title: Text(category, style: AppTypography.body),
                             children: [
                               Padding(
@@ -1002,7 +997,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                   }).toList(),
                                   onChanged: (newValue) {
                                     setState(() {
-                                      selectedSubCategories[category] = newValue;
+                                      selectedSubCategories[category] =
+                                          newValue;
                                       if (newValue != null) {
                                         _savedPtwNumbers.putIfAbsent(
                                           newValue,
@@ -1035,14 +1031,18 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     templateId: currentSelectedId,
                                     categoryName: category,
                                     initialPtw:
-                                        _savedPtwNumbers[currentSelectedId] ?? "",
+                                        _savedPtwNumbers[currentSelectedId] ??
+                                        "",
                                     initialAbove3m:
-                                        _savedAbove3m[currentSelectedId] ?? false,
+                                        _savedAbove3m[currentSelectedId] ??
+                                        false,
                                     initialCheckedItems:
-                                        _savedChecklists[currentSelectedId] ?? [],
+                                        _savedChecklists[currentSelectedId] ??
+                                        [],
                                     onPtwChanged: (isAbove3m, ptw) {
                                       setState(() {
-                                        _savedPtwNumbers[currentSelectedId] = ptw;
+                                        _savedPtwNumbers[currentSelectedId] =
+                                            ptw;
                                         _savedAbove3m[currentSelectedId] =
                                             isAbove3m;
                                       });
@@ -1073,7 +1073,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         );
                       },
                     ),
-      
+
                     // Global Image Analysis Block
                     Padding(
                       padding: const EdgeInsets.symmetric(
@@ -1134,13 +1134,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                               child: CircularProgressIndicator(
                                                 strokeWidth: 2,
                                                 valueColor:
-                                                    AlwaysStoppedAnimation<Color>(
-                                                      Colors.white,
-                                                    ),
+                                                    AlwaysStoppedAnimation<
+                                                      Color
+                                                    >(Colors.white),
                                               ),
                                             )
                                           : null,
-                                      icon: _isAnalyzing ? null : Icons.analytics,
+                                      icon: _isAnalyzing
+                                          ? null
+                                          : Icons.analytics,
                                     ),
                                   ),
                                 ],
@@ -1207,7 +1209,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                                     if (_globalImageBytes
                                                         .isEmpty) {
                                                       _globalAiData = null;
-                                                      _globalYoloDetections = [];
+                                                      _globalYoloDetections =
+                                                          [];
                                                     }
                                                   });
                                                 },
@@ -1215,10 +1218,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                                   padding: const EdgeInsets.all(
                                                     3,
                                                   ),
-                                                  decoration: const BoxDecoration(
-                                                    color: Colors.redAccent,
-                                                    shape: BoxShape.circle,
-                                                  ),
+                                                  decoration:
+                                                      const BoxDecoration(
+                                                        color: Colors.redAccent,
+                                                        shape: BoxShape.circle,
+                                                      ),
                                                   child: const Icon(
                                                     Icons.close_rounded,
                                                     size: 12,
@@ -1244,7 +1248,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         ),
                       ),
                     ),
-      
+
                     // 3. Final Continue Button Block
                     Padding(
                       padding: const EdgeInsets.all(AppPadding.page),
