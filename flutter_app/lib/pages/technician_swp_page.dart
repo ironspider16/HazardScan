@@ -17,7 +17,6 @@ import 'dart:ui';
 import 'package:kkhazardscan/widgets/safety_status_widget.dart'; // adjust pat
 import 'package:printing/printing.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:http/http.dart' as http;
 import 'package:kkhazardscan/yolo/yolo_service.dart';
 import 'package:universal_html/html.dart' as html;
 
@@ -43,17 +42,20 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   Map<String, int?> selectedSubCategories = {};
   bool isLoading = true;
 
+  List<String> _fetchedDesignations = [];
+  List<String> _fetchedLocations = [];
+  List<String> _fetchedDepartments = [];
+
   final Map<int, String> _savedPtwNumbers = {};
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
   final Map<int, bool> _checklistCompletionStates = {};
 
   // --- NEW GLOBAL STATE VARIABLES ---
-  List<Uint8List> _globalImageBytes =
+  final List<Uint8List> _globalImageBytes =
       []; // Stores raw bytes of all captured images for analysis and reporting
   Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
-  List<dynamic> _globalYoloDetections = [];
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
@@ -63,12 +65,50 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   void initState() {
     super.initState();
     _fetchSubCategories();
+    _fetchDropdownOptions();
   }
 
   @override
   void dispose() {
     _globalDetailsCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchDropdownOptions() async {
+    try {
+      // Assumes tables named 'designations', 'locations', and 'departments' exist
+      // with a text column called 'name'
+      final designationResponse = await supabase
+          .from('designations')
+          .select('designation')
+          .order('designation');
+      final locationResponse = await supabase
+          .from('locations')
+          .select('location')
+          .order('location');
+      final departmentResponse = await supabase
+          .from('departments')
+          .select('department')
+          .order('department');
+
+      setState(() {
+        _fetchedDesignations = List<String>.from(
+          (designationResponse as List).map(
+            (item) => item['designation'].toString(),
+          ),
+        );
+        _fetchedLocations = List<String>.from(
+          (locationResponse as List).map((item) => item['location'].toString()),
+        );
+        _fetchedDepartments = List<String>.from(
+          (departmentResponse as List).map(
+            (item) => item['department'].toString(),
+          ),
+        );
+      });
+    } catch (e) {
+      debugPrint("Error fetching dropdown options from Supabase: $e");
+    }
   }
 
   Future<void> _fetchSubCategories() async {
@@ -143,32 +183,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
         // Reset old AI data states so user is forced to re-analyze the new batch
         _globalAiData = null;
-        _globalYoloDetections = [];
       });
     }
   }
 
-  // --- GALLERY: SELECT MULTIPLE IMAGES AT ONCE ---
-  Future<void> _pickGlobalImagesFromGallery() async {
-    final picker = ImagePicker();
-    // Native multi-image selection screen
-    final List<XFile> pickedFiles = await picker.pickMultiImage();
-
-    if (pickedFiles.isNotEmpty) {
-      setState(() {
-        for (var file in pickedFiles) {
-          // Read bytes asynchronously and add to the list
-          file.readAsBytes().then((bytes) {
-            setState(() {
-              _globalImageBytes.add(bytes);
-            });
-          });
-        }
-        _globalAiData = null;
-        _globalYoloDetections = [];
-      });
-    }
-  }
 
   Future<void> _analyzeGlobalImage() async {
     dynamic decodedData;
@@ -197,7 +215,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
 
       setState(() {
-        _globalYoloDetections = detections;
         _isSpreaderUnlocked = status;
       });
 
@@ -331,73 +348,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     );
   }
 
-  void _showAiDetailsDialog() {
-    if (_globalAiData == null) return;
-
-    // Helper to format the sections
-    Widget buildSection(String title, Map<String, dynamic>? data) {
-      if (data == null || data.isEmpty) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: AppTypography.body.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.primaryBlue,
-              ),
-            ),
-            Text(
-              "Status: ${data['compliance'] ?? 'N/A'}",
-              style: AppTypography.faintbody.copyWith(color: Colors.black87),
-            ),
-            Text(
-              "Reason: ${data['reasoning'] ?? 'N/A'}",
-              style: AppTypography.faintbody,
-            ),
-            Text(
-              "Advice: ${data['advice'] ?? 'N/A'}",
-              style: AppTypography.faintbody.copyWith(color: Colors.red[800]),
-            ),
-          ],
-        ),
-      );
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          "Safety Analysis Breakdown",
-          style: AppTypography.Bluesubheading,
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildSection("Ladder & Heights", _globalAiData!['ladderHeight']),
-              buildSection("PPE", _globalAiData!['ppe']),
-              buildSection("Buddy System", _globalAiData!['buddySystem']),
-              buildSection("Area Hazards", _globalAiData!['areaHazards']),
-              buildSection(
-                "Site Supervision",
-                _globalAiData!['siteSupervision'],
-              ),
-              buildSection("Major Hazard Installations", _globalAiData!['mhi']),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showErrorDialog(String title, String message) {
     showDialog(
@@ -487,18 +437,90 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 label: "Designation",
                                 controller: desigCtrl,
                                 hint: "e.g. Senior Technician",
+                                suffixIcon: _fetchedDesignations.isNotEmpty
+                                    ? PopupMenuButton<String>(
+                                        icon: const Icon(
+                                          Icons.arrow_drop_down,
+                                          color: Colors.black,
+                                        ),
+                                        onSelected: (String value) {
+                                          desigCtrl.text = value;
+                                        },
+                                        itemBuilder: (BuildContext context) {
+                                          return _fetchedDesignations.map((
+                                            String option,
+                                          ) {
+                                            return PopupMenuItem<String>(
+                                              value: option,
+                                              child: Text(
+                                                option,
+                                                style: AppTypography.body,
+                                              ),
+                                            );
+                                          }).toList();
+                                        },
+                                      )
+                                    : null,
                               ),
                               const SizedBox(height: AppPadding.tight),
                               AppTextfield(
                                 label: "Location",
                                 hint: "Ward-2B",
                                 controller: locationCtrl,
+                                suffixIcon: _fetchedLocations.isNotEmpty
+                                    ? PopupMenuButton<String>(
+                                        icon: const Icon(
+                                          Icons.arrow_drop_down,
+                                          color: Colors.black,
+                                        ),
+                                        onSelected: (String value) {
+                                          locationCtrl.text = value;
+                                        },
+                                        itemBuilder: (BuildContext context) {
+                                          return _fetchedLocations.map((
+                                            String option,
+                                          ) {
+                                            return PopupMenuItem<String>(
+                                              value: option,
+                                              child: Text(
+                                                option,
+                                                style: AppTypography.body,
+                                              ),
+                                            );
+                                          }).toList();
+                                        },
+                                      )
+                                    : null,
                               ),
                               const SizedBox(height: AppPadding.tight),
                               AppTextfield(
                                 label: "Department",
                                 controller: deptCtrl,
                                 hint: "e.g. Facilities Management",
+                                suffixIcon: _fetchedDepartments.isNotEmpty
+                                    ? PopupMenuButton<String>(
+                                        icon: const Icon(
+                                          Icons.arrow_drop_down,
+                                          color: Colors.black,
+                                        ),
+                                        onSelected: (String value) {
+                                          deptCtrl.text = value;
+                                        },
+                                        itemBuilder: (BuildContext context) {
+                                          return _fetchedDepartments.map((
+                                            String option,
+                                          ) {
+                                            return PopupMenuItem<String>(
+                                              value: option,
+                                              child: Text(
+                                                option,
+                                                style: AppTypography.body,
+                                              ),
+                                            );
+                                          }).toList();
+                                        },
+                                      )
+                                    : null,
                               ),
                               const SizedBox(height: AppPadding.tight),
                               Text(
@@ -861,11 +883,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double fieldWidth = (MediaQuery.of(context).size.width * 0.85).clamp(
-      300.0,
-      450.0,
-    );
-
     final activeSubCategoryIds = selectedSubCategories.values
         .where((id) => id != null)
         .cast<int>()
@@ -1081,6 +1098,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                         horizontal: AppPadding.tight,
                       ),
                       child: Card(
+                        margin: EdgeInsets.zero,
                         color: AppColors.backgroundWhite,
                         elevation: 1,
                         shape: RoundedRectangleBorder(
@@ -1088,7 +1106,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                             AppDimensions.radiusMedium,
                           ),
                           side: BorderSide(
-                            color: AppColors.borderGrey.withAlpha(50),
+                            color: AppColors.borderGrey,
                           ),
                         ),
                         child: Padding(
@@ -1209,8 +1227,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                                     if (_globalImageBytes
                                                         .isEmpty) {
                                                       _globalAiData = null;
-                                                      _globalYoloDetections =
-                                                          [];
                                                     }
                                                   });
                                                 },
@@ -1251,18 +1267,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
                     // 3. Final Continue Button Block
                     Padding(
-                      padding: const EdgeInsets.all(AppPadding.page),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppPadding.tight,
+                        vertical: AppPadding.tight,
+                      ),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          SizedBox(
-                            width: fieldWidth,
-                            child: const Divider(
-                              height: AppPadding.large,
-                              thickness: 1,
-                              color: AppColors.borderGrey,
-                            ),
-                          ),
-                          const SizedBox(height: AppPadding.tight),
                           if (errorMessage != null && !canSubmitReport)
                             Padding(
                               padding: const EdgeInsets.only(bottom: 10),
@@ -1275,7 +1286,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               ),
                             ),
                           SizedBox(
-                            width: fieldWidth,
+                            width: double.infinity,
                             child: MenuButton(
                               label: "Continue",
                               onTap: canSubmitReport
@@ -1319,7 +1330,7 @@ class ReportPreviewScreen extends StatelessWidget {
           style: const TextStyle(
             fontSize: 14,
             fontFamily: 'Courier',
-            color: Colors.black87,
+            // color: Colors.black87
           ),
         ),
       ),

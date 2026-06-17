@@ -6,7 +6,6 @@ import 'Design/style_constant.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:kkhazardscan/yolo/yolo_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'config/language_manager.dart';
 void main() async {
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
