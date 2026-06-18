@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
+import 'package:kkhazardscan/pages/admin/manage_submission_details_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
@@ -161,6 +162,16 @@ class MainMenu extends StatelessWidget {
                           );
                         },
                       ),
+                      const SizedBox(height: AppPadding.medium),
+                      MenuButton(label: "Manage Submission details",
+                      onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ManageSubmissionDetailsPage(),
+                            ),
+                          );
+                        },)
                     ] else ...[
                       MenuButton(
                         label: "Submit Safety Report",
