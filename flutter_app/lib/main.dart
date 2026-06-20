@@ -147,19 +147,6 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       bool hasValidToken = false;
-
-      if (queryParameters.containsKey('auth')) {
-        final String? token = queryParameters['auth'];
-        if (token ==
-            'kkh_secure_gateway_9f8e7d6c5b4a3f2e1_tech_access_production_2026') {
-          await prefs.setBool('is_registered_technician_device', true);
-          hasValidToken = true;
-        }
-      }
-
-      bool isRegistered =
-          prefs.getBool('is_registered_technician_device') ?? false;
-
       const String techEmail = String.fromEnvironment(
         'TECH_EMAIL',
         defaultValue: '',
@@ -168,6 +155,23 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
         'TECH_PASSWORD',
         defaultValue: '',
       );
+
+      const String gatewayToken = String.fromEnvironment(
+        'GATEWAY_TOKEN',
+        defaultValue: '',
+      );
+
+      if (queryParameters.containsKey('auth')) {
+        final String? token = queryParameters['auth'];
+        if (gatewayToken.isNotEmpty &&
+            token == gatewayToken) {
+          await prefs.setBool('is_registered_technician_device', true);
+          hasValidToken = true;
+        }
+      }
+
+      bool isRegistered =
+          prefs.getBool('is_registered_technician_device') ?? false;
 
       // Catch configuration oversights immediately
       if (isRegistered && (techEmail.isEmpty || techPassword.isEmpty)) {
