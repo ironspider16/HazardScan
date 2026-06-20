@@ -10,6 +10,7 @@ import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import 'admin/reports_statistics_page.dart';
 import 'admin/reports_list_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -18,7 +19,14 @@ class MainMenu extends StatelessWidget {
 
   bool get isAdmin => user.role == UserRole.admin;
 
-  void _logout(BuildContext context) {
+  Future <void> _logout(BuildContext context) async {
+    try{
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove('is_registered_technician_device');
+    } catch (e) {
+      // Handle error
+    }
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
