@@ -30,7 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-
   Future<void> _loginAsAdmin() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -40,21 +39,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordCtrl.text.trim();
 
     try {
-      final data = await supabase
-          .from('accounts')
-          .select()
-          .eq('email', email)
-          .eq('password', password)
-          .maybeSingle();
+      final AuthResponse response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
 
       if (!mounted) return;
       setState(() => _loading_forAdmin = false);
 
-      if (data != null) {
+      if (response.user != null) {
         final AdminUser = AppUser(
-          id: data['id'] as int,
-          email: data['email'].toString(),
-          password: data['password'].toString(),
+          id: 1,
+          email: response.user!.email!.toString(),
+          password: '',
           role: UserRole.admin,
         );
 
@@ -62,11 +59,13 @@ class _LoginScreenState extends State<LoginScreen> {
           context,
           MaterialPageRoute(builder: (_) => MainMenu(user: AdminUser)),
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Invalid email or password')),
-        );
       }
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      setState(() => _loading_forAdmin = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message), backgroundColor: Colors.red),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading_forAdmin = false);
@@ -117,7 +116,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: AppPadding.medium),
 
-                  // 🔥 TITLE (Using Typography Class)
                   Text("HazardScan", style: AppTypography.Blueheading),
 
                   const SizedBox(height: AppPadding.tight),

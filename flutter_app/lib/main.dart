@@ -13,12 +13,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() async {
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url:
-        'https://bpknkumrsvuhkobxsvom.supabase.co', // replace with your Supabase URL
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwa25rdW1yc3Z1aGtvYnhzdm9tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0MTg4OTYsImV4cCI6MjA5Mjk5NDg5Nn0.-Vyj7QvPKAkNcnlPC6OjE_KugMTPgLQyDh2o-0thdNM', // replace with your Supabase anon key
+  const String supabaseUrl = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
   );
+  const String supabaseAnonKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
+
+  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
+    throw Exception(
+      'Missing Supabase credentials. Ensure --dart-define-from-file=secrets.json is appended.',
+    );
+  }
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   YoloService().coldStart(); // Call the cold start method for Backend Cloud API
   runApp(const MyApp());
 }
@@ -124,7 +133,7 @@ class InitialAuthGateway extends StatefulWidget {
 
 class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   bool _isResolvingRoute = true;
-  bool _deviceIsAuthorizedTech = false;
+  AppUser? _authenticatedUser;
 
   @override
   void initState() {
@@ -133,31 +142,83 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   }
 
   Future<void> _evaluateDeviceAuthorization() async {
+    final Uri currentUri = Uri.base;
+    final Map<String, String> queryParameters = currentUri.queryParameters;
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
+      bool hasValidToken = false;
 
-      // Step 1: Query browser local storage persistent keys
-      bool isRegistered =
-          prefs.getBool('is_registered_technician_device') ?? false;
-
-      // Step 2: Fallback query matching active address bar variables
-      final Uri currentUri = Uri.base;
-      if (currentUri.queryParameters.containsKey('auth')) {
-        final String? token = currentUri.queryParameters['auth'];
+      if (queryParameters.containsKey('auth')) {
+        final String? token = queryParameters['auth'];
         if (token ==
             'kkh_secure_gateway_9f8e7d6c5b4a3f2e1_tech_access_production_2026') {
           await prefs.setBool('is_registered_technician_device', true);
-          isRegistered = true;
+          hasValidToken = true;
+        }
+      }
+
+      bool isRegistered =
+          prefs.getBool('is_registered_technician_device') ?? false;
+
+      const String techEmail = String.fromEnvironment(
+        'TECH_EMAIL',
+        defaultValue: '',
+      );
+      const String techPassword = String.fromEnvironment(
+        'TECH_PASSWORD',
+        defaultValue: '',
+      );
+
+      // Catch configuration oversights immediately
+      if (isRegistered && (techEmail.isEmpty || techPassword.isEmpty)) {
+        debugPrint(
+          'CRITICAL: App recognizes technician device, but credentials are missing from environment.',
+        );
+      }
+
+      if (isRegistered && techEmail.isNotEmpty && techPassword.isNotEmpty) {
+        final Session? currentSession =
+            Supabase.instance.client.auth.currentSession;
+
+        // If an admin session is currently active but a technician token was passed, clear it
+        if (currentSession != null &&
+            currentSession.user.email != techEmail &&
+            hasValidToken) {
+          await Supabase.instance.client.auth.signOut();
+        }
+
+        // Authenticate Technician implicitly in the background
+        final AuthResponse res = await Supabase.instance.client.auth
+            .signInWithPassword(email: techEmail, password: techPassword);
+
+        if (res.user != null) {
+          _authenticatedUser = AppUser(
+            id: 0,
+            email: res.user!.email!,
+            password: '',
+            role: UserRole.user,
+          );
+        }
+      } else {
+        // Evaluate persistent standalone sessions for administrators
+        final Session? currentSession =
+            Supabase.instance.client.auth.currentSession;
+        if (currentSession != null &&
+            (techEmail.isEmpty || currentSession.user.email != techEmail)) {
+          _authenticatedUser = AppUser(
+            id: 1,
+            email: currentSession.user.email!,
+            password: '',
+            role: UserRole.admin,
+          );
         }
       }
 
       if (mounted) {
-        setState(() {
-          _deviceIsAuthorizedTech = isRegistered;
-          _isResolvingRoute = false;
-        });
+        setState(() => _isResolvingRoute = false);
       }
     } catch (e) {
+      debugPrint('Authorization error: $e');
       if (mounted) {
         setState(() => _isResolvingRoute = false);
       }
@@ -166,7 +227,6 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
 
   @override
   Widget build(BuildContext context) {
-    // Show static layout element during internal asynchronous storage operations
     if (_isResolvingRoute) {
       return const Scaffold(
         body: Center(
@@ -177,16 +237,8 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
       );
     }
 
-    // Direct routing split paths based on evaluated device authorization context
-    if (_deviceIsAuthorizedTech) {
-      return MainMenu(
-        user: AppUser(
-          id: 0,
-          email: "technician@example.com",
-          password: '',
-          role: UserRole.user,
-        ),
-      );
+    if (_authenticatedUser != null) {
+      return MainMenu(user: _authenticatedUser!);
     }
 
     return const LoginScreen();
