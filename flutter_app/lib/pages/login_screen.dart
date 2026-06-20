@@ -30,19 +30,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _loginAsTechnician() {
-    final anonymousTechnician = AppUser(
-      id: 0,
-      email: "technician@example.com",
-      password: '',
-      role: UserRole.user,
-    );
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => MainMenu(user: anonymousTechnician)),
-    );
-  }
 
   Future<void> _loginAsAdmin() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
