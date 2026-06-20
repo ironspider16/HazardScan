@@ -193,25 +193,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: AppPadding.tight / 2),
-                  SizedBox(
-                    width: fieldWidth,
-                    child: Divider(
-                      height: AppPadding.large,
-                      thickness: 2,
-                      color: Color(0xFFE0E0E0),
-                    ),
-                  ),
-
-                  const SizedBox(height: AppPadding.tight / 2),
-                  SizedBox(
-                    width: fieldWidth,
-                    child: MenuButton(
-                      label: "Continue as Technician",
-                      onTap: _loginAsTechnician,
-                      isPrimary: true,
-                      icon: Icons.person_3_outlined,
-                    ),
-                  ),
                 ],
               ),
             ),
