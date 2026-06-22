@@ -122,11 +122,15 @@ class MyApp extends StatelessWidget {
           ),
           home: const InitialAuthGateway(),
           onGenerateRoute: (settings) {
-            if (settings.name != null && settings.name!.startsWith('/?auth=')) {
-              return MaterialPageRoute(
-                builder: (context) => const InitialAuthGateway(),
-                settings: settings, // Preserves the URL data
-              );
+            if (settings.name != null) {
+              final uri = Uri.parse(settings.name!);
+              if (uri.queryParameters.containsKey('auth')) {
+                final token = uri.queryParameters['auth'];
+                return MaterialPageRoute(
+                  builder: (context) => InitialAuthGateway(authToken: token),
+                  settings: settings,
+                );
+              }
             }
             return null;
           },
@@ -137,7 +141,9 @@ class MyApp extends StatelessWidget {
 }
 
 class InitialAuthGateway extends StatefulWidget {
-  const InitialAuthGateway({super.key});
+  final String? authToken;
+
+  const InitialAuthGateway({super.key, this.authToken});
 
   @override
   State<InitialAuthGateway> createState() => _InitialAuthGatewayState();
@@ -156,13 +162,11 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   }
 
   Future<void> _evaluateDeviceAuthorization() async {
-    final Uri currentUri = Uri.base;
-    final Map<String, String> queryParameters = currentUri.queryParameters;
-
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       bool hasValidToken = false;
-      final String? urlToken = queryParameters['auth'];
+      final String? urlToken =
+          widget.authToken ?? Uri.base.queryParameters['auth'];
 
       // 1. Explicit Validation via URL Parameters
       if (urlToken != null && urlToken.isNotEmpty) {
