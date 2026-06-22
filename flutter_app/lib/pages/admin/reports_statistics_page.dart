@@ -730,8 +730,11 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            direction: Axis.horizontal,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppPadding.medium,
+            runSpacing: AppPadding.tight,
             children: [
               const Text(
                 "Weekly Safety Report",

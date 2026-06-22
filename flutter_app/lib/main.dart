@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:kkhazardscan/config/language_manager.dart';
 import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -10,17 +12,18 @@ import 'package:kkhazardscan/yolo/yolo_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+const String supabaseUrl = String.fromEnvironment(
+  'SUPABASE_URL',
+  defaultValue: '',
+);
+const String supabaseAnonKey = String.fromEnvironment(
+  'SUPABASE_ANON_KEY',
+  defaultValue: '',
+);
+
 void main() async {
   usePathUrlStrategy();
   WidgetsFlutterBinding.ensureInitialized();
-  const String supabaseUrl = String.fromEnvironment(
-    'SUPABASE_URL',
-    defaultValue: '',
-  );
-  const String supabaseAnonKey = String.fromEnvironment(
-    'SUPABASE_ANON_KEY',
-    defaultValue: '',
-  );
 
   if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
     throw Exception(
@@ -118,6 +121,15 @@ class MyApp extends StatelessWidget {
             ),
           ),
           home: const InitialAuthGateway(),
+          onGenerateRoute: (settings) {
+            if (settings.name != null && settings.name!.startsWith('/?auth=')) {
+              return MaterialPageRoute(
+                builder: (context) => const InitialAuthGateway(),
+                settings: settings, // Preserves the URL data
+              );
+            }
+            return null;
+          },
         );
       },
     );
@@ -134,6 +146,8 @@ class InitialAuthGateway extends StatefulWidget {
 class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   bool _isResolvingRoute = true;
   AppUser? _authenticatedUser;
+  String techEmail = '';
+  String techPassword = '';
 
   @override
   void initState() {
@@ -144,71 +158,100 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   Future<void> _evaluateDeviceAuthorization() async {
     final Uri currentUri = Uri.base;
     final Map<String, String> queryParameters = currentUri.queryParameters;
+
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       bool hasValidToken = false;
-      const String techEmail = String.fromEnvironment(
-        'TECH_EMAIL',
-        defaultValue: '',
-      );
-      const String techPassword = String.fromEnvironment(
-        'TECH_PASSWORD',
-        defaultValue: '',
-      );
+      final String? urlToken = queryParameters['auth'];
 
-      const String gatewayToken = String.fromEnvironment(
-        'GATEWAY_TOKEN',
-        defaultValue: '',
-      );
+      // 1. Explicit Validation via URL Parameters
+      if (urlToken != null && urlToken.isNotEmpty) {
+        final response = await http.post(
+          Uri.parse(
+            'https://bpknkumrsvuhkobxsvom.supabase.co/functions/v1/technician-gateway-token-check',
+          ),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $supabaseAnonKey',
+          },
+          body: jsonEncode({'token': urlToken}),
+        );
 
-      if (queryParameters.containsKey('auth')) {
-        final String? token = queryParameters['auth'];
-        if (gatewayToken.isNotEmpty &&
-            token == gatewayToken) {
-          await prefs.setBool('is_registered_technician_device', true);
-          hasValidToken = true;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          techEmail = data['tech_email'] ?? '';
+          techPassword = data['tech_password'] ?? '';
+
+          if (techEmail.isNotEmpty && techPassword.isNotEmpty) {
+            // Persist credentials locally so future visits do not require the URL token
+            await prefs.setBool('is_registered_technician_device', true);
+            await prefs.setString('saved_tech_email', techEmail);
+            await prefs.setString('saved_tech_password', techPassword);
+            hasValidToken = true;
+          }
+        } else {
+          debugPrint(
+            'Token verification rejected by server. Status: ${response.statusCode}',
+          );
+        }
+      }
+      // 2. Fallback to Local Storage Caching
+      else {
+        final bool isRegistered =
+            prefs.getBool('is_registered_technician_device') ?? false;
+        if (isRegistered) {
+          techEmail = prefs.getString('saved_tech_email') ?? '';
+          techPassword = prefs.getString('saved_tech_password') ?? '';
         }
       }
 
-      bool isRegistered =
+      final bool isRegisteredDevice =
           prefs.getBool('is_registered_technician_device') ?? false;
 
-      // Catch configuration oversights immediately
-      if (isRegistered && (techEmail.isEmpty || techPassword.isEmpty)) {
-        debugPrint(
-          'CRITICAL: App recognizes technician device, but credentials are missing from environment.',
-        );
-      }
-
-      if (isRegistered && techEmail.isNotEmpty && techPassword.isNotEmpty) {
+      // 3. Execution of Background Authentication Pipeline
+      if (isRegisteredDevice &&
+          techEmail.isNotEmpty &&
+          techPassword.isNotEmpty) {
         final Session? currentSession =
             Supabase.instance.client.auth.currentSession;
 
-        // If an admin session is currently active but a technician token was passed, clear it
+        // Clear out any stale administrator sessions if a fresh gateway token overrides it
         if (currentSession != null &&
             currentSession.user.email != techEmail &&
             hasValidToken) {
           await Supabase.instance.client.auth.signOut();
         }
 
-        // Authenticate Technician implicitly in the background
-        final AuthResponse res = await Supabase.instance.client.auth
-            .signInWithPassword(email: techEmail, password: techPassword);
+        // Re-read active session context post-signout validation
+        final Session? activeSession =
+            Supabase.instance.client.auth.currentSession;
 
-        if (res.user != null) {
+        if (activeSession == null || activeSession.user.email != techEmail) {
+          final AuthResponse res = await Supabase.instance.client.auth
+              .signInWithPassword(email: techEmail, password: techPassword);
+
+          if (res.user != null) {
+            _authenticatedUser = AppUser(
+              id: 0,
+              email: res.user!.email!,
+              password: '',
+              role: UserRole.user,
+            );
+          }
+        } else {
+          // Clean transition if session is already valid
           _authenticatedUser = AppUser(
             id: 0,
-            email: res.user!.email!,
+            email: activeSession.user.email!,
             password: '',
             role: UserRole.user,
           );
         }
       } else {
-        // Evaluate persistent standalone sessions for administrators
+        // Standalone authorization persistence evaluation for administrators
         final Session? currentSession =
             Supabase.instance.client.auth.currentSession;
-        if (currentSession != null &&
-            (techEmail.isEmpty || currentSession.user.email != techEmail)) {
+        if (currentSession != null) {
           _authenticatedUser = AppUser(
             id: 1,
             email: currentSession.user.email!,
@@ -217,12 +260,9 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
           );
         }
       }
-
-      if (mounted) {
-        setState(() => _isResolvingRoute = false);
-      }
     } catch (e) {
-      debugPrint('Authorization error: $e');
+      debugPrint('Authorization resolution routine error: $e');
+    } finally {
       if (mounted) {
         setState(() => _isResolvingRoute = false);
       }
