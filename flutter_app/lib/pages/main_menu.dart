@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:kkhazardscan/pages/admin/manage_accounts_page.dart';
+import 'package:kkhazardscan/main.dart';
 import 'package:kkhazardscan/pages/admin/manage_submission_details_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
+import 'package:kkhazardscan/supabase_client.dart';
 import '../config/app_users.dart';
 import '../pages/login_screen.dart';
 import '../config/language_manager.dart';
@@ -23,15 +24,19 @@ class MainMenu extends StatelessWidget {
     try{
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove('is_registered_technician_device');
+      await prefs.remove('saved_tech_email');
+      await prefs.remove('saved_tech_password');
+      await Supabase.instance.client.auth.signOut();
     } catch (e) {
-      // Handle error
+      // Handle logout error if necessary
+      debugPrint("Logout error: $e");
     }
-
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-      (_) => false,
-    );
+    if (context.mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const InitialAuthGateway()),
+        (route) => false,
+      );
+    }
   }
 
   @override
