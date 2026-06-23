@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter/foundation.dart';
 class LlmService {
   static Future<String> generateWeeklyReport({
     required int totalInspections,
@@ -34,7 +34,7 @@ class LlmService {
 
       return "No report generated. Response: ${response.data}";
     } catch (e) {
-      print("Error generating report: $e");
+      debugPrint("Error generating report: $e");
       return "Error generating report: $e";
     }
   }

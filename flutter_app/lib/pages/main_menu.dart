@@ -5,7 +5,6 @@ import 'package:kkhazardscan/pages/admin/manage_submission_details_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
 import 'package:kkhazardscan/supabase_client.dart';
 import '../config/app_users.dart';
-import '../pages/login_screen.dart';
 import '../config/language_manager.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
@@ -163,19 +162,7 @@ class MainMenu extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: AppPadding.medium),
-
-                      MenuButton(
-                        label: "Manage Worker Accounts",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ManageAccountsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppPadding.medium),
+                      
                       MenuButton(label: "Manage Submission details",
                       onTap: () {
                           Navigator.push(
