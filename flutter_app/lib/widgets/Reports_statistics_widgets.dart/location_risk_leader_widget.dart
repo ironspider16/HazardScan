@@ -4,54 +4,41 @@ import 'package:kkhazardscan/Design/style_constant.dart';
 class LocationRiskLeaderboardWidget extends StatelessWidget {
   final Map<String, double> locationDangerAverages;
 
-  const LocationRiskLeaderboardWidget({super.key, required this.locationDangerAverages});
+  const LocationRiskLeaderboardWidget({
+    super.key,
+    required this.locationDangerAverages,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Location Risk Leaderboard',
-                style: AppTypography.Bluesubheading,
-              ),
-              IconButton(
-                icon: const Icon(Icons.help_outline),
-                iconSize: 20,
-                color: AppColors.primaryBlue,
-                tooltip: 'Explain',
-                onPressed: () => _showRiskExplanation(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppPadding.medium),
-          ...locationDangerAverages.entries.map((entry) {
-            return _buildRiskLeaderboardItem(
-              entry.key,
-              entry.value
-            );
-          }),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Location Risk Leaderboard',
+              style: AppTypography.Bluesubheading,
+            ),
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              iconSize: 20,
+              color: AppColors.primaryBlue,
+              tooltip: 'Explain',
+              onPressed: () => _showRiskExplanation(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppPadding.medium),
+        ...locationDangerAverages.entries.map((entry) {
+          return _buildRiskLeaderboardItem(entry.key, entry.value);
+        }),
+      ],
     );
   }
 
-  Widget _buildRiskLeaderboardItem(
-    String locationName,
-    double rawScore,
-  ) {
-
-    
+  Widget _buildRiskLeaderboardItem(String locationName, double rawScore) {
     Color statusColor = Colors.green;
     Color backgroundColor = Colors.green.shade50;
 
@@ -129,7 +116,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'This leaderboard tracks cumulative safety risks across all Work At Height audits. Higher scores indicate areas with more frequent or severe safety violations.',
+                  'This leaderboard tracks average safety risks across all Work At Height locations. Higher scores indicate areas with more frequent or severe safety violations.',
                   style: TextStyle(fontSize: 14, color: Colors.black87),
                 ),
                 const SizedBox(height: AppPadding.medium),
@@ -139,7 +126,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: AppPadding.tight),
                 const Text(
-                  '• Raw Score: The total risk points accumulated from all reports.\n• Max Score: Calculated as (Total WAH Reports × 4 points).\n• Risk Percentage: Shows how close a category is to the worst-case scenario (100% risk).',
+                  '• Average score: The sum of risk score divided by total reports for each location.\n• Max Score: 4 points because that is the highest risk level.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.black87,

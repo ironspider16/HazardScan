@@ -8,42 +8,31 @@ class RiskLeaderboardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Risk Leaderboard',
-                style: AppTypography.Bluesubheading,
-              ),
-              IconButton(
-                icon: const Icon(Icons.help_outline),
-                iconSize: 20,
-                color: AppColors.primaryBlue,
-                tooltip: 'Explain',
-                onPressed: () => _showRiskExplanation(context),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppPadding.medium),
-          ...leaderboardData.map((item) {
-            return _buildRiskLeaderboardItem(
-              item["category"],
-              item["score"],
-              item["totalWah"],
-            );
-          }),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Risk Leaderboard', style: AppTypography.Bluesubheading),
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              iconSize: 20,
+              color: AppColors.primaryBlue,
+              tooltip: 'Explain',
+              onPressed: () => _showRiskExplanation(context),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppPadding.medium),
+        ...leaderboardData.map((item) {
+          return _buildRiskLeaderboardItem(
+            item["category"],
+            item["score"],
+            item["totalWah"],
+          );
+        }),
+      ],
     );
   }
 

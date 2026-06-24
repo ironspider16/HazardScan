@@ -320,7 +320,12 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       finalizedAverages[location] = totalScore / count;
     });
 
-    return finalizedAverages;
+    var sortedfinalizedAverages = Map.fromEntries(
+      finalizedAverages.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value)),
+    );
+
+    return sortedfinalizedAverages;
   }
 
   // ==========================================
@@ -539,13 +544,18 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
               const SizedBox(height: AppPadding.medium),
               _buildComplianceDistributionCard(ratioData),
               const SizedBox(height: AppPadding.medium),
-              RiskLeaderboardWidget(leaderboardData: leaderboard),
+              _buildChartContainer(
+                RiskLeaderboardWidget(leaderboardData: leaderboard),
+              ),
               const SizedBox(height: AppPadding.medium),
               _buildWeeklyReportSection(),
               const SizedBox(height: AppPadding.medium),
-              LocationRiskLeaderboardWidget(
-                locationDangerAverages: locationDangerAverages,
+              _buildChartContainer(
+                LocationRiskLeaderboardWidget(
+                  locationDangerAverages: locationDangerAverages,
+                ),
               ),
+              const SizedBox(height: AppPadding.medium),
             ],
           ),
         ),

@@ -57,9 +57,7 @@ class WeeklyReportDetailScreen extends StatelessWidget {
     );
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
-      appBar: UniversalAppBar(
-        title: "Weekly Overview"
-      ),
+      appBar: UniversalAppBar(title: "Weekly Overview"),
       body: Column(
         children: [
           Container(
@@ -71,38 +69,48 @@ class WeeklyReportDetailScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.blue.shade50.withOpacity(0.4),
             ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_month_outlined,
-                  color: Colors.blue.shade800,
-                  size: 20,
-                ),
-                const SizedBox(width: AppPadding.tight),
-                Text(
-                  "Reporting Period:",
-                  style: AppTypography.body.copyWith(
-                    fontWeight: FontWeight.w600,
+
+            child: SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                runSpacing: AppPadding.tight,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_outlined,
+                        color: Colors.blue.shade800,
+                        size: 20,
+                      ),
+                      const SizedBox(width: AppPadding.tight),
+                      Text(
+                        "Reporting Period:",
+                        style: AppTypography.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  "$startDate to $endDate",
-                  style: AppTypography.body.copyWith(
-                    color: Colors.blue.shade900,
-                    fontWeight: FontWeight.bold,
+                  Text(
+                    "$startDate to $endDate",
+                    style: AppTypography.body.copyWith(
+                      color: Colors.blue.shade900,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           Expanded(
             child: Markdown(
               data: content,
               styleSheet: markdownStyle,
-              padding: const EdgeInsets.all(AppPadding.page)
-            )
-          )
+              padding: const EdgeInsets.all(AppPadding.page),
+            ),
+          ),
         ],
       ),
     );
