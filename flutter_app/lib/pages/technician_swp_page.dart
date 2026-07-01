@@ -7,6 +7,7 @@ import 'package:kkhazardscan/pages/main_menu.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:kkhazardscan/pages/edit_report_data_screen.dart';
 import '../design/style_constant.dart';
 import '../widgets/technician_swp_Section.dart';
 import '../widgets/Menu_button.dart';
@@ -155,6 +156,25 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           ),
         );
       }
+    }
+  }
+    Future<void> _openEditReportScreen() async {
+    if (_globalAiData == null) return;
+
+    final updatedData = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditReportDataScreen(initialAiData: _globalAiData!),
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (updatedData != null) {
+      setState(() {
+        _globalAiData = updatedData;
+        _globalPdfBytes = null; // Invalidate any cached PDF so it regenerates with new data
+      });
     }
   }
 
@@ -316,7 +336,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
   // --------------------------------
 
-  void _showImagePreviewDialog() {
+  void _showImagePreviewDialog(Uint8List imageBytes) {
     if (_globalImageBytes.isEmpty)
       return; // Guard against empty list before trying to access .last
     showDialog(
@@ -333,7 +353,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                 // Allows pinching to zoom
                 // .last to show most recently added image
                 child: Image.memory(
-                  _globalImageBytes.last,
+                  imageBytes,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -1190,7 +1210,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                           clipBehavior: Clip.none,
                                           children: [
                                             GestureDetector(
-                                              onTap: _showImagePreviewDialog,
+                                              onTap: () => _showImagePreviewDialog(_globalImageBytes[index]),
                                               child: Container(
                                                 width: 86,
                                                 height: 86,
@@ -1259,6 +1279,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 aiData: _globalAiData,
                                 isSpreaderUnlocked: _isSpreaderUnlocked,
                               ),
+
+                              if (_globalAiData != null)
+                                TextButton.icon(
+                                  onPressed: _openEditReportScreen,
+                                  icon: const Icon(Icons.edit_note, color: Colors.blueAccent),
+                                  label: const Text("Manually Edit Report", style: TextStyle(color: Colors.blueAccent)),
+                                ),
                             ],
                           ),
                         ),
