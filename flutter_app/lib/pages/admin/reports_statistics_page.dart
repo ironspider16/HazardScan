@@ -80,21 +80,62 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   // DATA FETCHING & SERVICES
   // ==========================================
 
+  // Future<void> loadWeeklyReport() async {
+  //   setState(() => isWeeklyReportLoading = true);
+  //   try {
+  //     final todayStr = DateTime.now().toIso8601String().split('T')[0];
+  //     final response = await supabase
+  //         .from('weekly_reports')
+  //         .select()
+  //         .gte('end_date', todayStr)
+  //         .lte('start_date', todayStr)
+  //         .maybeSingle();
+
+  //     setState(() {
+  //       weeklyReport = response;
+  //       isWeeklyReportLoading = false;
+  //     });
+  //   } catch (e) {
+  //     setState(() => isWeeklyReportLoading = false);
+  //   }
+  // }
+
   Future<void> loadWeeklyReport() async {
     setState(() => isWeeklyReportLoading = true);
+
     try {
-      final todayStr = DateTime.now().toIso8601String().split('T')[0];
+      final today = DateTime.now();
+
       final response = await supabase
           .from('weekly_reports')
           .select()
-          .gte('end_date', todayStr)
-          .lte('start_date', todayStr)
+          .lte('end_date', today.toIso8601String().split('T')[0])
+          .order('end_date', ascending: false)
+          .limit(1)
           .maybeSingle();
 
-      setState(() {
-        weeklyReport = response;
-        isWeeklyReportLoading = false;
-      });
+      if (response == null) {
+        setState(() {
+          weeklyReport = null;
+          isWeeklyReportLoading = false;
+        });
+        return;
+      }
+
+      final endDate = DateTime.parse(response['end_date']);
+      final validUntil = endDate.add(const Duration(days: 7));
+
+      if (today.isBefore(validUntil) || today.isAtSameMomentAs(validUntil)) {
+        setState(() {
+          weeklyReport = response;
+          isWeeklyReportLoading = false;
+        });
+      } else {
+        setState(() {
+          weeklyReport = null;
+          isWeeklyReportLoading = false;
+        });
+      }
     } catch (e) {
       setState(() => isWeeklyReportLoading = false);
     }
