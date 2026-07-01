@@ -30,6 +30,52 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // Future<void> _loginAsAdmin() async {
+  //   if (!(_formKey.currentState?.validate() ?? false)) return;
+
+  //   setState(() => _loading_forAdmin = true);
+
+  //   final email = _emailCtrl.text.trim();
+  //   final password = _passwordCtrl.text.trim();
+
+  //   try {
+  //     final AuthResponse response = await supabase.auth.signInWithPassword(
+  //       email: email,
+  //       password: password,
+  //     );
+
+  //     if (!mounted) return;
+  //     setState(() => _loading_forAdmin = false);
+
+  //     if (response.user != null) {
+  //       final AdminUser = AppUser(
+  //         id: 1,
+  //         email: response.user!.email!.toString(),
+  //         password: '',
+  //         role: UserRole.admin,
+  //       );
+
+  //       Navigator.pushReplacement(
+  //         context,
+  //         MaterialPageRoute(builder: (_) => MainMenu(user: AdminUser)),
+  //       );
+  //     }
+  //   } on AuthException catch (error) {
+  //     if (!mounted) return;
+  //     setState(() => _loading_forAdmin = false);
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text(error.message), backgroundColor: Colors.red),
+  //     );
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     setState(() => _loading_forAdmin = false);
+
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text("Login error: $e"), backgroundColor: Colors.red),
+  //     );
+  //   }
+  // }
+
   Future<void> _loginAsAdmin() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
@@ -44,30 +90,46 @@ class _LoginScreenState extends State<LoginScreen> {
         password: password,
       );
 
+      if (response.user == null) {
+        throw Exception("Login failed. No user found.");
+      }
+
+      final roleResponse = await supabase.functions.invoke('get-user-role');
+
+      final data = roleResponse.data;
+
+      final String role = data['role'];
+
+      final UserRole userRole = role == 'admin'
+          ? UserRole.admin
+          : UserRole.user;
+
+      final AppUser loggedInUser = AppUser(
+        id: 0, // dummy ID because you removed id from accounts table
+        email: data['email'],
+        password: '',
+        role: userRole,
+      );
+
       if (!mounted) return;
+
       setState(() => _loading_forAdmin = false);
 
-      if (response.user != null) {
-        final AdminUser = AppUser(
-          id: 1,
-          email: response.user!.email!.toString(),
-          password: '',
-          role: UserRole.admin,
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => MainMenu(user: AdminUser)),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => MainMenu(user: loggedInUser)),
+      );
     } on AuthException catch (error) {
       if (!mounted) return;
+
       setState(() => _loading_forAdmin = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message), backgroundColor: Colors.red),
       );
     } catch (e) {
       if (!mounted) return;
+
       setState(() => _loading_forAdmin = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
