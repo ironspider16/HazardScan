@@ -316,7 +316,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
   // --------------------------------
 
-  void _showImagePreviewDialog() {
+  void _showImagePreviewDialog(Uint8List imageBytes) {
     if (_globalImageBytes.isEmpty)
       return; // Guard against empty list before trying to access .last
     showDialog(
@@ -333,7 +333,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                 // Allows pinching to zoom
                 // .last to show most recently added image
                 child: Image.memory(
-                  _globalImageBytes.last,
+                  imageBytes,
                   fit: BoxFit.contain,
                 ),
               ),
@@ -1190,7 +1190,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                           clipBehavior: Clip.none,
                                           children: [
                                             GestureDetector(
-                                              onTap: _showImagePreviewDialog,
+                                              onTap: () => _showImagePreviewDialog(_globalImageBytes[index]),
                                               child: Container(
                                                 width: 86,
                                                 height: 86,
