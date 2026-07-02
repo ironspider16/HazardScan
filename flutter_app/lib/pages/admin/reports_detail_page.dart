@@ -149,27 +149,32 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                           fontSize: 20,
                         ),
                       ),
+                      const SizedBox(height: AppPadding.tight / 2),
+                      Text(
+                        "Submitted by: $techName on $date",
+                        style: AppTypography.faintbody.copyWith(
+                          fontSize: 13,
+                          color: AppColors.textMain.withValues(alpha: 50),
+                        ),
+                      ),
                       const Divider(height: 24.0, thickness: 1.0),
 
-                      _buildInfoRow(
-                        Icons.assignment_turned_in,
-                        'PTW Number',
-                        ptwNumber,
-                      ),
+                      if (ptwNumber != 'N/A')
+                        _buildInfoRow(
+                          Icons.assignment_turned_in,
+                          'PTW Number',
+                          ptwNumber,
+                        ),
                       _buildInfoRow(Icons.business, 'Department', department),
                       _buildInfoRow(Icons.badge, 'Designation', designation),
                       _buildInfoRow(Icons.location_on, 'Location', location),
-                      _buildInfoRow(Icons.person, 'Technician Name', techName),
-                      _buildInfoRow(Icons.calendar_today, 'Date', date),
-
-                      const SizedBox(height: AppPadding.tight),
                       Text(
                         'Details',
                         style: AppTypography.body.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: AppPadding.medium),
+                      const SizedBox(height: AppPadding.tight),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(AppPadding.tight),

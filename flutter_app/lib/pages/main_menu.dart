@@ -22,9 +22,7 @@ class MainMenu extends StatelessWidget {
   Future <void> _logout(BuildContext context) async {
     try{
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.remove('is_registered_technician_device');
-      await prefs.remove('saved_tech_email');
-      await prefs.remove('saved_tech_password');
+      await prefs.remove('user_role');
       await Supabase.instance.client.auth.signOut();
     } catch (e) {
       // Handle logout error if necessary

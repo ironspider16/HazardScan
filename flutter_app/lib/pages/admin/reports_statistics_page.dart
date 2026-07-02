@@ -111,33 +111,18 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           .select()
           .lte('end_date', today.toIso8601String().split('T')[0])
           .order('end_date', ascending: false)
-          .limit(1)
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
-        setState(() {
-          weeklyReport = null;
-          isWeeklyReportLoading = false;
-        });
-        return;
-      }
-
-      final endDate = DateTime.parse(response['end_date']);
-      final validUntil = endDate.add(const Duration(days: 7));
-
-      if (today.isBefore(validUntil) || today.isAtSameMomentAs(validUntil)) {
-        setState(() {
-          weeklyReport = response;
-          isWeeklyReportLoading = false;
-        });
-      } else {
-        setState(() {
-          weeklyReport = null;
-          isWeeklyReportLoading = false;
-        });
-      }
+      setState(() {
+        weeklyReport = response.isNotEmpty ? response.first : null;
+        isWeeklyReportLoading = false;
+      });
+      return;
     } catch (e) {
-      setState(() => isWeeklyReportLoading = false);
+      setState(() {
+        weeklyReport = null;
+        isWeeklyReportLoading = false;
+      });
     }
   }
 

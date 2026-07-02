@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_users.dart';
 import '../pages/main_menu.dart';
 import 'package:kkhazardscan/supabase_client.dart';
@@ -21,7 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
 
   bool _showPassword = false;
-  bool _loading_forAdmin = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -30,56 +31,10 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // Future<void> _loginAsAdmin() async {
-  //   if (!(_formKey.currentState?.validate() ?? false)) return;
-
-  //   setState(() => _loading_forAdmin = true);
-
-  //   final email = _emailCtrl.text.trim();
-  //   final password = _passwordCtrl.text.trim();
-
-  //   try {
-  //     final AuthResponse response = await supabase.auth.signInWithPassword(
-  //       email: email,
-  //       password: password,
-  //     );
-
-  //     if (!mounted) return;
-  //     setState(() => _loading_forAdmin = false);
-
-  //     if (response.user != null) {
-  //       final AdminUser = AppUser(
-  //         id: 1,
-  //         email: response.user!.email!.toString(),
-  //         password: '',
-  //         role: UserRole.admin,
-  //       );
-
-  //       Navigator.pushReplacement(
-  //         context,
-  //         MaterialPageRoute(builder: (_) => MainMenu(user: AdminUser)),
-  //       );
-  //     }
-  //   } on AuthException catch (error) {
-  //     if (!mounted) return;
-  //     setState(() => _loading_forAdmin = false);
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text(error.message), backgroundColor: Colors.red),
-  //     );
-  //   } catch (e) {
-  //     if (!mounted) return;
-  //     setState(() => _loading_forAdmin = false);
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Login error: $e"), backgroundColor: Colors.red),
-  //     );
-  //   }
-  // }
-
-  Future<void> _loginAsAdmin() async {
+  Future<void> _login() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    setState(() => _loading_forAdmin = true);
+    setState(() => _isLoading = true);
 
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text.trim();
@@ -104,6 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
           ? UserRole.admin
           : UserRole.user;
 
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('user_role', role);
+
       final AppUser loggedInUser = AppUser(
         id: 0, // dummy ID because you removed id from accounts table
         email: data['email'],
@@ -113,7 +71,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      setState(() => _loading_forAdmin = false);
+      setState(() => _isLoading = false);
 
       Navigator.pushReplacement(
         context,
@@ -122,7 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (error) {
       if (!mounted) return;
 
-      setState(() => _loading_forAdmin = false);
+      setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error.message), backgroundColor: Colors.red),
@@ -130,7 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      setState(() => _loading_forAdmin = false);
+      setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Login error: $e"), backgroundColor: Colors.red),
@@ -231,10 +189,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: fieldWidth,
                     child: MenuButton(
-                      label: _loading_forAdmin
-                          ? "Logging in..."
-                          : "Login as Admin",
-                      onTap: _loading_forAdmin ? () => {} : _loginAsAdmin,
+                      label: _isLoading ? "Logging in..." : "Login",
+                      onTap: _isLoading ? () => {} : _login,
                       isPrimary: true,
                       icon: Icons.login,
                     ),

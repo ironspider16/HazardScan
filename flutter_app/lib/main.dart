@@ -121,19 +121,6 @@ class MyApp extends StatelessWidget {
             ),
           ),
           home: const InitialAuthGateway(),
-          onGenerateRoute: (settings) {
-            if (settings.name != null) {
-              final uri = Uri.parse(settings.name!);
-              if (uri.queryParameters.containsKey('auth')) {
-                final token = uri.queryParameters['auth'];
-                return MaterialPageRoute(
-                  builder: (context) => InitialAuthGateway(authToken: token),
-                  settings: settings,
-                );
-              }
-            }
-            return null;
-          },
         );
       },
     );
@@ -141,9 +128,7 @@ class MyApp extends StatelessWidget {
 }
 
 class InitialAuthGateway extends StatefulWidget {
-  final String? authToken;
-
-  const InitialAuthGateway({super.key, this.authToken});
+  const InitialAuthGateway({super.key});
 
   @override
   State<InitialAuthGateway> createState() => _InitialAuthGatewayState();
@@ -152,8 +137,6 @@ class InitialAuthGateway extends StatefulWidget {
 class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   bool _isResolvingRoute = true;
   AppUser? _authenticatedUser;
-  String techEmail = '';
-  String techPassword = '';
 
   @override
   void initState() {
@@ -162,115 +145,35 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
   }
 
   Future<void> _evaluateDeviceAuthorization() async {
-    try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      bool hasValidToken = false;
-      final String? urlToken =
-          widget.authToken ?? Uri.base.queryParameters['auth'];
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) {
+      setState(() => _isResolvingRoute = false);
+      return;
+    }
 
-      // 1. Explicit Validation via URL Parameters
-      if (urlToken != null && urlToken.isNotEmpty) {
-        final response = await http.post(
-          Uri.parse(
-            'https://bpknkumrsvuhkobxsvom.supabase.co/functions/v1/technician-gateway-token-check',
-          ),
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $supabaseAnonKey',
-          },
-          body: jsonEncode({'token': urlToken}),
+    final prefs = await SharedPreferences.getInstance();
+    String? role = prefs.getString('user_role');
+
+    if (role == null) {
+      try {
+        final response = await Supabase.instance.client.functions.invoke(
+          'get-user-role',
         );
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          techEmail = data['tech_email'] ?? '';
-          techPassword = data['tech_password'] ?? '';
-
-          if (techEmail.isNotEmpty && techPassword.isNotEmpty) {
-            // Persist credentials locally so future visits do not require the URL token
-            await prefs.setBool('is_registered_technician_device', true);
-            await prefs.setString('saved_tech_email', techEmail);
-            await prefs.setString('saved_tech_password', techPassword);
-            hasValidToken = true;
-          }
-        } else {
-          debugPrint(
-            'Token verification rejected by server. Status: ${response.statusCode}',
-          );
-        }
-      }
-      // 2. Fallback to Local Storage Caching
-      else {
-        final bool isRegistered =
-            prefs.getBool('is_registered_technician_device') ?? false;
-        if (isRegistered) {
-          techEmail = prefs.getString('saved_tech_email') ?? '';
-          techPassword = prefs.getString('saved_tech_password') ?? '';
-        }
-      }
-
-      final bool isRegisteredDevice =
-          prefs.getBool('is_registered_technician_device') ?? false;
-
-      // 3. Execution of Background Authentication Pipeline
-      if (isRegisteredDevice &&
-          techEmail.isNotEmpty &&
-          techPassword.isNotEmpty) {
-        final Session? currentSession =
-            Supabase.instance.client.auth.currentSession;
-
-        // Clear out any stale administrator sessions if a fresh gateway token overrides it
-        if (currentSession != null &&
-            currentSession.user.email != techEmail &&
-            hasValidToken) {
-          await Supabase.instance.client.auth.signOut();
-        }
-
-        // Re-read active session context post-signout validation
-        final Session? activeSession =
-            Supabase.instance.client.auth.currentSession;
-
-        if (activeSession == null || activeSession.user.email != techEmail) {
-          final AuthResponse res = await Supabase.instance.client.auth
-              .signInWithPassword(email: techEmail, password: techPassword);
-
-          if (res.user != null) {
-            _authenticatedUser = AppUser(
-              id: 0,
-              email: res.user!.email!,
-              password: '',
-              role: UserRole.user,
-            );
-          }
-        } else {
-          // Clean transition if session is already valid
-          _authenticatedUser = AppUser(
-            id: 0,
-            email: activeSession.user.email!,
-            password: '',
-            role: UserRole.user,
-          );
-        }
-      } else {
-        // Standalone authorization persistence evaluation for administrators
-        final Session? currentSession =
-            Supabase.instance.client.auth.currentSession;
-        if (currentSession != null) {
-          _authenticatedUser = AppUser(
-            id: 1,
-            email: currentSession.user.email!,
-            password: '',
-            role: UserRole.admin,
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Authorization resolution routine error: $e');
-    } finally {
-      if (mounted) {
-        setState(() => _isResolvingRoute = false);
+        role = response.data['role'];
+        await prefs.setString('user_role', role!);
+      } catch (e) {
+        debugPrint("Background role fetch failed: $e");
       }
     }
+
+    // Proceed with the session we already know is valid
+    _authenticatedUser = AppUser(
+      id: 0,
+      email: session.user.email ?? '',
+      role: role == 'admin' ? UserRole.admin : UserRole.user,
+      password: '',
+    );
+    setState(() => _isResolvingRoute = false);
   }
 
   @override
