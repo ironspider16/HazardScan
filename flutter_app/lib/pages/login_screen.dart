@@ -6,7 +6,6 @@ import 'package:kkhazardscan/supabase_client.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import '../widgets/App_Textfield.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'camera_page.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -106,18 +105,18 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF2563EB),
-        onPressed: () async {
-          final result = await Navigator.push<Map<String, dynamic>?>(
-            context,
-            MaterialPageRoute(builder: (_) => const CameraPage()),
-          );
+      // floatingActionButton: FloatingActionButton(
+      //   backgroundColor: const Color(0xFF2563EB),
+      //   onPressed: () async {
+      //     final result = await Navigator.push<Map<String, dynamic>?>(
+      //       context,
+      //       MaterialPageRoute(builder: (_) => const CameraPage()),
+      //     );
 
-          if (result == null) return;
-        },
-        child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
-      ),
+      //     if (result == null) return;
+      //   },
+      //   child: const Icon(Icons.camera_alt, color: Colors.white, size: 30),
+      // ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -127,11 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/KKHlogo.svg',
+                  Image.asset(
+                    'assets/images/Icon_kkh_512.png',
                     width: 100,
                     height: 100,
-                    semanticsLabel: 'Company Logo',
                   ),
 
                   const SizedBox(height: AppPadding.medium),

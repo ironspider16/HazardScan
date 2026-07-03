@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
       valueListenable: AppLanguageManager.localeNotifier,
       builder: (context, currentLocale, child) {
         return MaterialApp(
-          title: 'Safety App Login',
+          title: 'HazardScan KKH',
           locale: currentLocale,
           supportedLocales: const [Locale('en'), Locale('zh')],
           localizationsDelegates: const [
