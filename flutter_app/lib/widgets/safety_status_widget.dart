@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/Design/status_colors.dart';
 import '../Design/style_constant.dart';
 
 enum SafetyStatus { dangerous, partiallyCompliant, compliant, safe, na }
@@ -15,7 +16,7 @@ class SafetyStatusWidget extends StatelessWidget {
 
   SafetyStatus get _status {
     if (aiData == null) return SafetyStatus.na;
-    
+
     final String rawStatus = aiData!['overallStatus']?.toString() ?? 'N/A';
     switch (rawStatus.trim().toUpperCase()) {
       case 'DANGEROUS':
@@ -28,36 +29,6 @@ class SafetyStatusWidget extends StatelessWidget {
         return SafetyStatus.safe;
       default:
         return SafetyStatus.na;
-    }
-  }
-
-  Color _getStatusColor(SafetyStatus status) {
-    switch (status) {
-      case SafetyStatus.dangerous:
-        return Colors.red.shade700;
-      case SafetyStatus.partiallyCompliant:
-        return Colors.orange.shade700;
-      case SafetyStatus.compliant:
-        return AppColors.primaryBlue;
-      case SafetyStatus.safe:
-        return Colors.green.shade700;
-      case SafetyStatus.na:
-        return Colors.grey.shade600;
-    }
-  }
-
-  Color _getColorFromRawString(String statusStr) {
-    switch (statusStr.trim().toUpperCase()) {
-      case 'DANGEROUS':
-        return Colors.red.shade700;
-      case 'PARTIALLY COMPLIANT':
-        return Colors.orange.shade700;
-      case 'COMPLIANT':
-        return AppColors.primaryBlue;
-      case 'SAFE':
-        return Colors.green.shade700;
-      default:
-        return Colors.grey.shade600;
     }
   }
 
@@ -92,8 +63,9 @@ class SafetyStatusWidget extends StatelessWidget {
 
   void _showReasonsDialog(BuildContext context) {
     final statusType = _status;
-    final themeColor = _getStatusColor(statusType);
     final String overallStatusText = _getStatusText(statusType);
+
+    final Color themeColor = SafetyStatusHelper.getColor(overallStatusText);
 
     showDialog(
       context: context,
@@ -106,7 +78,7 @@ class SafetyStatusWidget extends StatelessWidget {
               margin: const EdgeInsets.only(bottom: AppPadding.medium),
               padding: const EdgeInsets.all(AppPadding.medium),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2), 
+                color: const Color(0xFFFEF2F2),
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
                 border: Border.all(color: const Color(0xFFFCA5A5), width: 1),
               ),
@@ -161,7 +133,7 @@ class SafetyStatusWidget extends StatelessWidget {
               final String categoryName = _formatCategoryKey(key);
               final String complianceStatus =
                   value['compliance']?.toString() ?? 'UNKNOWN';
-              final Color subStatusColor = _getColorFromRawString(
+              final Color subStatusColor = SafetyStatusHelper.getColor(
                 complianceStatus,
               );
 
@@ -278,10 +250,13 @@ class SafetyStatusWidget extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8, top: 4),
                     padding: const EdgeInsets.all(AppPadding.medium),
                     decoration: BoxDecoration(
-                      color: Colors.blueAccent.withOpacity(0.04),
+                      color: AppColors.primaryBlue.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                       border: const Border(
-                        left: BorderSide(color: Colors.blueAccent, width: 3),
+                        left: BorderSide(
+                          color: AppColors.primaryBlue,
+                          width: 3,
+                        ),
                       ),
                     ),
                     child: Column(
@@ -290,7 +265,7 @@ class SafetyStatusWidget extends StatelessWidget {
                         const Text(
                           "CORRECTIVE ADVICE:",
                           style: TextStyle(
-                            color: Colors.blueAccent,
+                            color: AppColors.primaryBlue,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -318,7 +293,10 @@ class SafetyStatusWidget extends StatelessWidget {
           backgroundColor: AppColors.backgroundWhite,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-            side: BorderSide(color: themeColor.withOpacity(0.2), width: 1.5),
+            side: BorderSide(
+              color: themeColor.withValues(alpha: 0.12),
+              width: 1.5,
+            ),
           ),
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -345,7 +323,7 @@ class SafetyStatusWidget extends StatelessWidget {
                   vertical: AppPadding.tight,
                 ),
                 decoration: BoxDecoration(
-                  color: themeColor.withValues(alpha: 0.15),
+                  color: themeColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(
                     AppDimensions.radiusMedium,
                   ),
@@ -394,7 +372,8 @@ class SafetyStatusWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusType = _status;
-    final statusColor = _getStatusColor(statusType);
+    final String statusText = _getStatusText(statusType);
+    final statusColor = SafetyStatusHelper.getColor(statusText);
 
     final String buttonLabel =
         (statusType == SafetyStatus.dangerous ||
@@ -406,7 +385,7 @@ class SafetyStatusWidget extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: AppPadding.tight),
       padding: const EdgeInsets.all(AppPadding.medium),
       decoration: BoxDecoration(
-        color: statusColor.withOpacity(0.1),
+        color: statusColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         border: Border.all(
           width: 1.5,
