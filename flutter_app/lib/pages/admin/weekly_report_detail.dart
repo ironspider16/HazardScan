@@ -1,19 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:kkhazardscan/supabase_client.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
+import 'package:markdown_editor_live/markdown_editor_live.dart';
 
-class WeeklyReportDetailScreen extends StatelessWidget {
+class WeeklyReportDetailScreen extends StatefulWidget {
   final String content;
-  final String startDate;
-  final String endDate;
+  final String date;
+  final int id;
 
   const WeeklyReportDetailScreen({
     super.key,
     required this.content,
-    required this.startDate,
-    required this.endDate,
+    required this.date,
+    required this.id,
   });
+
+  @override
+  State<WeeklyReportDetailScreen> createState() =>
+      _WeeklyReportDetailScreenState();
+}
+
+class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
+  late String _currentContent;
+  bool _isEditing = false;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentContent = widget.content;
+  }
+
+  Future<void> _saveReport() async {
+    if (widget.id <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error: Missing Report ID.")),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      await supabase
+          .from('weekly_reports')
+          .update({'report_content': _currentContent})
+          .eq('id', widget.id);
+
+      if (!mounted) return;
+      setState(() {
+        _isEditing = false;
+        _isSaving = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Weekly report updated successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Failed to save updates: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +115,46 @@ class WeeklyReportDetailScreen extends StatelessWidget {
     );
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
-      appBar: UniversalAppBar(title: "Weekly Overview"),
+      appBar: UniversalAppBar(
+        title: _isEditing ? "Editing Report" : "Weekly Overview",
+        actions: [
+          if (_isSaving)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: Icon(_isEditing ? Icons.save_rounded : Icons.edit_outlined),
+              color: AppColors.primaryBlue,
+              tooltip: _isEditing ? "Save Changes" : "Edit Report",
+              onPressed: () {
+                if (_isEditing) {
+                  _saveReport();
+                } else {
+                  setState(() => _isEditing = true);
+                }
+              },
+            ),
+          if (_isEditing && !_isSaving)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.grey),
+              tooltip: "Cancel",
+              onPressed: () {
+                setState(() {
+                  _currentContent = widget.content;
+                  _isEditing = false;
+                });
+              },
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Container(
@@ -94,7 +191,7 @@ class WeeklyReportDetailScreen extends StatelessWidget {
                     ],
                   ),
                   Text(
-                    "$startDate to $endDate",
+                    widget.date,
                     style: AppTypography.body.copyWith(
                       color: Colors.blue.shade900,
                       fontWeight: FontWeight.bold,
@@ -105,11 +202,39 @@ class WeeklyReportDetailScreen extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Markdown(
-              data: content,
-              styleSheet: markdownStyle,
-              padding: const EdgeInsets.all(AppPadding.page),
-            ),
+            child: _isEditing
+                ? Padding(
+                    padding: const EdgeInsets.all(AppPadding.page),
+                    child: Container(
+                      padding: const EdgeInsets.all(AppPadding.medium),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundWhite,
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusMedium,
+                        ),
+                        border: Border.all(
+                          color: AppColors.primaryBlue,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: MarkdownEditor(
+                        initialValue: _currentContent,
+                        onChanged: (text) => _currentContent = text,
+                        style: AppTypography.body.copyWith(height: 1.6),
+                        useSoftTabs: true,
+                        tabWidth: 2,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          hintText: 'Type report changes here...',
+                        ),
+                      ),
+                    ),
+                  )
+                : Markdown(
+                    data: _currentContent,
+                    styleSheet: markdownStyle,
+                    padding: const EdgeInsets.all(AppPadding.page),
+                  ),
           ),
         ],
       ),

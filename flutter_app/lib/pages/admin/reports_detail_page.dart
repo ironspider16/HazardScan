@@ -126,350 +126,348 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
 
     return Scaffold(
       appBar: const UniversalAppBar(title: 'Reports Detail Page'),
-      body: Container(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Card(
-                elevation: 0,
-                color: AppColors.primaryTint,
-                surfaceTintColor: AppColors.primaryTint,
-                margin: const EdgeInsets.all(AppPadding.medium),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(0),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Card(
+              elevation: 0,
+              color: AppColors.primaryTint,
+              surfaceTintColor: AppColors.primaryTint,
+              margin: const EdgeInsets.all(AppPadding.medium),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(0),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(AppPadding.medium),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Report Information',
+                      style: AppTypography.Blackheading.copyWith(
+                        fontSize: 20,
+                      ),
+                    ),
+                    const SizedBox(height: AppPadding.tight / 2),
+                    Text(
+                      "Submitted by: $techName on $date",
+                      style: AppTypography.faintbody.copyWith(
+                        fontSize: 13,
+                        color: AppColors.textMain.withValues(alpha: 50),
+                      ),
+                    ),
+                    const Divider(height: 24.0, thickness: 1.0),
+      
+                    if (ptwNumber != 'N/A')
+                      _buildInfoRow(
+                        Icons.assignment_turned_in,
+                        'PTW Number',
+                        ptwNumber,
+                      ),
+                    _buildInfoRow(Icons.business, 'Department', department),
+                    _buildInfoRow(Icons.badge, 'Designation', designation),
+                    _buildInfoRow(Icons.location_on, 'Location', location),
+                    Text(
+                      'Details',
+                      style: AppTypography.body.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppPadding.tight),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppPadding.tight),
+                      decoration: BoxDecoration(
+                        color: AppColors.backgroundWhite,
+                        borderRadius: BorderRadius.circular(0),
+                      ),
+                      child: Text(
+                        details,
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.textMain,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(AppPadding.medium),
+              ),
+            ),
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppPadding.medium,
+                    AppPadding.tight,
+                    AppPadding.medium,
+                    0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Report Information',
-                        style: AppTypography.Blackheading.copyWith(
-                          fontSize: 20,
-                        ),
-                      ),
-                      const SizedBox(height: AppPadding.tight / 2),
-                      Text(
-                        "Submitted by: $techName on $date",
-                        style: AppTypography.faintbody.copyWith(
-                          fontSize: 13,
-                          color: AppColors.textMain.withValues(alpha: 50),
-                        ),
-                      ),
-                      const Divider(height: 24.0, thickness: 1.0),
-
-                      if (ptwNumber != 'N/A')
-                        _buildInfoRow(
-                          Icons.assignment_turned_in,
-                          'PTW Number',
-                          ptwNumber,
-                        ),
-                      _buildInfoRow(Icons.business, 'Department', department),
-                      _buildInfoRow(Icons.badge, 'Designation', designation),
-                      _buildInfoRow(Icons.location_on, 'Location', location),
-                      Text(
-                        'Details',
-                        style: AppTypography.body.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: AppPadding.tight),
+                      // Modified: Significantly increased padding and font size for the status container
                       Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(AppPadding.tight),
-                        decoration: BoxDecoration(
-                          color: AppColors.backgroundWhite,
-                          borderRadius: BorderRadius.circular(0),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppPadding.tight,
+                          vertical: AppPadding.tight,
                         ),
+                        decoration: BoxDecoration(
+                          color: statusColor.withAlpha(26),
+                        ),
+      
                         child: Text(
-                          details,
-                          style: AppTypography.body.copyWith(
-                            color: AppColors.textMain,
+                          overallStatus,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            letterSpacing: 1.0, // Increased from 10
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-              Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppPadding.medium,
-                      AppPadding.tight,
-                      AppPadding.medium,
-                      0,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Modified: Significantly increased padding and font size for the status container
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppPadding.tight,
-                            vertical: AppPadding.tight,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withAlpha(26),
-                          ),
-
-                          child: Text(
-                            overallStatus,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
-                              letterSpacing: 1.0, // Increased from 10
-                            ),
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: _buildReasonsList(safetyVar).map((reason) {
-                            final String trimmed = reason.trim();
-                            if (trimmed.isEmpty) return const SizedBox.shrink();
-
-                            final String upperReason = trimmed.toUpperCase();
-
-                            final bool isRecommendation =
-                                trimmed.startsWith("Recommendation:") ||
-                                upperReason.startsWith("• ADVICE:") ||
-                                upperReason.contains("ADVICE:");
-
-                            final bool isCategoryHeader =
-                                !trimmed.startsWith("•") &&
-                                !trimmed.startsWith("[") &&
-                                !isRecommendation &&
-                                trimmed.contains(":") &&
-                                (upperReason.contains("COMPLIANT") ||
-                                    upperReason.contains("DANGEROUS") ||
-                                    upperReason.contains("SAFE") ||
-                                    upperReason.contains("N/A"));
-
-                            final bool isBulletDetail =
-                                trimmed.startsWith("•") ||
-                                upperReason.startsWith("DESCRIPTION:") ||
-                                upperReason.startsWith("REASONING:");
-
-                            if (isCategoryHeader) {
-                              final parts = trimmed.split(":");
-                              final String categoryName = parts[0].trim();
-                              final String complianceStatus = parts.length > 1
-                                  ? parts[1].trim()
-                                  : "N/A";
-                              final Color subStatusColor =
-                                  SafetyStatusHelper.getColor(complianceStatus);
-
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  top: AppPadding.large,
-                                  bottom: AppPadding.medium,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      categoryName.toUpperCase(),
-                                      // Modified: Increased header font size
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _buildReasonsList(safetyVar).map((reason) {
+                          final String trimmed = reason.trim();
+                          if (trimmed.isEmpty) return const SizedBox.shrink();
+      
+                          final String upperReason = trimmed.toUpperCase();
+      
+                          final bool isRecommendation =
+                              trimmed.startsWith("Recommendation:") ||
+                              upperReason.startsWith("• ADVICE:") ||
+                              upperReason.contains("ADVICE:");
+      
+                          final bool isCategoryHeader =
+                              !trimmed.startsWith("•") &&
+                              !trimmed.startsWith("[") &&
+                              !isRecommendation &&
+                              trimmed.contains(":") &&
+                              (upperReason.contains("COMPLIANT") ||
+                                  upperReason.contains("DANGEROUS") ||
+                                  upperReason.contains("SAFE") ||
+                                  upperReason.contains("N/A"));
+      
+                          final bool isBulletDetail =
+                              trimmed.startsWith("•") ||
+                              upperReason.startsWith("DESCRIPTION:") ||
+                              upperReason.startsWith("REASONING:");
+      
+                          if (isCategoryHeader) {
+                            final parts = trimmed.split(":");
+                            final String categoryName = parts[0].trim();
+                            final String complianceStatus = parts.length > 1
+                                ? parts[1].trim()
+                                : "N/A";
+                            final Color subStatusColor =
+                                SafetyStatusHelper.getColor(complianceStatus);
+      
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                top: AppPadding.large,
+                                bottom: AppPadding.medium,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    categoryName.toUpperCase(),
+                                    // Modified: Increased header font size
+                                    style: AppTypography.body.copyWith(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: subStatusColor.withAlpha(30),
+                                      borderRadius: BorderRadius.circular(0),
+                                    ),
+                                    child: Text(
+                                      complianceStatus.toUpperCase(),
+                                      // Modified: Increased sub-status font size
                                       style: AppTypography.body.copyWith(
-                                        fontSize: 12,
+                                        color: subStatusColor,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: subStatusColor.withAlpha(30),
-                                        borderRadius: BorderRadius.circular(0),
-                                      ),
-                                      child: Text(
-                                        complianceStatus.toUpperCase(),
-                                        // Modified: Increased sub-status font size
-                                        style: AppTypography.body.copyWith(
-                                          color: subStatusColor,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else if (isRecommendation) {
-                              String adviceText = trimmed;
-                              if (adviceText.startsWith("Recommendation:")) {
-                                adviceText = adviceText
-                                    .replaceFirst("Recommendation:", "")
-                                    .trim();
-                              } else if (adviceText.startsWith("•")) {
-                                String temp = adviceText.substring(1).trim();
-                                if (temp.toUpperCase().startsWith("ADVICE:")) {
-                                  adviceText = temp.substring(7).trim();
-                                } else {
-                                  adviceText = temp;
-                                }
-                              } else if (adviceText.toUpperCase().startsWith(
-                                "ADVICE:",
-                              )) {
-                                adviceText = adviceText.substring(7).trim();
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else if (isRecommendation) {
+                            String adviceText = trimmed;
+                            if (adviceText.startsWith("Recommendation:")) {
+                              adviceText = adviceText
+                                  .replaceFirst("Recommendation:", "")
+                                  .trim();
+                            } else if (adviceText.startsWith("•")) {
+                              String temp = adviceText.substring(1).trim();
+                              if (temp.toUpperCase().startsWith("ADVICE:")) {
+                                adviceText = temp.substring(7).trim();
+                              } else {
+                                adviceText = temp;
                               }
-
-                              return Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(
-                                  bottom: 12,
-                                  top: 6,
+                            } else if (adviceText.toUpperCase().startsWith(
+                              "ADVICE:",
+                            )) {
+                              adviceText = adviceText.substring(7).trim();
+                            }
+      
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(
+                                bottom: 12,
+                                top: 6,
+                              ),
+                              padding: const EdgeInsets.all(
+                                AppPadding.medium,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blueAccent.withOpacity(0.04),
+                                borderRadius: BorderRadius.circular(8),
+                                border: const Border(
+                                  left: BorderSide(
+                                    color: Colors.blueAccent,
+                                    width: 4,
+                                  ),
                                 ),
-                                padding: const EdgeInsets.all(
-                                  AppPadding.medium,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent.withOpacity(0.04),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: const Border(
-                                    left: BorderSide(
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "CORRECTIVE ADVICE:",
+                                    // Modified: Increased font size for advice label
+                                    style: TextStyle(
                                       color: Colors.blueAccent,
-                                      width: 4,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
                                     ),
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "CORRECTIVE ADVICE:",
-                                      // Modified: Increased font size for advice label
-                                      style: TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
+                                  const SizedBox(height: AppPadding.tight),
+                                  Text(
+                                    adviceText,
+                                    // Modified: Increased body text size
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 12,
+                                      height: 1.5,
                                     ),
-                                    const SizedBox(height: AppPadding.tight),
-                                    Text(
-                                      adviceText,
-                                      // Modified: Increased body text size
-                                      style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 12,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else if (isBulletDetail) {
-                              String bodyText = trimmed;
-                              if (bodyText.startsWith("•")) {
-                                bodyText = bodyText.substring(1).trim();
-                              }
-
-                              return Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 8,
-                                  bottom: 8,
-                                  right: 8,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      "• ",
-                                      style: TextStyle(
-                                        color: Colors.black45,
-                                        fontSize:
-                                            12, // Modified: Increased bullet size
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        bodyText,
-                                        // Modified: Increased body text size
-                                        style: const TextStyle(
-                                          color: Colors.black87,
-                                          fontSize: 13,
-                                          height: 1.5,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else {
-                              String category = "OBSERVATION";
-                              String bodyText = trimmed;
-
-                              if (trimmed.startsWith("[")) {
-                                final closingBracketIdx = trimmed.indexOf("]");
-                                if (closingBracketIdx != -1) {
-                                  category = trimmed.substring(
-                                    1,
-                                    closingBracketIdx,
-                                  );
-                                  bodyText = trimmed
-                                      .substring(closingBracketIdx + 1)
-                                      .trim();
-                                }
-                              }
-
-                              return Container(
-                                width: double.infinity,
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.all(
-                                  AppPadding.medium,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.backgroundWhite,
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(
-                                    color: AppColors.borderGrey,
-                                    width: 1.0,
                                   ),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      category.toUpperCase(),
-                                      // Modified: Increased observation label size
-                                      style: const TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5,
-                                      ),
+                                ],
+                              ),
+                            );
+                          } else if (isBulletDetail) {
+                            String bodyText = trimmed;
+                            if (bodyText.startsWith("•")) {
+                              bodyText = bodyText.substring(1).trim();
+                            }
+      
+                            return Padding(
+                              padding: const EdgeInsets.only(
+                                left: 8,
+                                bottom: 8,
+                                right: 8,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "• ",
+                                    style: TextStyle(
+                                      color: Colors.black45,
+                                      fontSize:
+                                          12, // Modified: Increased bullet size
                                     ),
-                                    const SizedBox(height: AppPadding.tight),
-                                    Text(
+                                  ),
+                                  Expanded(
+                                    child: Text(
                                       bodyText,
                                       // Modified: Increased body text size
                                       style: const TextStyle(
                                         color: Colors.black87,
-                                        fontSize: 16,
+                                        fontSize: 13,
                                         height: 1.5,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              );
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            String category = "OBSERVATION";
+                            String bodyText = trimmed;
+      
+                            if (trimmed.startsWith("[")) {
+                              final closingBracketIdx = trimmed.indexOf("]");
+                              if (closingBracketIdx != -1) {
+                                category = trimmed.substring(
+                                  1,
+                                  closingBracketIdx,
+                                );
+                                bodyText = trimmed
+                                    .substring(closingBracketIdx + 1)
+                                    .trim();
+                              }
                             }
-                          }).toList(),
-                        ),
-                      ],
-                    ),
+      
+                            return Container(
+                              width: double.infinity,
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.all(
+                                AppPadding.medium,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.backgroundWhite,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: AppColors.borderGrey,
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    category.toUpperCase(),
+                                    // Modified: Increased observation label size
+                                    style: const TextStyle(
+                                      color: Colors.black54,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppPadding.tight),
+                                  Text(
+                                    bodyText,
+                                    // Modified: Increased body text size
+                                    style: const TextStyle(
+                                      color: Colors.black87,
+                                      fontSize: 16,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        }).toList(),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

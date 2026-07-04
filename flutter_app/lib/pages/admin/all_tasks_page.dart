@@ -355,7 +355,7 @@ class _AllTasksPageState extends State<AllTasksPage> {
 
                             // Right Side: Filter Button
                             GestureDetector(
-                              onTap: () => print("Filter tapped"),
+                              onTap: () => debugPrint("Filter tapped"),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: const [

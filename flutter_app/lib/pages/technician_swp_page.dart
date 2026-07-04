@@ -210,8 +210,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   Future<void> _analyzeGlobalImage() async {
     dynamic decodedData;
-    if (_globalImageBytes.isEmpty)
+    if (_globalImageBytes.isEmpty) {
       return; // Guard against no images before analysis
+    }
 
     setState(() => _isAnalyzing = true);
 
@@ -337,8 +338,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   // --------------------------------
 
   void _showImagePreviewDialog(Uint8List imageBytes) {
-    if (_globalImageBytes.isEmpty)
+    if (_globalImageBytes.isEmpty) {
       return; // Guard against empty list before trying to access .last
+    }
     showDialog(
       context: context,
       builder: (context) => BackdropFilter(
@@ -671,8 +673,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     icon: Icons.assignment_turned_in_rounded,
                                     onTap: () async {
                                       if (!(formKey.currentState?.validate() ??
-                                          false))
+                                          false)) {
                                         return;
+                                      }
 
                                       setDialogState(
                                         () => dialogSubmitting = true,
@@ -848,7 +851,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
-      print("Error executing report: $e");
+      debugPrint("Error executing report: $e");
       return false;
     }
   }
@@ -894,10 +897,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       );
 
       if (response.status != 200 && response.status != 201) {
-        print('Failed to send email via function: ${response.data}');
+        debugPrint('Failed to send email via function: ${response.data}');
       }
     } catch (e) {
-      print('Error calling edge function: $e');
+      debugPrint('Error calling edge function: $e');
     }
   }
 
@@ -918,8 +921,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           bool isAbove3m = _savedAbove3m[id] ?? false;
           if (isAbove3m) {
             String ptw = _savedPtwNumbers[id] ?? "";
-            if (ptw.trim().isEmpty)
+            if (ptw.trim().isEmpty) {
               return "Permit To Work (PTW) number is required.";
+            }
 
             if (_globalImageBytes.isEmpty) {
               return "Please upload a site photo for Work at Height tasks.";

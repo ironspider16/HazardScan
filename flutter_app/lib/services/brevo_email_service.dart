@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> sendEmailViaFunction() async {
@@ -15,11 +16,11 @@ Future<void> sendEmailViaFunction() async {
     );
 
     if (response.status == 200) {
-      print("Email sent successfully");
+      debugPrint("Email sent successfully");
     } else {
-      print("Failed to send email: ${response.data}");
+      debugPrint("Failed to send email: ${response.data}");
     }
   } catch (e) {
-    print("Error calling function: $e");
+    debugPrint("Error calling function: $e");
   }
 }

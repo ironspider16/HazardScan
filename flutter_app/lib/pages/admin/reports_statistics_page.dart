@@ -1,5 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:kkhazardscan/pages/admin/past_weekly_reports_page.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets.dart/location_risk_leader_widget.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets.dart/report_timeline_widget.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets.dart/risk_leaderboard_widget.dart';
@@ -79,26 +81,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   // ==========================================
   // DATA FETCHING & SERVICES
   // ==========================================
-
-  // Future<void> loadWeeklyReport() async {
-  //   setState(() => isWeeklyReportLoading = true);
-  //   try {
-  //     final todayStr = DateTime.now().toIso8601String().split('T')[0];
-  //     final response = await supabase
-  //         .from('weekly_reports')
-  //         .select()
-  //         .gte('end_date', todayStr)
-  //         .lte('start_date', todayStr)
-  //         .maybeSingle();
-
-  //     setState(() {
-  //       weeklyReport = response;
-  //       isWeeklyReportLoading = false;
-  //     });
-  //   } catch (e) {
-  //     setState(() => isWeeklyReportLoading = false);
-  //   }
-  // }
 
   Future<void> loadWeeklyReport() async {
     setState(() => isWeeklyReportLoading = true);
@@ -352,6 +334,24 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     );
 
     return sortedfinalizedAverages;
+  }
+
+  String formatDateRange(String startDate, String endDate) {
+    try {
+      DateTime start = DateTime.parse(startDate);
+      DateTime end = DateTime.parse(endDate);
+
+      DateFormat monthDayFormat = DateFormat('MMM d');
+      DateFormat yearFormat = DateFormat('yyyy');
+
+      String startFormatted = monthDayFormat.format(start);
+      String endFormatted = monthDayFormat.format(end);
+      String yearFormatted = yearFormat.format(end);
+
+      return "$startFormatted - $endFormatted, $yearFormatted";
+    } catch (e) {
+      return "Unknown Date";
+    }
   }
 
   // ==========================================
@@ -811,6 +811,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     final content = weeklyReport!['report_content'] as String? ?? '';
     final startDate = weeklyReport!['start_date'] as String? ?? '';
     final endDate = weeklyReport!['end_date'] as String? ?? '';
+    final int id = weeklyReport!['id'];
 
     return _buildChartContainer(
       Column(
@@ -844,16 +845,29 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           MenuButton(
             label: "View Full Report",
             isPrimary: true,
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => WeeklyReportDetailScreen(
                     content: content,
-                    startDate: startDate,
-                    endDate: endDate,
+                    date: formatDateRange(startDate, endDate),
+                    id: id,
                   ),
                 ),
+              );
+
+              loadWeeklyReport();
+            },
+          ),
+          const Divider(height: 24.0, thickness: 1.0),
+          MenuButton(
+            label: "View All Weekly Reports",
+            isPrimary: false,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AllWeeklyReportsPage()),
               );
             },
           ),
