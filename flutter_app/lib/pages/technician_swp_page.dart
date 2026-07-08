@@ -51,8 +51,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
   final Map<int, bool> _checklistCompletionStates = {};
-
-  // --- NEW GLOBAL STATE VARIABLES ---
   final List<Uint8List> _globalImageBytes =
       []; // Stores raw bytes of all captured images for analysis and reporting
   Uint8List? _globalPdfBytes;
@@ -60,7 +58,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
-  // ----------------------------------
+
+  Map<String, dynamic>? _lastAiCallMetrics;
 
   @override
   void initState() {
@@ -207,134 +206,208 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     }
   }
 
+Future<void> _analyzeGlobalImage() async {
+  if (_globalImageBytes.isEmpty) return; // Guard against no images before analysis
 
-  Future<void> _analyzeGlobalImage() async {
-    dynamic decodedData;
-    if (_globalImageBytes.isEmpty)
-      return; // Guard against no images before analysis
+  setState(() => _isAnalyzing = true);
+  final stopwatch = Stopwatch()..start(); // Start timing the analysis process
+  dynamic decodedData;
 
-    setState(() => _isAnalyzing = true);
+  try {
+    // 1. Execute Local Object Detection
+    final detections = await _yoloService.runYoloDetect(
+      imageBytes: _globalImageBytes.first, // Pass raw bytes to YOLO service
+      isMounted: () => mounted,
+      context: context,
+    );
 
-    try {
-      final detections = await _yoloService.runYoloDetect(
-        imageBytes: _globalImageBytes.first, // Pass raw bytes to YOLO service
-        isMounted: () => mounted,
-        context: context,
-      );
+    if (!mounted) return;
 
-      if (!mounted) return;
-
-      bool status = false;
-      if (detections.isNotEmpty) {
-        for (var detection in detections) {
-          if (detection['label'] == 'spreader_unlocked') {
-            status = true;
-            break;
-          }
+    bool status = false;
+    if (detections.isNotEmpty) {
+      for (var detection in detections) {
+        if (detection['label'] == 'spreader_unlocked') {
+          status = true;
+          break;
         }
       }
+    }
 
+    setState(() {
+      _isSpreaderUnlocked = status;
+    });
+
+    // 2. Compress Images for Network Payload Optimization
+    final List<Uint8List> compressedImages = await Future.wait(
+      _globalImageBytes.map((bytes) => _prepareEmailImage(bytes)),
+    );
+
+    // 3. Dispatch Multi-Angle Payload to Edge Function Gateway
+    final analysisResult = await GeminiService.detectHazards(
+      compressedImages,
+      _globalDetailsCtrl.text,
+    );
+
+    stopwatch.stop(); // Halt stopwatch upon response retrieval
+    final double latencySeconds = stopwatch.elapsedMilliseconds / 1000.0;
+
+    if (!mounted) return;
+
+    // 4. Save Network Telemetry & Routing States
+    setState(() {
+      _lastAiCallMetrics = {
+        'timestamp': DateTime.now().toString().split('.').first,
+        'success': !analysisResult.isError,
+        'keySlot': analysisResult.keySlot ?? -1,
+        'modelUsed': analysisResult.modelUsed ?? 'none',
+        'latency': '${latencySeconds.toStringAsFixed(2)}s',
+        'errorType': analysisResult.errorType ?? 'NONE',
+        'errorDetail': analysisResult.errorDetail ?? 'NONE',
+        'systemNotice': analysisResult.systemNotice ?? 'NONE',
+      };
+    });
+
+    if (_lastAiCallMetrics != null) {
+  supabase.from('ai_telemetry_logs').insert({
+    'timestamp':    _lastAiCallMetrics!['timestamp'],
+    'success':      _lastAiCallMetrics!['success'],
+    'key_slot':     _lastAiCallMetrics!['keySlot'],
+    'model_used':   _lastAiCallMetrics!['modelUsed'],
+    'latency':    _lastAiCallMetrics!['latency'],
+    'error_type':   _lastAiCallMetrics!['errorType'],
+    'error_detail': _lastAiCallMetrics!['errorDetail'],
+    'image_size_kb': (_globalImageBytes.isNotEmpty ? _globalImageBytes.first.lengthInBytes / 1024 : 0).toStringAsFixed(2),
+    'image_count':  _globalImageBytes.length,
+  }).then((_) {
+    debugPrint("[TELEMETRY] Log written successfully.");
+  }).catchError((e) {
+    debugPrint("[TELEMETRY] Failed to write log: $e");
+  });
+}
+
+
+    // Routing telemetry log (visible in your debug console)
+    debugPrint(
+      "[ROUTING] Key Slot: ${analysisResult.keySlot} | "
+      "Model: ${analysisResult.modelUsed} | "
+      "Error: ${analysisResult.errorType ?? 'none'}",
+    );
+
+    // 5. Evaluate Edge Function Level System Faults
+    if (analysisResult.isError) {
       setState(() {
-        _isSpreaderUnlocked = status;
-      });
-
-      final List<Uint8List> compressedImages = await Future.wait(
-        _globalImageBytes.map((bytes) => _prepareEmailImage(bytes)),
-      );
-
-      // pass full list to match updated GeminiService signature
-      final analysisResult = await GeminiService.detectHazards(
-        compressedImages,
-        _globalDetailsCtrl.text,
-      );
-
-      if (!mounted) return;
-
-      // ── Routing telemetry log (visible in your debug console) ──
-      debugPrint(
-        "[ROUTING] Key Slot: ${analysisResult.keySlot} | "
-        "Model: ${analysisResult.modelUsed} | "
-        "Error: ${analysisResult.errorType ?? 'none'}",
-      );
-
-      // ── Hard error — named errorType from edge function ──
-      if (analysisResult.isError) {
-        setState(() {
-          _isAnalyzing = false;
-          _globalAiData = null;
-        });
-
-        final errorType = analysisResult.errorType ?? "";
-
-        if (errorType == "EXHAUSTION_ERROR") {
-          _showErrorDialog(
-            "API Quota Warning",
-            "All API keys and fallback models are currently exhausted. "
-                "You are likely near quota limits. Please wait a moment and try again.",
-          );
-        } else if (errorType == "SDK_ERROR") {
-          _showErrorDialog(
-            "Analysis Error — Key Slot ${analysisResult.keySlot}, Model: ${analysisResult.modelUsed}",
-            analysisResult.errorDetail ??
-                "The analysis engine returned an unexpected error.",
-          );
-        } else if (errorType == "SETUP_ERROR") {
-          _showErrorDialog(
-            "Configuration Error",
-            "No API keys are configured on the server. Contact your administrator.",
-          );
-        } else if (errorType == "CONNECTION_ERROR") {
-          _showErrorDialog(
-            "Connection Failed",
-            analysisResult.errorDetail ??
-                "Could not reach the analysis server. Check your connection.",
-          );
-        } else {
-          _showErrorDialog(
-            analysisResult.errorTitle ?? "Analysis Failed",
-            analysisResult.errorDetail ?? "An unknown error occurred.",
-          );
-        }
-        return;
-      }
-
-      // ── Soft notice — backup model was used, analysis still succeeded ──
-      if (analysisResult.systemNotice != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(analysisResult.systemNotice!),
-            backgroundColor: Colors.orange.shade700,
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      }
-
-      // ── Success — parse and store as before ──
-      try {
-        decodedData = jsonDecode(analysisResult.jsonPayload);
-      } catch (e) {
-        _showErrorDialog(
-          "Parse Error",
-          "The server returned an unreadable response.",
-        );
-        setState(() => _isAnalyzing = false);
-        return;
-      }
-
-      setState(() {
-        _globalAiData = decodedData;
         _isAnalyzing = false;
+        _globalAiData = null;
       });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _isAnalyzing = false);
-      _showErrorDialog(
-        "Network Error",
-        "Could not reach the analysis server. Check your connection.\n\nDetails: $e",
+
+      final errorType = analysisResult.errorType ?? "";
+
+      if (errorType == "EXHAUSTION_ERROR") {
+        _showErrorDialog(
+          "API Quota Warning",
+          "All API keys and fallback models are currently exhausted. You are likely near quota limits. Please wait a moment and try again.",
+        );
+      } else if (errorType == "SDK_ERROR") {
+        _showErrorDialog(
+          "Analysis Error — Key Slot ${analysisResult.keySlot}, Model: ${analysisResult.modelUsed}",
+          analysisResult.errorDetail ?? "The analysis engine returned an unexpected error.",
+        );
+      } else if (errorType == "SETUP_ERROR") {
+        _showErrorDialog(
+          "Configuration Error",
+          "No API keys are configured on the server. Contact your administrator.",
+        );
+      } else if (errorType == "CONNECTION_ERROR") {
+        _showErrorDialog(
+          "Connection Failed",
+          analysisResult.errorDetail ?? "Could not reach the analysis server. Check your connection.",
+        );
+      } else {
+        _showErrorDialog(
+          analysisResult.errorTitle ?? "Analysis Failed",
+          analysisResult.errorDetail ?? "An unknown error occurred.",
+        );
+      }
+      return;
+    }
+      
+    // 6. Handle Soft Notices (E.g., Backup model was deployed instead of primary)
+    if (analysisResult.systemNotice != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(analysisResult.systemNotice!),
+          backgroundColor: Colors.orange.shade700,
+          duration: const Duration(seconds: 6),
+        ),
       );
     }
+
+    // 7. Parse Structural Payload JSON Schema Data
+    try {
+      decodedData = jsonDecode(analysisResult.jsonPayload);
+    } catch (e) {
+      _showErrorDialog("Parse Error", "The server returned an unreadable response.");
+      setState(() => _isAnalyzing = false);
+      return;
+    }
+
+    setState(() {
+      _globalAiData = decodedData;
+      _isAnalyzing = false;
+    });
+
+  } catch (e) {
+    if (stopwatch.isRunning) stopwatch.stop();
+    if (!mounted) return;
+
+    final double latencySeconds = stopwatch.elapsedMilliseconds / 1000.0;
+    final String errorStr = e.toString();
+
+    String determinedErrorType = "UNKNOWN_ERROR";
+    String systemMessage = "Could not reach the analysis server. Check your connection.";
+    
+    // Explicitly intercept hard platform resource cuts (546 Worker limits)
+    if (errorStr.contains("546") || errorStr.contains("WORKER_RESOURCE_LIMIT")) {
+      determinedErrorType = "WORKER_RESOURCE_LIMIT (546)";
+      systemMessage = "Edge function exceeded resource limits. Please try again later.";
+    }
+
+    setState(() {
+      _isAnalyzing = false;
+      _lastAiCallMetrics = {
+        'timestamp': DateTime.now().toString().split('.').first,
+        'success': false,
+        'keySlot': -1,
+        'modelUsed': 'none',
+        'latency': '${latencySeconds.toStringAsFixed(2)}s',
+        'errorType': determinedErrorType,
+        'errorDetail': errorStr,
+        'systemNotice': systemMessage,
+      };
+    });
+
+if (_lastAiCallMetrics != null) {
+  supabase.from('ai_telemetry_logs').insert({
+    'timestamp':    _lastAiCallMetrics!['timestamp'],
+    'success':      _lastAiCallMetrics!['success'],
+    'key_slot':     _lastAiCallMetrics!['keySlot'],
+    'model_used':   _lastAiCallMetrics!['modelUsed'],
+    'latency':    _lastAiCallMetrics!['latency'],
+    'error_type':   _lastAiCallMetrics!['errorType'],
+    'error_detail': _lastAiCallMetrics!['errorDetail'],
+    'image_count':  _globalImageBytes.length,
+    'image_size_kb': (_globalImageBytes.isNotEmpty ? _globalImageBytes.first.lengthInBytes / 1024 : 0).toStringAsFixed(2),
+  }).then((_) {
+    debugPrint("[TELEMETRY] Log written successfully.");
+  }).catchError((e) {
+    debugPrint("[TELEMETRY] Failed to write log: $e");
+  });
+}
+
+    _showErrorDialog("Network / Server Error", "$systemMessage\n\nDetails: $e");
   }
-  // --------------------------------
+}
+
 
   void _showImagePreviewDialog(Uint8List imageBytes) {
     if (_globalImageBytes.isEmpty)
@@ -794,7 +867,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'mhi': _globalAiData!['mhi'] ?? {},
               'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
@@ -848,7 +920,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
-      print("Error executing report: $e");
+      debugPrint("Error executing report: $e");
       return false;
     }
   }
@@ -894,10 +966,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       );
 
       if (response.status != 200 && response.status != 201) {
-        print('Failed to send email via function: ${response.data}');
+        debugPrint('Failed to send email via function: ${response.data}');
       }
     } catch (e) {
-      print('Error calling edge function: $e');
+      debugPrint('Error calling edge function: $e');
     }
   }
 
