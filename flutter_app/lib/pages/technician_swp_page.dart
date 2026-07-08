@@ -51,8 +51,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, bool> _savedAbove3m = {};
   final Map<int, List<String>> _savedChecklists = {};
   final Map<int, bool> _checklistCompletionStates = {};
-
-  // --- NEW GLOBAL STATE VARIABLES ---
   final List<Uint8List> _globalImageBytes =
       []; // Stores raw bytes of all captured images for analysis and reporting
   Uint8List? _globalPdfBytes;
@@ -60,7 +58,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
-  // ----------------------------------
+
+  Map<String, dynamic>? _lastAiCallMetrics;
 
   @override
   void initState() {
@@ -158,7 +157,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
     }
   }
-    Future<void> _openEditReportScreen() async {
+
+  Future<void> _openEditReportScreen() async {
     if (_globalAiData == null) return;
 
     final updatedData = await Navigator.push<Map<String, dynamic>>(
@@ -173,7 +173,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     if (updatedData != null) {
       setState(() {
         _globalAiData = updatedData;
-        _globalPdfBytes = null; // Invalidate any cached PDF so it regenerates with new data
+        _globalPdfBytes =
+            null; // Invalidate any cached PDF so it regenerates with new data
       });
     }
   }
@@ -207,16 +208,16 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     }
   }
 
-
   Future<void> _analyzeGlobalImage() async {
-    dynamic decodedData;
-    if (_globalImageBytes.isEmpty) {
+    if (_globalImageBytes.isEmpty)
       return; // Guard against no images before analysis
-    }
 
     setState(() => _isAnalyzing = true);
+    final stopwatch = Stopwatch()..start(); // Start timing the analysis process
+    dynamic decodedData;
 
     try {
+      // 1. Execute Local Object Detection
       final detections = await _yoloService.runYoloDetect(
         imageBytes: _globalImageBytes.first, // Pass raw bytes to YOLO service
         isMounted: () => mounted,
@@ -239,26 +240,60 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         _isSpreaderUnlocked = status;
       });
 
+      // 2. Compress Images for Network Payload Optimization
       final List<Uint8List> compressedImages = await Future.wait(
         _globalImageBytes.map((bytes) => _prepareEmailImage(bytes)),
       );
 
-      // pass full list to match updated GeminiService signature
+      // 3. Dispatch Multi-Angle Payload to Edge Function Gateway
       final analysisResult = await GeminiService.detectHazards(
         compressedImages,
         _globalDetailsCtrl.text,
       );
 
+      stopwatch.stop(); // Halt stopwatch upon response retrieval
+      final double latencySeconds = stopwatch.elapsedMilliseconds / 1000.0;
+
       if (!mounted) return;
 
-      // ── Routing telemetry log (visible in your debug console) ──
+      // 4. Save Network Telemetry & Routing States
+      setState(() {
+        _lastAiCallMetrics = {
+          'timestamp': DateTime.now().toString().split('.').first,
+          'success': !analysisResult.isError,
+          'keySlot': analysisResult.keySlot ?? -1,
+          'modelUsed': analysisResult.modelUsed ?? 'none',
+          'latency': latencySeconds,
+          'errorType': analysisResult.errorType ?? 'NONE',
+          'errorDetail': analysisResult.errorDetail ?? 'NONE',
+          'systemNotice': analysisResult.systemNotice ?? 'NONE',
+        };
+      });
+
+      if (_lastAiCallMetrics != null) {
+        _writeTelemetryLog({
+          'timestamp': _lastAiCallMetrics!['timestamp'],
+          'success': _lastAiCallMetrics!['success'],
+          'key_slot': _lastAiCallMetrics!['keySlot'],
+          'model_used': _lastAiCallMetrics!['modelUsed'],
+          'latency': latencySeconds,
+          'error_type': _lastAiCallMetrics!['errorType'],
+          'error_detail': _lastAiCallMetrics!['errorDetail'],
+          'image_count': _globalImageBytes.length,
+          'image_size_kb': _globalImageBytes.isNotEmpty
+              ? (_globalImageBytes.first.lengthInBytes / 1024).round()
+              : 0,
+        });
+      }
+
+      // Routing telemetry log (visible in your debug console)
       debugPrint(
         "[ROUTING] Key Slot: ${analysisResult.keySlot} | "
         "Model: ${analysisResult.modelUsed} | "
         "Error: ${analysisResult.errorType ?? 'none'}",
       );
 
-      // ── Hard error — named errorType from edge function ──
+      // 5. Evaluate Edge Function Level System Faults
       if (analysisResult.isError) {
         setState(() {
           _isAnalyzing = false;
@@ -270,8 +305,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         if (errorType == "EXHAUSTION_ERROR") {
           _showErrorDialog(
             "API Quota Warning",
-            "All API keys and fallback models are currently exhausted. "
-                "You are likely near quota limits. Please wait a moment and try again.",
+            "All API keys and fallback models are currently exhausted. You are likely near quota limits. Please wait a moment and try again.",
           );
         } else if (errorType == "SDK_ERROR") {
           _showErrorDialog(
@@ -299,7 +333,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return;
       }
 
-      // ── Soft notice — backup model was used, analysis still succeeded ──
+      // 6. Handle Soft Notices (E.g., Backup model was deployed instead of primary)
       if (analysisResult.systemNotice != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -310,7 +344,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         );
       }
 
-      // ── Success — parse and store as before ──
+      // 7. Parse Structural Payload JSON Schema Data
       try {
         decodedData = jsonDecode(analysisResult.jsonPayload);
       } catch (e) {
@@ -327,15 +361,60 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         _isAnalyzing = false;
       });
     } catch (e) {
+      if (stopwatch.isRunning) stopwatch.stop();
       if (!mounted) return;
-      setState(() => _isAnalyzing = false);
+
+      final double latencySeconds = stopwatch.elapsedMilliseconds / 1000.0;
+      final String errorStr = e.toString();
+
+      String determinedErrorType = "UNKNOWN_ERROR";
+      String systemMessage =
+          "Could not reach the analysis server. Check your connection.";
+
+      // Explicitly intercept hard platform resource cuts (546 Worker limits)
+      if (errorStr.contains("546") ||
+          errorStr.contains("WORKER_RESOURCE_LIMIT")) {
+        determinedErrorType = "WORKER_RESOURCE_LIMIT (546)";
+        systemMessage =
+            "Edge function exceeded resource limits. Please try again later.";
+      }
+
+      setState(() {
+        _isAnalyzing = false;
+        _lastAiCallMetrics = {
+          'timestamp': DateTime.now().toString().split('.').first,
+          'success': false,
+          'keySlot': -1,
+          'modelUsed': 'none',
+          'latency': latencySeconds,
+          'errorType': determinedErrorType,
+          'errorDetail': errorStr,
+          'systemNotice': systemMessage,
+        };
+      });
+
+      if (_lastAiCallMetrics != null) {
+        _writeTelemetryLog({
+          'timestamp': _lastAiCallMetrics!['timestamp'],
+          'success': false,
+          'key_slot': -1,
+          'model_used': 'none',
+          'latency': latencySeconds,
+          'error_type': determinedErrorType,
+          'error_detail': errorStr,
+          'image_count': _globalImageBytes.length,
+          'image_size_kb': _globalImageBytes.isNotEmpty
+              ? (_globalImageBytes.first.lengthInBytes / 1024).round()
+              : 0,
+        });
+      }
+
       _showErrorDialog(
-        "Network Error",
-        "Could not reach the analysis server. Check your connection.\n\nDetails: $e",
+        "Network / Server Error",
+        "$systemMessage\n\nDetails: $e",
       );
     }
   }
-  // --------------------------------
 
   void _showImagePreviewDialog(Uint8List imageBytes) {
     if (_globalImageBytes.isEmpty) {
@@ -354,10 +433,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               InteractiveViewer(
                 // Allows pinching to zoom
                 // .last to show most recently added image
-                child: Image.memory(
-                  imageBytes,
-                  fit: BoxFit.contain,
-                ),
+                child: Image.memory(imageBytes, fit: BoxFit.contain),
               ),
               IconButton(
                 icon: const Icon(Icons.close, color: Colors.white, size: 30),
@@ -369,7 +445,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       ),
     );
   }
-
 
   void _showErrorDialog(String title, String message) {
     showDialog(
@@ -396,6 +471,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _writeTelemetryLog(Map<String, dynamic> fields) async {
+    try {
+      await Supabase.instance.client.from('ai_telemetry_logs').insert(fields);
+      debugPrint("[TELEMETRY] Log written successfully.");
+    } catch (e) {
+      debugPrint("[TELEMETRY] Failed to write log: $e");
+    }
   }
 
   void _showAcknowledgementDialog() {
@@ -797,7 +881,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'mhi': _globalAiData!['mhi'] ?? {},
               'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
@@ -851,6 +934,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
+      debugPrint("Error executing report: $e");
       debugPrint("Error executing report: $e");
       return false;
     }
@@ -1129,9 +1213,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                           borderRadius: BorderRadius.circular(
                             AppDimensions.radiusMedium,
                           ),
-                          side: BorderSide(
-                            color: AppColors.borderGrey,
-                          ),
+                          side: BorderSide(color: AppColors.borderGrey),
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(AppPadding.medium),
@@ -1214,7 +1296,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                           clipBehavior: Clip.none,
                                           children: [
                                             GestureDetector(
-                                              onTap: () => _showImagePreviewDialog(_globalImageBytes[index]),
+                                              onTap: () =>
+                                                  _showImagePreviewDialog(
+                                                    _globalImageBytes[index],
+                                                  ),
                                               child: Container(
                                                 width: 86,
                                                 height: 86,
@@ -1287,8 +1372,14 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                               if (_globalAiData != null)
                                 TextButton.icon(
                                   onPressed: _openEditReportScreen,
-                                  icon: const Icon(Icons.edit_note, color: Colors.blueAccent),
-                                  label: const Text("Manually Edit Report", style: TextStyle(color: Colors.blueAccent)),
+                                  icon: const Icon(
+                                    Icons.edit_note,
+                                    color: Colors.blueAccent,
+                                  ),
+                                  label: const Text(
+                                    "Manually Edit Report",
+                                    style: TextStyle(color: Colors.blueAccent),
+                                  ),
                                 ),
                             ],
                           ),

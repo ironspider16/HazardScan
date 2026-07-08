@@ -581,6 +581,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                   locationDangerAverages: locationDangerAverages,
                 ),
               ),
+              
               const SizedBox(height: AppPadding.medium),
             ],
           ),

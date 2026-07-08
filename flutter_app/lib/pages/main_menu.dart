@@ -4,12 +4,13 @@ import 'package:kkhazardscan/pages/admin/manage_submission_details_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
 import 'package:kkhazardscan/supabase_client.dart';
 import '../config/app_users.dart';
-import '../config/language_manager.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import 'admin/reports_statistics_page.dart';
 import 'admin/reports_list_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:kkhazardscan/widgets/Reports_statistics_widgets/ai_telemetry_widget.dart';
+
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -51,143 +52,98 @@ class MainMenu extends StatelessWidget {
                   horizontal: AppPadding.page,
                 ),
                 constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // 🔷 ICON
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryBlue,
-                        borderRadius: BorderRadius.circular(
-                          AppDimensions.radiusLarge,
-                        ),
-                      ),
-                      child: Image.asset(
-                        'assets/images/Icon_kkh_512.png',
-                        width: 100,
-                        height: 100,
-                      ),
-                    ),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: AppPadding.medium),
 
-                    const SizedBox(height: AppPadding.medium),
-
-                    const Text("HazardScan", style: AppTypography.Blueheading),
-
-                    const SizedBox(height: AppPadding.tight),
-
-                    Text("Hi, $roleText", style: AppTypography.Bluesubheading),
-
-                    const SizedBox(height: AppPadding.medium),
-
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Language",
-                          style: AppTypography.body.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textMain,
+                      // 🔷 ICON
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue,
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.radiusLarge,
                           ),
                         ),
-                        const SizedBox(height: AppPadding.tight),
-                        ValueListenableBuilder<Locale>(
-                          valueListenable: AppLanguageManager.localeNotifier,
-                          builder: (context, currentLocale, child) {
-                            return DropdownButtonFormField<String>(
-                              value: currentLocale.languageCode,
-                              dropdownColor: Colors.white,
-                              icon: const Icon(
-                                Icons.arrow_drop_down,
-                                color: AppColors.textSecondary,
+                        child: Image.asset(
+                          'assets/images/Icon_kkh_512.png',
+                          width: 100,
+                          height: 100,
+                        ),
+                      ),
+                      
+                      const SizedBox(height: AppPadding.medium),
+
+                      const Text("HazardScan", style: AppTypography.Blueheading),
+
+                      const SizedBox(height: AppPadding.tight),
+
+                      const SizedBox(height: AppPadding.medium),
+                      
+                      if (isAdmin) ...[
+                        const AiTelemetryWidget(),
+                        MenuButton(
+                          label: "Reports Statistics",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ReportsStatisticsPage(),
                               ),
-                              style: AppTypography.body.copyWith(
-                                color: AppColors.textMain,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppPadding.medium),
+
+                        MenuButton(
+                          label: "Reports List",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ReportsListPage(),
                               ),
-                              decoration: const InputDecoration(
-                                prefixIcon: Icon(Icons.language, size: 20),
-                                fillColor: AppColors.backgroundWhite,
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppPadding.medium),
+
+                        MenuButton(
+                          label: "Manage Submission details",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ManageSubmissionDetailsPage(),
                               ),
-                              items: const [
-                                DropdownMenuItem(
-                                  value: 'en',
-                                  child: Text("English"),
+                            );
+                          },
+                        ),
+                      ] else ...[
+                        MenuButton(
+                          label: "Submit Safety Report",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TechnicianSelectSwp(
+                                  templateId: 1,
+                                  categoryName: "1",
                                 ),
-                                DropdownMenuItem(
-                                  value: 'zh',
-                                  child: Text("中文"),
-                                ),
-                              ],
-                              onChanged: (String? newLanguageCode) {
-                                if (newLanguageCode != null) {
-                                  AppLanguageManager.changeLanguage(
-                                    newLanguageCode,
-                                  );
-                                }
-                              },
+                              ),
                             );
                           },
                         ),
                       ],
-                    ),
-                    const SizedBox(height: AppPadding.medium),
-                    if (isAdmin) ...[
-                      MenuButton(
-                        label: "Reports Statistics",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ReportsStatisticsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppPadding.medium),
-
-                      MenuButton(
-                        label: "Reports List",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ReportsListPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: AppPadding.medium),
-
-                      MenuButton(
-                        label: "Manage Submission details",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const ManageSubmissionDetailsPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ] else ...[
-                      MenuButton(
-                        label: "Submit Safety Report",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => TechnicianSelectSwp(
-                                templateId: 1,
-                                categoryName: "1",
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                      // Spacing clearance at the bottom so elements don't hide under the logout button
+                      const SizedBox(height: 100),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
