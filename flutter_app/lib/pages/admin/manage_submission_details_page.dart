@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:kkhazardscan/pages/admin/manage_departments_page.dart';
 import 'package:kkhazardscan/pages/admin/manage_designations_page.dart';
-import 'package:kkhazardscan/pages/admin/manage_immediate_emails.dart';
+import 'package:kkhazardscan/pages/admin/manage_emails.dart';
 import 'package:kkhazardscan/pages/admin/manage_locations_page.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
@@ -73,13 +73,11 @@ class _ManageSubmissionDetailsState extends State<ManageSubmissionDetailsPage> {
               ),
               const SizedBox(height: AppPadding.medium),
               MenuButton(
-                label: "Manage Immediate Emails",
+                label: "Manage Emails",
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => const ManageImmediateEmailsPage(),
-                    ),
+                    MaterialPageRoute(builder: (_) => const ManageEmailsPage()),
                   );
                 },
                 icon: Icons.email_outlined,
@@ -118,9 +116,7 @@ class _ManageSubmissionDetailsState extends State<ManageSubmissionDetailsPage> {
                   style: TextStyle(fontSize: 14, color: Colors.black87),
                 ),
                 const SizedBox(height: AppPadding.medium),
-                const Text(
-                  'You can add, edit and delete them as you wish.'
-                )
+                const Text('You can add, edit and delete them as you wish.'),
               ],
             ),
           ),
@@ -128,7 +124,7 @@ class _ManageSubmissionDetailsState extends State<ManageSubmissionDetailsPage> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Close'),
-            )
+            ),
           ],
         );
       },

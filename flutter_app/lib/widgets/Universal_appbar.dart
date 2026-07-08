@@ -3,9 +3,11 @@ import 'package:kkhazardscan/Design/style_constant.dart';
 
 class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final Color? titleColor;
   final List<Widget>? actions;
   final Widget? leading;
   final bool centerTitle;
+  final Color? backgroundColor;
 
   const UniversalAppBar({
     super.key,
@@ -13,12 +15,14 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.actions,
     this.leading,
     this.centerTitle = true,
+    this.backgroundColor = AppColors.backgroundWhite,
+    this.titleColor,
   });
 
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      backgroundColor: AppColors.backgroundWhite,
+      backgroundColor: backgroundColor,
       elevation: 0,
       centerTitle: centerTitle,
       leading: leading ?? (_shouldShowBackButton(context)
@@ -29,7 +33,7 @@ class UniversalAppBar extends StatelessWidget implements PreferredSizeWidget {
           : null),
       title: Text(
         title,
-        style: AppTypography.Bluesubheading,
+        style: AppTypography.Bluesubheading.copyWith(color: titleColor ?? null),
       ),
       actions: actions,
     );
