@@ -410,8 +410,9 @@ if (_lastAiCallMetrics != null) {
 
 
   void _showImagePreviewDialog(Uint8List imageBytes) {
-    if (_globalImageBytes.isEmpty)
+    if (_globalImageBytes.isEmpty) {
       return; // Guard against empty list before trying to access .last
+    }
     showDialog(
       context: context,
       builder: (context) => BackdropFilter(
@@ -744,8 +745,9 @@ if (_lastAiCallMetrics != null) {
                                     icon: Icons.assignment_turned_in_rounded,
                                     onTap: () async {
                                       if (!(formKey.currentState?.validate() ??
-                                          false))
+                                          false)) {
                                         return;
+                                      }
 
                                       setDialogState(
                                         () => dialogSubmitting = true,
@@ -921,6 +923,7 @@ if (_lastAiCallMetrics != null) {
       return true;
     } catch (e) {
       debugPrint("Error executing report: $e");
+      debugPrint("Error executing report: $e");
       return false;
     }
   }
@@ -967,8 +970,10 @@ if (_lastAiCallMetrics != null) {
 
       if (response.status != 200 && response.status != 201) {
         debugPrint('Failed to send email via function: ${response.data}');
+        debugPrint('Failed to send email via function: ${response.data}');
       }
     } catch (e) {
+      debugPrint('Error calling edge function: $e');
       debugPrint('Error calling edge function: $e');
     }
   }
@@ -990,8 +995,9 @@ if (_lastAiCallMetrics != null) {
           bool isAbove3m = _savedAbove3m[id] ?? false;
           if (isAbove3m) {
             String ptw = _savedPtwNumbers[id] ?? "";
-            if (ptw.trim().isEmpty)
+            if (ptw.trim().isEmpty) {
               return "Permit To Work (PTW) number is required.";
+            }
 
             if (_globalImageBytes.isEmpty) {
               return "Please upload a site photo for Work at Height tasks.";

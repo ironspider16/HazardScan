@@ -12,6 +12,7 @@ class MenuButton extends StatefulWidget {
   final double? width;
   final double? height;
   final Widget? leading;
+  final Widget? leading2;
 
   const MenuButton({
     super.key,
@@ -25,6 +26,7 @@ class MenuButton extends StatefulWidget {
     this.width,
     this.height,
     this.leading,
+    this.leading2
   });
 
   @override
@@ -126,6 +128,9 @@ class _MenuButtonState extends State<MenuButton> {
                 fontSize: widget.isMini ? 12 : null,
               ),
             ),
+            if (widget.leading2 != null) ...[
+              widget.leading2!,
+            ]
           ],
         ),
       ),

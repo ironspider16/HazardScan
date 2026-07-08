@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:kkhazardscan/config/language_manager.dart';
 import 'pages/login_screen.dart'; // make sure this file is in lib/login_screen.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -43,7 +41,7 @@ class MyApp extends StatelessWidget {
       valueListenable: AppLanguageManager.localeNotifier,
       builder: (context, currentLocale, child) {
         return MaterialApp(
-          title: 'Safety App Login',
+          title: 'HazardScan KKH',
           locale: currentLocale,
           supportedLocales: const [Locale('en'), Locale('zh')],
           localizationsDelegates: const [

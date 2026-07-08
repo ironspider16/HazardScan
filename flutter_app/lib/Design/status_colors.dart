@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/Design/style_constant.dart';
 
 class SafetyStatusHelper {
-  static Color getColor(String status) {
+  static Color getColor(String? status) {
+    if (status == null) return Colors.grey.shade600;
+    
     final String upperStatus = status.toUpperCase();
 
-    if (upperStatus.contains('PARTIALLY')) {
-      return Colors.orange;
-    } else if (upperStatus == 'COMPLIANT' || upperStatus == 'SAFE') {
-      return Colors.green;
-    } else if (upperStatus == 'DANGEROUS' || upperStatus.contains('NON')) {
-      return Colors.red;
+    if (upperStatus == 'DANGEROUS') {
+      return Colors.red.shade700;
+    } else if (upperStatus == 'PARTIALLY COMPLIANT') {
+      return Colors.orange.shade700;
+    } else if (upperStatus == 'COMPLIANT') {
+      return AppColors.primaryBlue;
+    } else if (upperStatus == 'SAFE') {
+      return Colors.green.shade700;
     }
-    return Colors.grey;
+    return Colors.grey.shade600;
   }
 }

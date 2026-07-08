@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:kkhazardscan/main.dart';
 import 'package:kkhazardscan/pages/admin/manage_submission_details_page.dart';
 import 'package:kkhazardscan/pages/technician/technician_select_SWP.dart';
@@ -19,8 +18,8 @@ class MainMenu extends StatelessWidget {
 
   bool get isAdmin => user.role == UserRole.admin;
 
-  Future <void> _logout(BuildContext context) async {
-    try{
+  Future<void> _logout(BuildContext context) async {
+    try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove('user_role');
       await Supabase.instance.client.auth.signOut();
@@ -65,16 +64,15 @@ class MainMenu extends StatelessWidget {
                           AppDimensions.radiusLarge,
                         ),
                       ),
-                      child: SvgPicture.asset(
-                        'assets/images/KKHlogo.svg',
+                      child: Image.asset(
+                        'assets/images/Icon_kkh_512.png',
                         width: 100,
                         height: 100,
-                        semanticsLabel: 'Company Logo',
                       ),
                     ),
 
                     const SizedBox(height: AppPadding.medium),
-                    
+
                     const Text("HazardScan", style: AppTypography.Blueheading),
 
                     const SizedBox(height: AppPadding.tight),
@@ -160,16 +158,19 @@ class MainMenu extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: AppPadding.medium),
-                      
-                      MenuButton(label: "Manage Submission details",
-                      onTap: () {
+
+                      MenuButton(
+                        label: "Manage Submission details",
+                        onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const ManageSubmissionDetailsPage(),
+                              builder: (_) =>
+                                  const ManageSubmissionDetailsPage(),
                             ),
                           );
-                        },)
+                        },
+                      ),
                     ] else ...[
                       MenuButton(
                         label: "Submit Safety Report",
