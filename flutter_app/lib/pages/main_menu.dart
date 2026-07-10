@@ -10,7 +10,7 @@ import 'admin/reports_statistics_page.dart';
 import 'admin/reports_list_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets/ai_telemetry_widget.dart';
-
+import 'package:kkhazardscan/pages/admin/change_technician_password_page.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
@@ -75,17 +75,20 @@ class MainMenu extends StatelessWidget {
                           height: 100,
                         ),
                       ),
-                      
+
                       const SizedBox(height: AppPadding.medium),
 
-                      const Text("HazardScan", style: AppTypography.Blueheading),
+                      const Text(
+                        "HazardScan",
+                        style: AppTypography.Blueheading,
+                      ),
 
                       const SizedBox(height: AppPadding.tight),
 
                       const SizedBox(height: AppPadding.medium),
-                      
+
                       if (isAdmin) ...[
-                        const AiTelemetryWidget(),
+                        // const AiTelemetryWidget(),
                         MenuButton(
                           label: "Reports Statistics",
                           onTap: () {
@@ -120,6 +123,33 @@ class MainMenu extends StatelessWidget {
                               MaterialPageRoute(
                                 builder: (_) =>
                                     const ManageSubmissionDetailsPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppPadding.medium),
+
+                        MenuButton(
+                          label: "AI Engine Matrix",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AiTelemetryPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: AppPadding.medium),
+
+                        MenuButton(
+                          label: "Change Technician's Password",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ChangeTechnicianPasswordPage(),
                               ),
                             );
                           },
