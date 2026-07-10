@@ -300,7 +300,7 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          "Register Supervisor Target",
+          "Add Email",
           style: AppTypography.Blackheading.copyWith(fontSize: 22),
         ),
         content: Column(
@@ -346,7 +346,7 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                         'email': text,
                         'is_immediate': false,
                       });
-                      _fetchEmails();
+                      await _fetchEmails();
                     } catch (e) {
                       debugPrint("Database storage failure: $e");
                       setState(() => _isLoading = false);
@@ -375,7 +375,7 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          "Modify Supervisor Target",
+          "Edit email",
           style: AppTypography.Blackheading.copyWith(fontSize: 22),
         ),
         content: Column(
@@ -549,16 +549,33 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                 ),
                 IconButton(
                   tooltip: "Delete Selected Records",
-                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                  icon: const Icon(Icons.delete, color: Colors.redAccent),
                   onPressed: _bulkDeleteEmails,
                 ),
                 const SizedBox(width: 8),
               ],
             )
-          : (UniversalAppBar(title: "Manage Emails") as PreferredSizeWidget),
+          : (UniversalAppBar(
+                  title: "Manage Emails",
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.help_outline),
+                      iconSize: 20,
+                      color: AppColors.primaryBlue,
+                      tooltip: 'Explain',
+                      onPressed: () => _showExplanation(context),
+                    ),
+                  ],
+                )
+                as PreferredSizeWidget),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppPadding.page),
+          padding: isMobile(context)
+              ? EdgeInsets.symmetric(
+                  vertical: AppPadding.tight,
+                  horizontal: AppPadding.page,
+                )
+              : EdgeInsetsGeometry.all(AppPadding.page),
           child: Column(
             children: [
               Expanded(
@@ -577,45 +594,61 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
-                                  child: Text(
-                                    "Filter via Group:",
-                                    style: AppTypography.Blacksubheading,
+                                Text(
+                                  "Filter via Group:",
+                                  style: AppTypography.faintbody.copyWith(
+                                    color: AppColors.textMain,
                                   ),
                                 ),
-                                Wrap(
-                                  spacing: AppPadding.tight,
-                                  runSpacing: AppPadding.tight,
-                                  children: _allGroups.map((group) {
-                                    final String groupName =
-                                        group['name'] ?? '';
-                                    final int groupId = group['id'] ?? 0;
-                                    return FilterChip(
-                                      label: Text(groupName),
-                                      selected: _selectedGroups.any(
-                                        (group) => group['id'] == groupId,
-                                      ),
-                                      onSelected: (bool selected) {
-                                        setState(() {
-                                          if (selected) {
-                                            _selectedGroups.add({
-                                              'id': groupId,
-                                              'name': groupName,
-                                            });
-                                          } else {
-                                            _selectedGroups.removeWhere(
+                                const SizedBox(height: AppPadding.tight),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    spacing: AppPadding.tight,
+                                    children: _allGroups.map((group) {
+                                      final String groupName =
+                                          group['name'] ?? '';
+                                      final int groupId = group['id'] ?? 0;
+                                      return Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          FilterChip(
+                                            label: Text(groupName),
+                                            selected: _selectedGroups.any(
                                               (group) => group['id'] == groupId,
-                                            );
-                                          }
-                                        });
-                                        debugPrint(_selectedGroups.toString());
-                                      },
-                                      onDeleted: () => _deleteGroup(groupId),
-                                      deleteIcon: const Icon(Icons.delete),
-                                      deleteIconColor: Colors.redAccent,
-                                    );
-                                  }).toList(),
+                                            ),
+                                            onSelected: (bool selected) {
+                                              setState(() {
+                                                if (selected) {
+                                                  _selectedGroups.add({
+                                                    'id': groupId,
+                                                    'name': groupName,
+                                                  });
+                                                } else {
+                                                  _selectedGroups.removeWhere(
+                                                    (group) =>
+                                                        group['id'] == groupId,
+                                                  );
+                                                }
+                                              });
+                                              debugPrint(
+                                                _selectedGroups.toString(),
+                                              );
+                                            },
+                                            onDeleted: () =>
+                                                _deleteGroup(groupId),
+                                            deleteIcon: const Icon(
+                                              Icons.delete,
+                                            ),
+                                            deleteIconColor: Colors.redAccent,
+                                          ),
+                                          const SizedBox(
+                                            width: AppPadding.tight / 4,
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ),
                                 ),
                               ],
                             ),
@@ -713,6 +746,87 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
       ),
     );
   }
+
+  void _showExplanation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            "How to manage emails?",
+            style: AppTypography.Bluesubheading,
+          ),
+
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'What does toggling each email on and off do?',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppPadding.medium),
+                const Text(
+                  'Toggling an email on, makes it an immediate email. An immediate email will receive the report immediately when a technician submits a report from the technician checklist page.',
+                ),
+                const SizedBox(height: AppPadding.medium),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      key: UniqueKey(),
+                      backgroundColor: Colors.yellow,
+                      child: Icon(
+                        Icons.mail_outline,
+                        color: Colors.grey.shade700,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: AppPadding.tight),
+                    const Text(
+                      "Means it's an immediate email",
+                      style: AppTypography.body
+                    )
+                  ],
+                ),
+                const SizedBox(height: AppPadding.medium),
+                Text(
+                  'What is an email group?',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppPadding.medium),
+                const Text(
+                  'An email group is the group of emails that will receive reports when you go into the reports list page, manually choose the reports via long clicking each report, and select the email group.',
+                ),
+                const SizedBox(height: AppPadding.medium),
+                Text(
+                  'How do I add emails to groups, and delete emails?',
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppPadding.medium),
+                const Text(
+                  'By long pressing an email, you can select multiple emails. After long pressing, there will be an option at the bottom of the page to add selected emails to a group. at the top right of the page, there will also be an option to delete emails.',
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 class _EmailCard extends StatelessWidget {
@@ -768,31 +882,37 @@ class _EmailCard extends StatelessWidget {
               horizontal: AppPadding.medium,
               vertical: 2.0,
             ),
-            leading: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 150),
-              child: isSelectionMode
-                  ? Checkbox(
-                      key: ValueKey('checkbox_$email'),
-                      activeColor: AppColors.primaryBlue,
-                      value: isSelected,
-                      onChanged: (_) => onTap(),
-                    )
-                  : CircleAvatar(
-                      key: ValueKey('avatar_$email'),
-                      backgroundColor: isImmediate
-                          ? Colors.yellow
-                          : AppColors.backgroundWhite,
-                      child: Icon(
-                        Icons.mail_outline,
-                        color: Colors.grey.shade700,
-                        size: 20,
-                      ),
-                    ),
-            ),
+            leading: (isMobile(context) && !isSelectionMode)
+                ? null
+                : AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 150),
+                    child: isSelectionMode
+                        ? Checkbox(
+                            key: ValueKey('checkbox_$email'),
+                            activeColor: AppColors.primaryBlue,
+                            value: isSelected,
+                            onChanged: (_) => onTap(),
+                          )
+                        : CircleAvatar(
+                            key: ValueKey('avatar_$email'),
+                            backgroundColor: isImmediate
+                                ? Colors.yellow
+                                : AppColors.backgroundWhite,
+                            child: Icon(
+                              Icons.mail_outline,
+                              color: Colors.grey.shade700,
+                              size: 20,
+                            ),
+                          ),
+                  ),
             title: Text(
               email,
+              overflow: TextOverflow.fade,
+              maxLines: 1,
+              softWrap: false,
               style: AppTypography.body.copyWith(
                 fontWeight: isImmediate ? FontWeight.w600 : FontWeight.normal,
+                fontSize: isMobile(context) ? 13 : null,
               ),
             ),
             trailing: isSelectionMode
@@ -891,4 +1011,8 @@ class _AddEmailButton extends StatelessWidget {
       ),
     );
   }
+}
+
+bool isMobile(BuildContext context) {
+  return MediaQuery.sizeOf(context).width < 500;
 }
