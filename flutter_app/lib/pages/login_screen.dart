@@ -105,6 +105,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     return Scaffold(
+      // This is for testing purposes (YOLO model testing etcetc)
+      // It will display floating icon at login screen
       // floatingActionButton: FloatingActionButton(
       //   backgroundColor: const Color(0xFF2563EB),
       //   onPressed: () async {
