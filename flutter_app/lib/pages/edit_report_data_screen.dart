@@ -19,7 +19,8 @@ class _EditReportDataScreenState extends State<EditReportDataScreen> {
     {'key': 'ladderHeight', 'label': 'Working at Heights'},
     {'key': 'ppe', 'label': 'Personal Protective Equipment (PPE)'},
     {'key': 'buddySystem', 'label': 'Buddy System'},
-    {'key': 'areaHazards', 'label': 'Area & Environmental Hazards'},
+    {'key': 'electricalMachinery', 'label': 'Electrical & Machinery Hazards'},
+    {'key': 'areaHazards', 'label': 'Housekeeping and Area Hazards'},
   ];
 
   @override

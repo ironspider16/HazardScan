@@ -881,6 +881,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
+              'electricalMachinery': _globalAiData!['electricalMachinery'] ?? {},
               'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
@@ -934,7 +935,6 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       await supabase.from('safety_reports').insert(recordsToInsert);
       return true;
     } catch (e) {
-      debugPrint("Error executing report: $e");
       debugPrint("Error executing report: $e");
       return false;
     }

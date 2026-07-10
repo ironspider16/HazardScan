@@ -25,10 +25,6 @@ class LocalReportCompiler {
     switch (status.trim().toUpperCase()) {
       case 'DANGEROUS':
         return _red;
-      case 'PARTIALLY COMPLIANT':
-        return _orange;
-      case 'COMPLIANT':
-        return _blue;
       case 'SAFE':
         return _green;
       default:
@@ -40,10 +36,6 @@ class LocalReportCompiler {
     switch (status.trim().toUpperCase()) {
       case 'DANGEROUS':
         return _redTint;
-      case 'PARTIALLY COMPLIANT':
-        return _orangeTint;
-      case 'COMPLIANT':
-        return _blueTint;
       case 'SAFE':
         return _greenTint;
       default:
@@ -67,6 +59,7 @@ class LocalReportCompiler {
     final Map<String, dynamic> ladder = initialAiData['ladderHeight'] ?? {};
     final Map<String, dynamic> ppe = initialAiData['ppe'] ?? {};
     final Map<String, dynamic> buddy = initialAiData['buddySystem'] ?? {};
+    final Map<String, dynamic> electrical = initialAiData['electricalMachinery'] ?? {};
     final Map<String, dynamic> hazards = initialAiData['areaHazards'] ?? {};
     final String overallStatus = initialAiData['overallStatus'] ?? 'PENDING';
 
@@ -121,7 +114,9 @@ class LocalReportCompiler {
           pw.SizedBox(height: 8),
           _hazardCard('Buddy System', buddy, getField),
           pw.SizedBox(height: 8),
-          _hazardCard('Area & Environmental Hazards', hazards, getField),
+          _hazardCard('Electrical & Machinery Hazards', electrical, getField),
+          pw.SizedBox(height: 8),
+          _hazardCard('Housekeeping and Area Hazards', hazards, getField),
           pw.SizedBox(height: 8),
 
           // Manual notes box
