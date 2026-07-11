@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:kkhazardscan/Design/status_Colors.dart';
 import 'package:kkhazardscan/pages/admin/reports_detail_page.dart';
+import 'package:kkhazardscan/services/report_compiler.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
@@ -16,6 +20,7 @@ class ReportsListPage extends StatefulWidget {
 
 class _ReportsListPageState extends State<ReportsListPage> {
   final supabase = Supabase.instance.client;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   List<Map<String, dynamic>> reports = [];
   bool isLoading = true;
@@ -28,6 +33,12 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  List<Map<String, dynamic>> _allGroups = [];
+  List<int> _selectedReports = [];
+  PersistentBottomSheetController? _bottomSheetController;
+  bool get _isSelectionMode => _selectedReports.isNotEmpty;
+  bool selectEmailGroupStep = false;
 
   final List<String> categories = [
     'Work At Height',
@@ -54,6 +65,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
   void initState() {
     super.initState();
     loadReports();
+    _fetchAllGroups();
   }
 
   @override
@@ -163,6 +175,54 @@ class _ReportsListPageState extends State<ReportsListPage> {
     }
   }
 
+  Future<void> _fetchAllGroups() async {
+    try {
+      final data = await supabase
+          .from("email_groups")
+          .select("id, name")
+          .order('name', ascending: true);
+      setState(() {
+        _allGroups = (data as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+      });
+    } catch (e) {
+      debugPrint("Error fetching groups : $e");
+    }
+  }
+
+  void _handleRowTap(int id) {
+    _toggleSelection(id);
+  }
+
+  // Change individual row selection status with tactile haptic feedback
+  void _toggleSelection(int id) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (_selectedReports.contains(id)) {
+        _selectedReports.remove(id);
+      } else {
+        _selectedReports.add(id);
+      }
+    });
+
+    _bottomSheetController?.setState?.call(() {});
+  }
+
+  // Cancel multi-select state safely
+  void _clearSelection() {
+    setState(() {
+      _selectedReports.clear();
+    });
+    _bottomSheetController?.setState?.call(() {});
+  }
+
+  void _conditionalCloseBottomSheet() {
+    if (_selectedReports.isEmpty) {
+      _bottomSheetController?.close();
+    }
+  }
+
   // Parses safety JSON map/string fields into structured reason strings
 
   Widget _informationChips(Map<String, Map<String, dynamic>> info) {
@@ -194,6 +254,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
   }
 
   Widget _reportCard(Map<String, dynamic> report) {
+    final int reportId = report['id'];
+    final bool isSelected = _selectedReports.contains(reportId);
+
     final String techName = report['technician_name'] ?? 'Unknown Technician';
     final String date = report['submitted_at'] ?? '';
     final String safetyProcedure =
@@ -214,71 +277,109 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
     return Container(
       margin: const EdgeInsets.only(top: AppPadding.medium),
-      decoration: BoxDecoration(
-        color: AppColors.primaryTint,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-      ),
+
       // Clip contents so the splash effect stays inside the border radius
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
         child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ReportsDetailPage(report: report),
-              ),
-            );
+          onLongPress: () => {
+            _toggleSelection(reportId),
+            _openBottomSheet(context),
           },
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // A subtle status indicator bar on the far left edge of the card
-                Container(width: 6, color: statusColor),
+          onTap: () {
+            if (_isSelectionMode) {
+              _handleRowTap(reportId);
+              _conditionalCloseBottomSheet();
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ReportsDetailPage(report: report),
+                ),
+              );
+            }
+          },
+          child: Stack(
+            children: [
+              Container(
+                color: AppColors.primaryTint,
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // A subtle status indicator bar on the far left edge of the card
+                      Container(width: 6, color: statusColor),
 
-                // Main card details content
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppPadding.medium),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                "$safetyProcedure — $safetyProcedureCategory",
-                                style: AppTypography.Blacksubheading.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                      // Main card details content
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppPadding.medium),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      "$safetyProcedure — $safetyProcedureCategory",
+                                      style:
+                                          AppTypography
+                                              .Blacksubheading.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Icon(
+                                    isSelected
+                                        ? (Icons.check_circle)
+                                        : Icons.chevron_right_rounded,
+                                    color: isSelected
+                                        ? AppColors.primaryBlue
+                                        : Colors.black.withOpacity(0.35),
+                                  ),
+                                ],
                               ),
-                            ),
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              color: Colors.black.withOpacity(0.35),
-                            ),
-                          ],
+
+                              const SizedBox(height: AppPadding.tight / 2),
+
+                              Text(
+                                "Submitted by: $techName",
+                                style: AppTypography.faintbody.copyWith(
+                                  fontSize: 13,
+                                ),
+                              ),
+
+                              const SizedBox(height: AppPadding.medium),
+                              _informationChips(info),
+                            ],
+                          ),
                         ),
-
-                        const SizedBox(height: AppPadding.tight / 2),
-
-                        Text(
-                          "Submitted by: $techName",
-                          style: AppTypography.faintbody.copyWith(fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusMedium,
                         ),
-
-                        const SizedBox(height: AppPadding.medium),
-                        _informationChips(info),
-                      ],
+                        border: Border.all(
+                          color: AppColors.primaryBlue,
+                          width: 2,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
@@ -443,6 +544,249 @@ class _ReportsListPageState extends State<ReportsListPage> {
     );
   }
 
+  void _openBottomSheet(BuildContext context) {
+    final scaffoldState = _scaffoldKey.currentState;
+    if (scaffoldState == null) return;
+
+    _bottomSheetController = scaffoldState.showBottomSheet(
+      (BuildContext ctx) {
+        // 2. Wrap with StatefulBuilder to handle bottom sheet internal updates
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.only(top: AppPadding.tight),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (selectEmailGroupStep == false) ...[
+                    SizedBox(
+                      height: AppPadding.Largest,
+                      width: double.infinity,
+                      child: TextButton(
+                        onPressed: () {
+                          debugPrint(_selectedReports.toString());
+                          // 3. Use setSheetState to trigger a rebuild of the sheet
+                          setSheetState(() {
+                            selectEmailGroupStep = true;
+                          });
+                        },
+                        style: TextButton.styleFrom(
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.zero,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.email, size: AppPadding.medium),
+                            SizedBox(width: AppPadding.tight),
+                            Text(
+                              'Send to email group (${_selectedReports.length} selected)',
+                              style: TextStyle(fontSize: AppPadding.medium),
+                            ),
+                            SizedBox(width: AppPadding.tight),
+                            const Icon(Icons.chevron_right),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppPadding.tight),
+                  ] else ...[
+                    SizedBox(
+                      height: 150,
+                      child: ListView.builder(
+                        itemCount: _allGroups.length,
+                        itemBuilder: (context, index) {
+                          final int groupId = _allGroups[index]["id"];
+                          final String groupName = _allGroups[index]["name"];
+                          return SizedBox(
+                            height: AppPadding.Largest,
+                            width: double.infinity,
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.pop(ctx);
+                                _sendReportsToEmailGroup(groupId, groupName);
+                              },
+                              style: TextButton.styleFrom(
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.zero,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  SizedBox(width: AppPadding.Largest),
+                                  Text(
+                                    'Send to ${_allGroups[index]["name"]}',
+                                    style: TextStyle(
+                                      fontSize: AppPadding.medium,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  Icon(Icons.send),
+                                  SizedBox(width: AppPadding.Largest),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                  const Divider(height: 1, thickness: 1),
+
+                  SizedBox(
+                    height: AppPadding.Largest,
+                    width: double.infinity,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                        ),
+                      ),
+                      onPressed: () {
+                        _clearSelection();
+                        Navigator.pop(ctx);
+                      },
+                      child: const Text(
+                        'Close',
+                        style: AppTypography.faintbody,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppPadding.tight),
+        ),
+      ),
+    );
+
+    _bottomSheetController?.closed.then((_) {
+      _bottomSheetController = null;
+      // 4. Reset the step variable when the sheet is closed completely
+      setState(() {
+        selectEmailGroupStep = false;
+      });
+    });
+  }
+
+  Future<void> _sendReportsToEmailGroup(int groupId, String groupName) async {
+    final selectedObjs = reports
+        .where((r) => _selectedReports.contains(r['id']))
+        .toList();
+
+    if (selectedObjs.isEmpty) return;
+
+    // Show non-dismissible loading dialog during PDF generation and network requests
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogCtx) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Text(
+                  "Sending ${selectedObjs.length} reports to $groupName...",
+                  style: AppTypography.body,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    int successCount = 0;
+
+    for (int i = 0; i < selectedObjs.length; i++) {
+      final report = selectedObjs[i];
+      try {
+        // Reconstruct the nested AI data map from flat database columns
+        final safetyVar =
+            report['WAH_safetyVariables_FK'] as Map<String, dynamic>?;
+        final Map<String, dynamic> aiData = {
+          'overallStatus': safetyVar?['Overall Status'] ?? 'PENDING',
+          'ladderHeight':
+              safetyVar?['ladderheight'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'ppe':
+              safetyVar?['ppe'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'buddySystem':
+              safetyVar?['buddySystem'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'areaHazards':
+              safetyVar?['areaHazards'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+        };
+
+        // Compile PDF locally without image evidence
+        final Uint8List pdfBytes = await LocalReportCompiler.generateWshReport(
+          location: report['location']?.toString() ?? 'Not Declared',
+          supervisor: report['technician_name']?.toString() ?? 'Unassigned',
+          employer: report['department']?.toString() ?? 'Not Declared',
+          initialAiData: aiData,
+          manualNotes: report['Details']?.toString() ?? '',
+          imagesBytes: null,
+          submittedAt: report['submitted_at']
+        );
+
+        final String base64Pdf = base64Encode(pdfBytes);
+
+        // Invoke Supabase Edge Function for each report
+        final response = await supabase.functions.invoke(
+          'email-sending',
+          body: {
+            "group_id": groupId,
+            "technician_name": report['technician_name'] ?? 'Unassigned',
+            "details": report['Details'] ?? '',
+            "title": report['swp_templates']?['title'] ?? 'General',
+            "category": report['swp_templates']?['category'] ?? 'General',
+            "ptw_number": report['wah_permit_numbers'] ?? '',
+            "designation": report['designation'] ?? '',
+            "department": report['department'] ?? '',
+            "location": report['location'] ?? '',
+            "pdf": base64Pdf,
+          },
+        );
+
+        if (response.status == 200 || response.status == 201) {
+          successCount++;
+        } else {
+          debugPrint('Failed to send report ${report['id']}: ${response.data}');
+        }
+      } catch (e) {
+        debugPrint('Error dispatching report ${report['id']}: $e');
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pop(context); // Dismiss loading dialog
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "Successfully sent $successCount of ${selectedObjs.length} reports to $groupName.",
+        ),
+        backgroundColor: successCount == selectedObjs.length
+            ? Colors.green
+            : Colors.orange,
+      ),
+    );
+
+    _clearSelection();
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isFiltering =
@@ -453,9 +797,12 @@ class _ReportsListPageState extends State<ReportsListPage> {
 
     final filteredData = _filteredReports;
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppColors.backgroundWhite,
       appBar: UniversalAppBar(
-        title: "All Reports",
+        title: _isSelectionMode
+            ? "All Reports (${_selectedReports.length} Selected) "
+            : "All Reports",
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_vert_rounded, color: Colors.black),
@@ -469,7 +816,6 @@ class _ReportsListPageState extends State<ReportsListPage> {
               loadReports();
             },
           ),
-
           IconButton(
             icon: Icon(
               Icons.filter_list_alt,

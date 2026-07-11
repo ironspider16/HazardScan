@@ -788,8 +788,8 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                     const SizedBox(width: AppPadding.tight),
                     const Text(
                       "Means it's an immediate email",
-                      style: AppTypography.body
-                    )
+                      style: AppTypography.body,
+                    ),
                   ],
                 ),
                 const SizedBox(height: AppPadding.medium),

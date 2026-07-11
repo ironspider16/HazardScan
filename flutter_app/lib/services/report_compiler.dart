@@ -51,14 +51,15 @@ class LocalReportCompiler {
     }
   }
 
-// --- MAIN GENERATOR ---
+  // --- MAIN GENERATOR ---
   static Future<Uint8List> generateWshReport({
     required String location,
     required String supervisor,
     required String employer,
     required Map<String, dynamic> initialAiData,
     required String manualNotes,
-    List<Uint8List>? imagesBytes, 
+    List<Uint8List>? imagesBytes,
+    String? submittedAt,
   }) async {
     final pdf = pw.Document();
     final font = await PdfGoogleFonts.notoSansRegular();
@@ -73,10 +74,12 @@ class LocalReportCompiler {
     String getField(Map<String, dynamic> block, String field) =>
         block[field]?.toString().trim() ?? 'Not Declared';
 
-    final String currentDate = DateTime.now().toIso8601String().split('T')[0];
-    final String currentTime =
-        "${DateTime.now().hour.toString().padLeft(2, '0')}:"
-        "${DateTime.now().minute.toString().padLeft(2, '0')}";
+    final String currentDate =
+        submittedAt ?? DateTime.now().toIso8601String().split('T')[0];
+    final String currentTime = submittedAt != null
+        ? ''
+        : "${DateTime.now().hour.toString().padLeft(2, '0')}:"
+              "${DateTime.now().minute.toString().padLeft(2, '0')}";
 
     // Convert all captured image streams into a PDF layout array
     List<pw.MemoryImage> siteImages = [];
@@ -108,7 +111,10 @@ class LocalReportCompiler {
               'Employer / Contractor',
               employer.isEmpty ? 'Not Declared' : employer,
             ],
-            ['Inspection Time', '$currentDate  $currentTime SGT'],
+            [
+              'Inspection Time',
+              '$currentDate  $currentTime ${submittedAt != null ? '' : 'SGT'}',
+            ],
           ]),
           pw.SizedBox(height: 16),
 
@@ -136,11 +142,15 @@ class LocalReportCompiler {
           pw.SizedBox(height: 8),
           if (siteImages.isNotEmpty) ...[
             pw.Column(
-              children: siteImages.map((img) => pw.Padding(
-                padding: const pw.EdgeInsets.only(bottom: 12),
-                child: _imageBlock(img),
-              )).toList(),
-            )
+              children: siteImages
+                  .map(
+                    (img) => pw.Padding(
+                      padding: const pw.EdgeInsets.only(bottom: 12),
+                      child: _imageBlock(img),
+                    ),
+                  )
+                  .toList(),
+            ),
           ] else
             _emptyImageBlock(),
 
