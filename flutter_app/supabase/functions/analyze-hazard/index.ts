@@ -47,6 +47,12 @@ serve(async (req: Request) => {
         reasoning: "N/A",
         advice: "N/A",
       },
+      electricalMachinery: {
+        compliance: "N/A",
+        description: "N/A",
+        reasoning: "N/A",
+        advice: "N/A",
+      },
       areaHazards: {
         compliance: "N/A",
         description: "N/A",
@@ -100,15 +106,22 @@ ADDITIONAL SITE CONTEXT PROVIDED BY THE TECHNICIAN ON-SITE:
 "${userContext || "No additional context provided."}"
  
 HOSPITAL SWP CONSTRAINTS TO ENFORCE:
-1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. You MUST CHECK if the ladder's spreader bars are locked, if unable to confirm, mark as "N/A" or "PARTIALLY COMPLIANT".
-2. BUDDY SYSTEM & PERSONNEL: Check for lack of a buddy system on ladders, missing attendants/watchmen for confined spaces or lifters, and unauthorized entry into cordoned zones. It is assumed that one of the buddy system participants is the photographer, so if you see one person on a ladder but cannot confirm if a buddy is present, you can infer potential non-compliance and mark as "PARTIALLY COMPLIANT" only with reasoning.
-3. PPE (Personal Protective Equipment): Look for missing safety helmets, safety shoes and gloves. Boots must be rubber if the surface is wet. 
-4. AREA & SURFACE HAZARDS: Check for uncordoned work/refilling areas, slippery or wet surfaces, obstructed transport routes/exits, debris on platforms, confined spaces such as vents and lack of ventilation. Confined spaces are to be marked as either "PARTIALLY COMPLIANT" or "SAFE". You may include here any other general hazards you see as well. This category is a catch-all for any safety issues not covered by the first three categories.
- 
+1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. You MUST CHECK if the ladder's spreader bars are locked, if unable to confirm, mark as "N/A" or "DANGEROUS".
+2. BUDDY SYSTEM & PERSONNEL: Check for lack of a buddy system on ladders, missing attendants/watchmen for confined spaces or lifters, and unauthorized entry into cordoned zones. It is assumed that one of the buddy system participants is the photographer, so if you see one person on a ladder but cannot confirm if a buddy is present, you can infer potential non-compliance and mark as "DANGEROUS" or "N/A" with reasoning.
+3. PPE (Personal Protective Equipment): Look for missing safety helmets, safety shoes and gloves. Boots must be rubber if the surface is wet. Safety helemet refers to hard hats, but bump caps for general work are also acceptable. If you see a worker without a helmet, mark as "DANGEROUS". If you see a worker with a helmet but cannot confirm if it is a hard hat or bump cap, mark as "N/A" with reasoning.
+4. ELECTRICAL AND MACHINERY HAZARDS: Check for exposed live wires, ungrounded equipment, pinch points and machinery without proper guards. If you see any exposed live wires or unguarded machinery, mark as "DANGEROUS". If you cannot confirm the status of electrical or machinery safety, mark as "SAFE" or "N/A" with reasoning.
+5. HOUSEKEEPING & AREA HAZARDS: Check for uncordoned work, no borders or demarcations, slippery or wet surfaces, obstructed transport routes/exits, messy and unorganised tools and work area, debris on platforms, low ceilings, confined spaces such as vents and lack of ventilation. Confined spaces are to be marked as either "DANGEROUS" or "SAFE". You may include here any other general hazards you see as well. This category is a catch-all for any safety issues not covered by the first four categories.
+
 OUTPUT INSTRUCTIONS:
-- Evaluate the 4 target safety categories and map your assessment data into the requested JSON schema fields (compliance, description, reasoning, and advice).
-- For compliance fields, choose exactly one value from this list: [DANGEROUS, PARTIALLY COMPLIANT, COMPLIANT, SAFE, N/A].
-- If the images are too ambiguous to make a clear judgment on a category, mark it as "N/A" or "PARTIALLY COMPLIANT" and explain in the reasoning field what information is missing or unclear. Do not invent details that are not visible across the images, but you can make logical inferences based on what is visible (e.g., if you see a ladder but cannot confirm if the spreader bars are locked, you can infer potential risk and mark as "PARTIALLY COMPLIANT" with reasoning).
+- Evaluate the 5 target safety categories and map your assessment data into the requested JSON schema fields (compliance, description, reasoning, and advice).
+- For compliance fields, choose exactly one value from this list: [SAFE, DANGEROUS, N/A].
+- If the images are too ambiguous to make a clear judgment on a category, mark it as "N/A" or "SAFE" and explain in the reasoning field what information is missing or unclear. Do not invent details that are not visible across the images, but you can make logical inferences based on what is visible (e.g., if you see a ladder but cannot confirm if the spreader bars are locked, you can infer potential risk and mark as "N/A" with reasoning).
+- If multiple images show the same area from different angles, you can combine the information to make a more informed assessment. (e.g., if one image shows a worker on a ladder with no buddy, but one of the other images shows a second worker nearby, you can infer that a buddy system is in place and mark as "SAFE" with reasoning).
+
+**CRITICAL LOGIC RULE:** 
+- Choose "SAFE" only if the items are present and compliant, or if the hazard type does not exist in the scene.
+- Choose "DANGEROUS" if a clear violation is seen, or if high-risk equipment (ladders, open electrical panels) is being used but vital safety controls (buddies, locks, PPE) are visibly missing from the scene.
+- Choose "N/A" only if the target object/worker is completely cut off from the camera view or completely obscured by heavy blur/darkness. Do not invent details.
 `;
 
     for (let keyIdx = 0; keyIdx < apiKeys.length; keyIdx++) {
@@ -147,8 +160,6 @@ OUTPUT INSTRUCTIONS:
                     type: "STRING",
                     enum: [
                       "DANGEROUS",
-                      "PARTIALLY COMPLIANT",
-                      "COMPLIANT",
                       "SAFE",
                       "N/A",
                     ],
@@ -160,8 +171,6 @@ OUTPUT INSTRUCTIONS:
                         type: "STRING",
                         enum: [
                           "DANGEROUS",
-                          "PARTIALLY COMPLIANT",
-                          "COMPLIANT",
                           "SAFE",
                           "N/A",
                         ],
@@ -184,8 +193,6 @@ OUTPUT INSTRUCTIONS:
                         type: "STRING",
                         enum: [
                           "DANGEROUS",
-                          "PARTIALLY COMPLIANT",
-                          "COMPLIANT",
                           "SAFE",
                           "N/A",
                         ],
@@ -208,8 +215,28 @@ OUTPUT INSTRUCTIONS:
                         type: "STRING",
                         enum: [
                           "DANGEROUS",
-                          "PARTIALLY COMPLIANT",
-                          "COMPLIANT",
+                          "SAFE",
+                          "N/A",
+                        ],
+                      },
+                      description: { type: "STRING" },
+                      reasoning: { type: "STRING" },
+                      advice: { type: "STRING" },
+                    },
+                    required: [
+                      "compliance",
+                      "description",
+                      "reasoning",
+                      "advice",
+                    ],
+                  },
+                  electricalMachinery: {
+                    type: "OBJECT",
+                    properties: {
+                      compliance: {
+                        type: "STRING",
+                        enum: [
+                          "DANGEROUS",
                           "SAFE",
                           "N/A",
                         ],
@@ -232,8 +259,6 @@ OUTPUT INSTRUCTIONS:
                         type: "STRING",
                         enum: [
                           "DANGEROUS",
-                          "PARTIALLY COMPLIANT",
-                          "COMPLIANT",
                           "SAFE",
                           "N/A",
                         ],
@@ -255,6 +280,7 @@ OUTPUT INSTRUCTIONS:
                   "ladderHeight",
                   "ppe",
                   "buddySystem",
+                  "electricalMachinery",
                   "areaHazards",
                 ],
               },
