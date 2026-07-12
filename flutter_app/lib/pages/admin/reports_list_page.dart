@@ -681,24 +681,32 @@ class _ReportsListPageState extends State<ReportsListPage> {
     final selectedObjs = reports
         .where((r) => _selectedReports.contains(r['id']))
         .toList();
+    // List map string dynamic of selected reports based on id
 
     if (selectedObjs.isEmpty) return;
 
     // Show non-dismissible loading dialog during PDF generation and network requests
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogCtx) {
-        return AlertDialog(
-          content: Row(
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppPadding.tight),
+        ),
+      ),
+      builder: (BuildContext ctx) {
+        return Padding(
+          padding: const EdgeInsets.all(AppPadding.large),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircularProgressIndicator(),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Text(
-                  "Sending ${selectedObjs.length} reports to $groupName...",
-                  style: AppTypography.body,
-                ),
+              const SizedBox(width: AppPadding.large),
+              Text(
+                "Sending ${selectedObjs.length} reports to $groupName...",
+                style: AppTypography.body,
               ),
             ],
           ),
@@ -738,7 +746,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           initialAiData: aiData,
           manualNotes: report['Details']?.toString() ?? '',
           imagesBytes: null,
-          submittedAt: report['submitted_at']
+          submittedAt: report['submitted_at'],
         );
 
         final String base64Pdf = base64Encode(pdfBytes);

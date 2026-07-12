@@ -112,7 +112,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
     parseCategory("LADDER HEIGHT", safetyVar['ladderheight']);
     parseCategory("PPE", safetyVar['ppe']);
     parseCategory("BUDDY SYSTEM", safetyVar['buddySystem']);
-    parseCategory("HOUSEKEEPING ANDAREA HAZARDS", safetyVar['areaHazards']);
+    parseCategory("HOUSEKEEPING AND AREA HAZARDS", safetyVar['areaHazards']);
     parseCategory("ELECTRICAL AND MACHINERY", safetyVar['electricalMachinery']);
 
     return reasons;
