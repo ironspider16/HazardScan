@@ -145,9 +145,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                   children: [
                     Text(
                       'Report Information',
-                      style: AppTypography.Blackheading.copyWith(
-                        fontSize: 20,
-                      ),
+                      style: AppTypography.Blackheading.copyWith(fontSize: 20),
                     ),
                     const SizedBox(height: AppPadding.tight / 2),
                     Text(
@@ -158,7 +156,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                       ),
                     ),
                     const Divider(height: 24.0, thickness: 1.0),
-      
+
                     if (ptwNumber != 'N/A')
                       _buildInfoRow(
                         Icons.assignment_turned_in,
@@ -214,7 +212,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                         decoration: BoxDecoration(
                           color: statusColor.withAlpha(26),
                         ),
-      
+
                         child: Text(
                           overallStatus,
                           style: TextStyle(
@@ -230,14 +228,14 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                         children: _buildReasonsList(safetyVar).map((reason) {
                           final String trimmed = reason.trim();
                           if (trimmed.isEmpty) return const SizedBox.shrink();
-      
+
                           final String upperReason = trimmed.toUpperCase();
-      
+
                           final bool isRecommendation =
                               trimmed.startsWith("Recommendation:") ||
                               upperReason.startsWith("• ADVICE:") ||
                               upperReason.contains("ADVICE:");
-      
+
                           final bool isCategoryHeader =
                               !trimmed.startsWith("•") &&
                               !trimmed.startsWith("[") &&
@@ -247,12 +245,12 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                                   upperReason.contains("DANGEROUS") ||
                                   upperReason.contains("SAFE") ||
                                   upperReason.contains("N/A"));
-      
+
                           final bool isBulletDetail =
                               trimmed.startsWith("•") ||
                               upperReason.startsWith("DESCRIPTION:") ||
                               upperReason.startsWith("REASONING:");
-      
+
                           if (isCategoryHeader) {
                             final parts = trimmed.split(":");
                             final String categoryName = parts[0].trim();
@@ -261,7 +259,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                                 : "N/A";
                             final Color subStatusColor =
                                 SafetyStatusHelper.getColor(complianceStatus);
-      
+
                             return Padding(
                               padding: const EdgeInsets.only(
                                 top: AppPadding.large,
@@ -320,16 +318,11 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                             )) {
                               adviceText = adviceText.substring(7).trim();
                             }
-      
+
                             return Container(
                               width: double.infinity,
-                              margin: const EdgeInsets.only(
-                                bottom: 12,
-                                top: 6,
-                              ),
-                              padding: const EdgeInsets.all(
-                                AppPadding.medium,
-                              ),
+                              margin: const EdgeInsets.only(bottom: 12, top: 6),
+                              padding: const EdgeInsets.all(AppPadding.medium),
                               decoration: BoxDecoration(
                                 color: Colors.blueAccent.withOpacity(0.04),
                                 borderRadius: BorderRadius.circular(8),
@@ -371,7 +364,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                             if (bodyText.startsWith("•")) {
                               bodyText = bodyText.substring(1).trim();
                             }
-      
+
                             return Padding(
                               padding: const EdgeInsets.only(
                                 left: 8,
@@ -406,7 +399,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                           } else {
                             String category = "OBSERVATION";
                             String bodyText = trimmed;
-      
+
                             if (trimmed.startsWith("[")) {
                               final closingBracketIdx = trimmed.indexOf("]");
                               if (closingBracketIdx != -1) {
@@ -419,13 +412,11 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                                     .trim();
                               }
                             }
-      
+
                             return Container(
                               width: double.infinity,
                               margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(
-                                AppPadding.medium,
-                              ),
+                              padding: const EdgeInsets.all(AppPadding.medium),
                               decoration: BoxDecoration(
                                 color: AppColors.backgroundWhite,
                                 borderRadius: BorderRadius.circular(6),
