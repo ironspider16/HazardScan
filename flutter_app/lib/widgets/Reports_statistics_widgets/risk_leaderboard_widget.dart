@@ -41,7 +41,7 @@ class RiskLeaderboardWidget extends StatelessWidget {
     int rawScore,
     int totalWahReports,
   ) {
-    final int maxScore = totalWahReports * 4;
+    final int maxScore = totalWahReports * 1;
     final double riskRatio = maxScore > 0 ? rawScore / maxScore : 0.0;
     final int riskPercentage = (riskRatio * 100).round();
 
@@ -132,7 +132,7 @@ class RiskLeaderboardWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: AppPadding.tight),
                 const Text(
-                  '• Raw Score: The total risk points accumulated from all reports.\n• Max Score: Calculated as (Total WAH Reports × 4 points).\n• Risk Percentage: Shows how close a category is to the worst-case scenario (100% risk).',
+                  '• Raw Score: The total risk points accumulated from all reports.\n• Max Score: Calculated as (Total WAH Reports × 1 points).\n• Risk Percentage: Shows how close a category is to the worst-case scenario (100% risk).',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.black87,
@@ -145,9 +145,7 @@ class RiskLeaderboardWidget extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: AppPadding.tight),
-                _buildScoreRow('Dangerous', '+4'),
-                _buildScoreRow('Partially Compliant', '+2'),
-                _buildScoreRow('Compliant', '+1'),
+                _buildScoreRow('Dangerous', '+1'),
                 _buildScoreRow('Safe', '+0'),
               ],
             ),
@@ -174,7 +172,7 @@ class RiskLeaderboardWidget extends StatelessWidget {
             points,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: points == '+4' ? Colors.red : Colors.blueGrey,
+              color: points == '+1' ? Colors.red : Colors.blueGrey,
             ),
           ),
         ],

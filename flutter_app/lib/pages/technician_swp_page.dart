@@ -6,6 +6,7 @@ import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/main_menu.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
+import 'package:random_string/random_string.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kkhazardscan/pages/edit_report_data_screen.dart';
 import '../design/style_constant.dart';
@@ -871,12 +872,26 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     );
   }
 
+  String generateUniqueCode() {
+    DateTime now = DateTime.now();
+    final String year = now.year.toString();
+    final String month = now.month.toString().padLeft(2, '0');
+    final String day = now.day.toString().padLeft(2, '0');
+    final String hour = now.hour.toString().padLeft(2, '0');
+    final String minute = now.minute.toString().padLeft(2, '0');
+    final String second = now.second.toString().padLeft(2, '0');
+    final String random = randomAlphaNumeric(3).toUpperCase();
+
+    return "KKH-$year$month$day-$hour$minute$second-$random";
+  }
+
   Future<bool> _executeSubmitReport({
     required String name,
     required String designation,
     required String department,
     required String location,
   }) async {
+    final String reportCode = generateUniqueCode();
     try {
       if (name.trim() == "" ||
           designation.trim() == "" ||
@@ -962,6 +977,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'WAH_safetyVariables_FK': category == "Work At Height"
               ? globalWahSafetyForeignKey
               : null,
+          'report_code': reportCode,
         });
 
         // Trigger edge function email process
@@ -980,6 +996,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                   ? _globalImageBytes.first
                   : null), // Pass compressed image bytes if available, otherwise fallback to first raw image bytes if any exist
           pdfBytes: finalPdfBytes,
+          reportCode: reportCode,
         );
       }
 
@@ -1000,6 +1017,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String title,
     required String category,
     required String location,
+    required String reportCode,
     Uint8List? imageBytes,
     Uint8List? pdfBytes,
   }) async {
@@ -1028,6 +1046,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           "location": location,
           "image": base64Image,
           "pdf": base64Pdf,
+          "report_code": reportCode,
         },
       );
 

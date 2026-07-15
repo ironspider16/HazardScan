@@ -42,10 +42,10 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
     Color statusColor = Colors.green;
     Color backgroundColor = Colors.green.shade50;
 
-    if (rawScore > 1 && rawScore <= 2.5) {
+    if (rawScore > 0.2 && rawScore <= 0.6) {
       statusColor = Colors.orange;
       backgroundColor = Colors.orange.shade50;
-    } else if (rawScore > 2.5) {
+    } else if (rawScore > 0.6) {
       statusColor = Colors.red;
       backgroundColor = Colors.red.shade100;
     }
@@ -58,9 +58,15 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                locationName,
-                style: AppTypography.body.copyWith(fontWeight: FontWeight.w600),
+              Expanded(
+                child: Text(
+                  locationName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.body.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -69,7 +75,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  "${rawScore.toStringAsFixed(2)}/4",
+                  "${rawScore.toStringAsFixed(2)}/1",
                   style: AppTypography.body.copyWith(
                     fontWeight: FontWeight.bold,
                     color: statusColor,
@@ -85,7 +91,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: rawScore / 4,
+                    value: rawScore / 1,
                     backgroundColor: AppColors.borderGrey.withValues(
                       alpha: 0.3,
                     ),
@@ -126,7 +132,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: AppPadding.tight),
                 const Text(
-                  '• Average score: The sum of risk score divided by total reports for each location.\n• Max Score: 4 points because that is the highest risk level.',
+                  '• Average score: The sum of risk score divided by total reports for each location.\n• Max Score: 1 point because that is the highest risk level.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.black87,
@@ -139,9 +145,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                 ),
                 const SizedBox(height: AppPadding.tight),
-                _buildScoreRow('Dangerous', '+4'),
-                _buildScoreRow('Partially Compliant', '+2'),
-                _buildScoreRow('Compliant', '+1'),
+                _buildScoreRow('Dangerous', '+1'),
                 _buildScoreRow('Safe', '+0'),
               ],
             ),
@@ -168,7 +172,7 @@ class LocationRiskLeaderboardWidget extends StatelessWidget {
             points,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: points == '+4' ? Colors.red : Colors.blueGrey,
+              color: points == '+1' ? Colors.red : Colors.blueGrey,
             ),
           ),
         ],

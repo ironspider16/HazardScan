@@ -10,8 +10,6 @@ class StatusDistributionCircle extends StatelessWidget {
   List<PieChartSectionData> _generateChartData() {
     final Map<String, Color> statusColors = {
       'SAFE': Colors.green,
-      'COMPLIANT': Colors.blue,
-      'PARTIALLY COMPLIANT': Colors.orange,
       'DANGEROUS': Colors.red,
       'N/A': Colors.grey,
     };

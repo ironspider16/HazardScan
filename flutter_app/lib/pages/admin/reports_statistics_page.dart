@@ -60,12 +60,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     'Liquid Nitrogen (LN2) Refilling',
     'General',
   ];
-  final List<String> complianceLevels = [
-    'SAFE',
-    'COMPLIANT',
-    'PARTIALLY COMPLIANT',
-    'DANGEROUS',
-  ];
+  final List<String> complianceLevels = ['SAFE', 'DANGEROUS'];
 
   // ==========================================
   // LIFECYCLE METHODS
@@ -162,30 +157,11 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 
   Map<String, Map<String, int>> _calculateComplianceRatios() {
     final Map<String, Map<String, int>> breakdown = {
-      'Ladder Height': {
-        'SAFE': 0,
-        'COMPLIANT': 0,
-        'PARTIALLY COMPLIANT': 0,
-        'DANGEROUS': 0,
-      },
-      'PPE': {
-        'SAFE': 0,
-        'COMPLIANT': 0,
-        'PARTIALLY COMPLIANT': 0,
-        'DANGEROUS': 0,
-      },
-      'Buddy System': {
-        'SAFE': 0,
-        'COMPLIANT': 0,
-        'PARTIALLY COMPLIANT': 0,
-        'DANGEROUS': 0,
-      },
-      'Area Hazards': {
-        'SAFE': 0,
-        'COMPLIANT': 0,
-        'PARTIALLY COMPLIANT': 0,
-        'DANGEROUS': 0,
-      },
+      'Ladder Height': {'SAFE': 0, 'DANGEROUS': 0},
+      'PPE': {'SAFE': 0, 'DANGEROUS': 0},
+      'Buddy System': {'SAFE': 0, 'DANGEROUS': 0},
+      'Area Hazards': {'SAFE': 0, 'DANGEROUS': 0},
+      'Electrical And Machinery': {'SAFE': 0, 'DANGEROUS': 0},
     };
 
     for (var report in reports) {
@@ -206,6 +182,11 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           breakdown,
           'Area Hazards',
           vars['areaHazards'],
+        );
+        _incrementBreakdownCount(
+          breakdown,
+          'Electrical And Machinery',
+          vars['electricalMachinery'],
         );
       }
     }
@@ -234,6 +215,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       'PPE': 0,
       'Buddy System': 0,
       'Area Hazards': 0,
+      'Electrical And Machinery': 0,
     };
 
     final totalWahReports = reports
@@ -250,6 +232,9 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             scores['Buddy System']! + _extractScore(vars['buddySystem']);
         scores['Area Hazards'] =
             scores['Area Hazards']! + _extractScore(vars['areaHazards']);
+        scores['Electrical And Machinery'] =
+            scores['Electrical And Machinery']! +
+            _extractScore(vars['electricalMachinery']);
       }
     }
 
@@ -278,24 +263,15 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     switch (parsed['compliance'] as String?) {
       case 'SAFE':
         return 0;
-      case 'COMPLIANT':
-        return 1;
-      case 'PARTIALLY COMPLIANT':
-        return 2;
       case 'DANGEROUS':
-        return 4;
+        return 1;
       default:
         return 0;
     }
   }
 
   int getScore(compliance) {
-    final scores = {
-      "SAFE": 0,
-      "COMPLIANT": 1,
-      "PARTIALLY COMPLIANT": 2,
-      "DANGEROUS": 4,
-    };
+    final scores = {"SAFE": 0, "DANGEROUS": 1};
     return scores[(compliance.toString().toUpperCase())] ?? 0;
   }
 
@@ -581,7 +557,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                   locationDangerAverages: locationDangerAverages,
                 ),
               ),
-              
+
               const SizedBox(height: AppPadding.medium),
             ],
           ),
@@ -663,6 +639,10 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             'Area Hazards',
             ratioData['Area Hazards']!,
           ),
+          _buildHorizontalStackedBar(
+            'Electrical And Machinery',
+            ratioData['Electrical And Machinery']!,
+          ),
           const Divider(height: 24),
           _buildComplianceLegend(),
         ],
@@ -675,10 +655,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     Map<String, int> counts,
   ) {
     final int safe = counts['SAFE'] ?? 0;
-    final int compliant = counts['COMPLIANT'] ?? 0;
-    final int partial = counts['PARTIALLY COMPLIANT'] ?? 0;
     final int dangerous = counts['DANGEROUS'] ?? 0;
-    final int total = safe + compliant + partial + dangerous;
+    final int total = safe + dangerous;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppPadding.tight),
@@ -719,10 +697,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       children: [
                         if (safe > 0)
                           _buildBarSegment(safe, Colors.green.shade600),
-                        if (compliant > 0)
-                          _buildBarSegment(compliant, Colors.green.shade300),
-                        if (partial > 0)
-                          _buildBarSegment(partial, Colors.orange),
                         if (dangerous > 0)
                           _buildBarSegment(dangerous, Colors.red),
                       ],
@@ -758,8 +732,6 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       runSpacing: AppPadding.tight,
       children: [
         _buildLegendItem("Safe", Colors.green.shade600),
-        _buildLegendItem("Compliant", Colors.green.shade300),
-        _buildLegendItem("Partial", Colors.orange),
         _buildLegendItem("Dangerous", Colors.red),
       ],
     );
