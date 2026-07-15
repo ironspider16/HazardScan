@@ -110,7 +110,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           ? '!inner'
           : '';
       final selectQuery =
-          '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK$complianceJoinModifier(*)';
+          '*, swp_templates!inner(id, category, title), safety_variables_FK$complianceJoinModifier(*)';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
@@ -136,7 +136,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       if (selectedComplianceLevel != null) {
         query = query.eq('swp_templates.category', 'Work At Height');
         query = query.eq(
-          'WAH_safetyVariables_FK.Overall Status',
+          'safety_variables_FK.Overall Status',
           selectedComplianceLevel!,
         );
       }
@@ -165,7 +165,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     };
 
     for (var report in reports) {
-      final vars = report['WAH_safetyVariables_FK'];
+      final vars = report['safety_variables_FK'];
       if (vars != null) {
         _incrementBreakdownCount(
           breakdown,
@@ -219,11 +219,11 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     };
 
     final totalWahReports = reports
-        .where((r) => r["WAH_safetyVariables_FK"] != null)
+        .where((r) => r["safety_variables_FK"] != null)
         .length;
 
     for (var report in reports) {
-      final vars = report['WAH_safetyVariables_FK'];
+      final vars = report['safety_variables_FK'];
       if (vars != null) {
         scores['Ladder Height'] =
             scores['Ladder Height']! + _extractScore(vars['ladderheight']);
@@ -282,8 +282,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     for (var r in data) {
       final String location = r['location'] ?? 'Unknown';
 
-      if (r['WAH_safetyVariables_FK'] != null) {
-        final String? status = r['WAH_safetyVariables_FK']['Overall Status'];
+      if (r['WAH_safety_variables_FK'] != null) {
+        final String? status = r['safety_variables_FK']['Overall Status'];
         final int score = getScore(status); // Using your scoring logic helper
 
         if (!tracker.containsKey(location)) {

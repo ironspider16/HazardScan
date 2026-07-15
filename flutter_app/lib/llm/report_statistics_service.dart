@@ -8,7 +8,7 @@ class ReportStatisticsService {
     final response = await supabase.from('safety_reports').select('''
       *,
       swp_templates!inner(id, category, title),
-      WAH_safetyVariables(*)
+      safety_variables(*)
     ''');
 
     final reports = List<Map<String, dynamic>>.from(response);
@@ -54,7 +54,7 @@ class ReportStatisticsService {
     }
 
     for (final report in reports) {
-      final rawVars = report['WAH_safetyVariables'];
+      final rawVars = report['safety_variables'];
 
       final vars = rawVars is List && rawVars.isNotEmpty
           ? rawVars.first

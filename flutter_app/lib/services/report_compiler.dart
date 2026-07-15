@@ -48,11 +48,14 @@ class LocalReportCompiler {
     required String location,
     required String supervisor,
     required String employer,
+    int? initialAnalysisId,
     required int totalAttempts,
-    required String aiChangeExplanation,
+    required String aiChangeAnalysis,
+    bool? spreaderUnlocked,
     required Map<String, dynamic> initialAiData,
     required Map<String, dynamic> finalAiData,
     required String manualNotes,
+    String? submittedAt,
     List<Uint8List>? initialImagesBytes,
     List<Uint8List>? finalImagesBytes,
   }) async {
@@ -60,10 +63,12 @@ class LocalReportCompiler {
     final font = await PdfGoogleFonts.notoSansSymbols2Regular();
     final fontBold = await PdfGoogleFonts.notoSansBold();
 
-    final String currentDate = DateTime.now().toIso8601String().split('T')[0];
-    final String currentTime =
-        "${DateTime.now().hour.toString().padLeft(2, '0')}:"
-        "${DateTime.now().minute.toString().padLeft(2, '0')}";
+    final String currentDate =
+        submittedAt ?? DateTime.now().toIso8601String().split('T')[0];
+    final String currentTime = submittedAt != null
+        ? ''
+        : "${DateTime.now().hour.toString().padLeft(2, '0')}:"
+              "${DateTime.now().minute.toString().padLeft(2, '0')}";
 
     String getField(Map<String, dynamic> block, String field) =>
         block[field]?.toString().trim() ?? 'Not Declared';
@@ -100,7 +105,7 @@ class LocalReportCompiler {
           // --- SECTION 2: AI Intermittent Comparison Summary ---
           _sectionHeader('2. Rectification Summary (AI Insight)'),
           pw.SizedBox(height: 8),
-          _aiSummaryBox(aiChangeExplanation),
+          _aiSummaryBox(aiChangeAnalysis),
           pw.SizedBox(height: 16),
 
           // --- SECTION 3: Safety Metric Evolution Matrix ---

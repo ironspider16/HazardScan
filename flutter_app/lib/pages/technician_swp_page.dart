@@ -61,7 +61,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   List<Uint8List> _firstAttemptedImages = [];
   List<Uint8List> _lastAttemptedImages = [];
   int _attemptCount = 0;
-  String _aiChangeExplanation = "";
+  String _aiChangeAnalysis = "";
 
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
@@ -394,10 +394,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
         if (incomingStatus == 'SAFE') {
           if (_attemptCount > 1 && _firstAiData != null) {
-            _aiChangeExplanation =
+            _aiChangeAnalysis =
                 "Workspace transitioned dynamically from an unsafe to a safe state. Hazards flagged during the initial iteration were mitigated and re-evaluated through the verification loop.";
           } else {
-            _aiChangeExplanation =
+            _aiChangeAnalysis =
                 'Safe state detected on the first analysis attempt. No hazards were flagged and no adjustments are required.';
           }
         } else {
@@ -746,7 +746,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                             initialAiData: _firstAiData ?? _globalAiData ?? {},
                                             finalAiData: _globalAiData ?? {},
                                             totalAttempts: _attemptCount,
-                                            aiChangeExplanation: _aiChangeExplanation,
+                                            aiChangeAnalysis: _aiChangeAnalysis,
                                             initialImagesBytes: _firstAttemptedImages,
                                             finalImagesBytes: _lastAttemptedImages,
                                           );
@@ -917,7 +917,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         initialAiData: _firstAiData ?? _globalAiData ?? {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
         finalAiData: _globalAiData ?? {},
         totalAttempts: _attemptCount,
-        aiChangeExplanation: _aiChangeExplanation,
+        aiChangeAnalysis: _aiChangeAnalysis,
         initialImagesBytes: _firstAttemptedImages, // Pass initial list of images to ensure report has all photos, even if PDF preview wasn't generated
         finalImagesBytes: _lastAttemptedImages, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
       );
@@ -939,7 +939,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       if (_globalAiData != null) {
         final insertedWahData = await supabase
-            .from('WAH_safetyVariables')
+            .from('safety_variables')
             .insert({
               'Overall Status': _globalAiData!['overallStatus'] ?? 'N/A',
               'ladderheight': _globalAiData!['ladderHeight'] ?? {},
@@ -974,7 +974,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK': category == "Work At Height"
+          'safety_variables_FK': category == "Work At Height"
               ? globalWahSafetyForeignKey
               : null,
           'report_code': reportCode,
