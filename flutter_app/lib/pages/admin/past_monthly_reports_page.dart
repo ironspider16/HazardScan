@@ -75,7 +75,7 @@ class PastMonthlyReportsPageState extends State<AllMonthlyReportsPage> {
         : int.tryParse(report['id']?.toString() ?? '0') ?? 0;
 
     final String formattedDate = formatDateRange(startDate, endDate);
-    final int position = index + 1;
+    final int position = monthlyReports.length - index;
 
     return Container(
       margin: const EdgeInsets.only(top: AppPadding.medium),

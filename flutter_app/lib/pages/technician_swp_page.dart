@@ -57,7 +57,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
-  Map<String, dynamic>? _firstAiData; // Nullable, set on first successful AI call
+  Map<String, dynamic>?
+  _firstAiData; // Nullable, set on first successful AI call
   List<Uint8List> _firstAttemptedImages = [];
   List<Uint8List> _lastAttemptedImages = [];
   int _attemptCount = 0;
@@ -268,7 +269,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       final analysisResult = await GeminiService.detectHazards(
         compressedImages,
         _globalDetailsCtrl.text,
-        _attemptCount > 0 ? _firstAiData: null,
+        _attemptCount > 0 ? _firstAiData : null,
       );
 
       stopwatch.stop(); // Halt stopwatch upon response retrieval
@@ -742,13 +743,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                             location: locationCtrl.text,
                                             supervisor: nameCtrl.text,
                                             employer: deptCtrl.text,
-                                            manualNotes: _globalDetailsCtrl.text,
-                                            initialAiData: _firstAiData ?? _globalAiData ?? {},
+                                            manualNotes:
+                                                _globalDetailsCtrl.text,
+                                            initialAiData:
+                                                _firstAiData ??
+                                                _globalAiData ??
+                                                {},
                                             finalAiData: _globalAiData ?? {},
                                             totalAttempts: _attemptCount,
                                             aiChangeAnalysis: _aiChangeAnalysis,
-                                            initialImagesBytes: _firstAttemptedImages,
-                                            finalImagesBytes: _lastAttemptedImages,
+                                            initialImagesBytes:
+                                                _firstAttemptedImages,
+                                            finalImagesBytes:
+                                                _lastAttemptedImages,
                                           );
 
                                       setState(() {
@@ -914,12 +921,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         supervisor: name,
         employer: department,
         manualNotes: _globalDetailsCtrl.text,
-        initialAiData: _firstAiData ?? _globalAiData ?? {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
+        initialAiData:
+            _firstAiData ??
+            _globalAiData ??
+            {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
         finalAiData: _globalAiData ?? {},
         totalAttempts: _attemptCount,
         aiChangeAnalysis: _aiChangeAnalysis,
-        initialImagesBytes: _firstAttemptedImages, // Pass initial list of images to ensure report has all photos, even if PDF preview wasn't generated
-        finalImagesBytes: _lastAttemptedImages, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
+        initialImagesBytes:
+            _firstAttemptedImages, // Pass initial list of images to ensure report has all photos, even if PDF preview wasn't generated
+        finalImagesBytes:
+            _lastAttemptedImages, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
       );
 
       final activeSubCategoryIds = selectedSubCategories.values
