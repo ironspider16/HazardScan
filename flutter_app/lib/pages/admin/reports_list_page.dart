@@ -240,6 +240,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
             style: BorderStyle.none,
             color: Colors.transparent,
           ),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
         ),
         Chip(
           label: Text(info["date"]?["string"] as String? ?? "Unknown date"),
@@ -248,6 +250,18 @@ class _ReportsListPageState extends State<ReportsListPage> {
             style: BorderStyle.none,
             color: Colors.transparent,
           ),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+        ),
+        Chip(
+          label: Text(info["category"]?["string"] as String? ?? "Unknown category"),
+          avatar: Icon(info["category"]?["icon"] as IconData),
+          side: const BorderSide(
+            style: BorderStyle.none,
+            color: Colors.transparent,
+          ),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
         ),
       ],
     );
@@ -265,6 +279,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
         report['swp_templates']?['title'] ?? 'N/A';
     final String location = report['location'] ?? 'No location';
     final safetyVar = report['WAH_safetyVariables_FK'];
+    final reportCode = report['report_code'] ?? "unknown ID";
 
     // Extract compliance status to color-code the card's edge
     final String overallStatus = safetyVar?['Overall Status'] ?? 'UNKNOWN';
@@ -273,6 +288,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
     Map<String, Map<String, dynamic>> info = {
       "location": {"string": location, "icon": Icons.location_on_outlined},
       "date": {"string": date, "icon": Icons.calendar_month_outlined},
+      "category" : {"string" : "$safetyProcedure - $safetyProcedureCategory", "icon" : Icons.category}
     };
 
     return Container(
@@ -323,7 +339,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      "$safetyProcedure — $safetyProcedureCategory",
+                                      reportCode,
                                       style:
                                           AppTypography
                                               .Blacksubheading.copyWith(
@@ -764,6 +780,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
             "designation": report['designation'] ?? '',
             "department": report['department'] ?? '',
             "location": report['location'] ?? '',
+            "report_code": report['report_code'] ?? '',
             "pdf": base64Pdf,
           },
         );

@@ -20,6 +20,8 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
   late final String ptwNumber;
   late final String techName;
   late final String date;
+  late final String reportCode;
+  late final String category;
 
   @override
   void initState() {
@@ -37,6 +39,8 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
     final String techName =
         widget.report['technician_name']?.toString() ?? 'N/A';
     final String date = widget.report['submitted_at']?.toString() ?? 'N/A';
+    final String reportCode = widget.report["report_code"]?.toString() ?? 'unknown ID';
+    final String category = "${widget.report['swp_templates']?['category']} - ${widget.report['swp_templates']?['title']}";
     setState(() {
       this.location = location;
       this.designation = designation;
@@ -45,6 +49,8 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
       this.ptwNumber = ptwNumber;
       this.techName = techName;
       this.date = date;
+      this.reportCode = reportCode;
+      this.category = category;
     });
   }
 
@@ -144,7 +150,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Report Information',
+                      reportCode,
                       style: AppTypography.Blackheading.copyWith(fontSize: 20),
                     ),
                     const SizedBox(height: AppPadding.tight / 2),
@@ -166,6 +172,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                     _buildInfoRow(Icons.business, 'Department', department),
                     _buildInfoRow(Icons.badge, 'Designation', designation),
                     _buildInfoRow(Icons.location_on, 'Location', location),
+                    _buildInfoRow(Icons.category, 'Category', category),
                     Text(
                       'Details',
                       style: AppTypography.body.copyWith(
