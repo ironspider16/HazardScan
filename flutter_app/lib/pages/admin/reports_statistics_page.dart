@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:kkhazardscan/pages/admin/past_weekly_reports_page.dart';
+import 'package:kkhazardscan/pages/admin/past_monthly_reports_page.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets/location_risk_leader_widget.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets/report_timeline_widget.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets/risk_leaderboard_widget.dart';
@@ -12,6 +13,7 @@ import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:kkhazardscan/pages/admin/weekly_report_detail.dart';
+import 'package:kkhazardscan/pages/admin/monthly_report_detail.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 
 // ==========================================
@@ -39,6 +41,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   Map<String, dynamic>? weeklyReport;
   bool isLoading = true;
   bool isWeeklyReportLoading = true;
+  Map<String, dynamic>? monthlyReport;
+  bool isMonthlyReportLoading = true;
 
   // Active Filter States
   DateTimeRange? selectedRange;
@@ -70,6 +74,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   void initState() {
     super.initState();
     loadWeeklyReport();
+    loadMonthlyReport();
     loadReports();
   }
 
@@ -99,6 +104,48 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       setState(() {
         weeklyReport = null;
         isWeeklyReportLoading = false;
+      });
+    }
+  }
+
+  Future<void> loadMonthlyReport() async {
+    if (!mounted) return;
+
+    setState(() => isMonthlyReportLoading = true);
+
+    try {
+      final String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+      debugPrint('Loading monthly report for date: $today');
+
+      final List<dynamic> response = await supabase
+          .from('monthly_reports')
+          .select()
+          .lte('end_date', today)
+          .order('end_date', ascending: false)
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      debugPrint('Monthly report response: $response');
+
+      if (!mounted) return;
+
+      setState(() {
+        monthlyReport = response.isNotEmpty
+            ? Map<String, dynamic>.from(response.first)
+            : null;
+
+        isMonthlyReportLoading = false;
+      });
+    } catch (e, stackTrace) {
+      debugPrint('Monthly report loading error: $e');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+
+      setState(() {
+        monthlyReport = null;
+        isMonthlyReportLoading = false;
       });
     }
   }
@@ -552,6 +599,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
               const SizedBox(height: AppPadding.medium),
               _buildWeeklyReportSection(),
               const SizedBox(height: AppPadding.medium),
+              _buildMonthlyReportSection(),
+              const SizedBox(height: AppPadding.medium),
               _buildChartContainer(
                 LocationRiskLeaderboardWidget(
                   locationDangerAverages: locationDangerAverages,
@@ -841,6 +890,102 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => AllWeeklyReportsPage()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthlyReportSection() {
+    if (isMonthlyReportLoading) {
+      return _buildChartContainer(
+        const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (monthlyReport == null) {
+      return _buildChartContainer(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Monthly Safety Report",
+              style: AppTypography.Bluesubheading,
+            ),
+            const SizedBox(height: AppPadding.tight),
+            Text(
+              "No management report has been generated for today yet.",
+              style: AppTypography.body.copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final content = monthlyReport!['report_content'] as String? ?? '';
+    final startDate = monthlyReport!['start_date'] as String? ?? '';
+    final endDate = monthlyReport!['end_date'] as String? ?? '';
+    final int id = monthlyReport!['id'];
+
+    return _buildChartContainer(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            direction: Axis.horizontal,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppPadding.medium,
+            runSpacing: AppPadding.tight,
+            children: [
+              const Text(
+                "Monthly Safety Report",
+                style: AppTypography.Bluesubheading,
+              ),
+              Text(
+                "$startDate to $endDate",
+                style: AppTypography.body.copyWith(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppPadding.medium),
+          Text(
+            content.length > 90 ? '${content.substring(0, 90)}...' : content,
+            style: AppTypography.body,
+          ),
+          const SizedBox(height: AppPadding.medium),
+          MenuButton(
+            label: "View Full Report",
+            isPrimary: true,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MonthlyReportDetailScreen(
+                    content: content,
+                    date: formatDateRange(startDate, endDate),
+                    id: id,
+                  ),
+                ),
+              );
+
+              loadMonthlyReport();
+            },
+          ),
+          const Divider(height: 24.0, thickness: 1.0),
+          MenuButton(
+            label: "View All Monthly Reports",
+            isPrimary: false,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AllMonthlyReportsPage(),
+                ),
               );
             },
           ),
