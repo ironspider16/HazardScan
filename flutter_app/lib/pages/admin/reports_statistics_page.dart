@@ -329,7 +329,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     for (var r in data) {
       final String location = r['location'] ?? 'Unknown';
 
-      if (r['WAH_safety_variables_FK'] != null) {
+      if (r['safety_variables_FK'] != null) {
         final String? status = r['safety_variables_FK']['Overall Status'];
         final int score = getScore(status); // Using your scoring logic helper
 
