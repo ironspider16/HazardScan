@@ -63,11 +63,19 @@ serve(async (req: Request) => {
   };
 
   try {
-    const { imagesBase64, userContext } = await req.json();
+    const { imagesBase64, userContext, previousAnalysis } = await req.json();
     const keysString = Deno.env.get("GEMINI_API_KEY") || "";
     const apiKeys = keysString.split(",").map((k: string) => k.trim()).filter((
       k: string,
     ) => k.length > 0);
+
+    const previousContext = previousAnalysis
+      ? '\nPREVIOUS INSPECTION FINDINGS (note what has changed in the new images):\n' + 
+        Object.entries(previousAnalysis)
+        .filter(([key]) => ['ladderHeight', 'ppe', 'buddySystem', 'electricalMachinery', 'areaHazards'].includes(key))
+        .map(([_, block]: [string, any]) => `- [${block.compliance}] ${block.description}`)
+        .join('\n')
+      : '';
 
     const modelArray = [
       "gemini-3.5-flash",
@@ -101,9 +109,10 @@ serve(async (req: Request) => {
     const prompt =
       `You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP). 
 Analyze these workspace images collectively (which may present different perspective angles or close-ups of the same environment) and evaluate them against the specific Non-Compliance (NC) list below, as well as general safety hazards.
- 
+ W
 ADDITIONAL SITE CONTEXT PROVIDED BY THE TECHNICIAN ON-SITE:
 "${userContext || "No additional context provided."}"
+"${previousContext}" 
  
 HOSPITAL SWP CONSTRAINTS TO ENFORCE:
 1. LADDERS & HEIGHT: You must check for locked spreader bars (the hinged bar), standing on the top rung, carrying items (lack of 3-point contact) and unstable placement. You MUST CHECK if the ladder's spreader bars are locked, if unable to confirm, mark as "N/A" or "DANGEROUS".
@@ -117,6 +126,7 @@ OUTPUT INSTRUCTIONS:
 - For compliance fields, choose exactly one value from this list: [SAFE, DANGEROUS, N/A].
 - If the images are too ambiguous to make a clear judgment on a category, mark it as "N/A" or "SAFE" and explain in the reasoning field what information is missing or unclear. Do not invent details that are not visible across the images, but you can make logical inferences based on what is visible (e.g., if you see a ladder but cannot confirm if the spreader bars are locked, you can infer potential risk and mark as "N/A" with reasoning).
 - If multiple images show the same area from different angles, you can combine the information to make a more informed assessment. (e.g., if one image shows a worker on a ladder with no buddy, but one of the other images shows a second worker nearby, you can infer that a buddy system is in place and mark as "SAFE" with reasoning).
+- If visual cues and technician manual context differ, trust the technician as long as it is not too far fetched. 
 
 **CRITICAL LOGIC RULE:** 
 - Choose "SAFE" only if the items are present and compliant, or if the hazard type does not exist in the scene.
