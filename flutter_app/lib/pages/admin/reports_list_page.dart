@@ -103,7 +103,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
       final String templateTitle = swpTemplate != null
           ? (swpTemplate['title'] ?? '').toString().toLowerCase()
           : '';
-      final safetyVar = report['WAH_safetyVariables_FK'];
+      final safetyVar = report['safety_variables_FK'];
       final String overallStatus = safetyVar != null
           ? (safetyVar['Overall Status'] ?? '').toString().toLowerCase()
           : '';
@@ -129,7 +129,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           : '';
 
       String selectQuery =
-          '*, swp_templates!inner(id, category, title), WAH_safetyVariables_FK$complianceJoinModifier(*)';
+          '*, swp_templates!inner(id, category, title), safety_variables_FK$complianceJoinModifier(*)';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
@@ -157,7 +157,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
       if (selectedComplianceLevel != null) {
         query = query.eq('swp_templates.category', 'Work At Height');
         query = query.eq(
-          'WAH_safetyVariables_FK.Overall Status',
+          'safety_variables_FK.Overall Status',
           selectedComplianceLevel!,
         );
       }
@@ -278,8 +278,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
     final String safetyProcedureCategory =
         report['swp_templates']?['title'] ?? 'N/A';
     final String location = report['location'] ?? 'No location';
-    final safetyVar = report['WAH_safetyVariables_FK'];
     final reportCode = report['report_code'] ?? "unknown ID";
+    final safetyVar = report['safety_variables_FK'];
 
     // Extract compliance status to color-code the card's edge
     final String overallStatus = safetyVar?['Overall Status'] ?? 'UNKNOWN';
@@ -737,8 +737,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
       try {
         // Reconstruct the nested AI data map from flat database columns
         final safetyVar =
-            report['WAH_safetyVariables_FK'] as Map<String, dynamic>?;
-        final Map<String, dynamic> aiData = {
+            report['safety_variables_FK'] as Map<String, dynamic>?;
+
+        final Map<String, dynamic> initialAiData = {
           'overallStatus': safetyVar?['Overall Status'] ?? 'PENDING',
           'ladderHeight':
               safetyVar?['ladderheight'] ??
@@ -752,6 +753,34 @@ class _ReportsListPageState extends State<ReportsListPage> {
           'areaHazards':
               safetyVar?['areaHazards'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'electricalMachinery':
+              safetyVar?['eletricalMachinery'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'spreaderUnlocked':
+              safetyVar?['spreaderUnlocked'] ??
+              false,
+        };
+
+        final Map<String, dynamic> finalAiData = {
+          'overallStatus': safetyVar?['Overall Status'] ?? 'PENDING',
+          'ladderHeight':
+              safetyVar?['ladderheight'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'ppe':
+              safetyVar?['ppe'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'buddySystem':
+              safetyVar?['buddySystem'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'areaHazards':
+              safetyVar?['areaHazards'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'electricalMachinery':
+              safetyVar?['eletricalMachinery'] ??
+              {'status': 'N/A', 'notes': 'No AI evaluation available'},
+          'spreaderUnlocked':
+              safetyVar?['spreaderUnlocked'] ??
+              false,
         };
 
         // Compile PDF locally without image evidence
@@ -759,10 +788,13 @@ class _ReportsListPageState extends State<ReportsListPage> {
           location: report['location']?.toString() ?? 'Not Declared',
           supervisor: report['technician_name']?.toString() ?? 'Unassigned',
           employer: report['department']?.toString() ?? 'Not Declared',
-          initialAiData: aiData,
+          initialAiData: initialAiData,
+          finalAiData: finalAiData,
           manualNotes: report['Details']?.toString() ?? '',
-          imagesBytes: null,
           submittedAt: report['submitted_at'],
+          totalAttempts: report['totalAttempts'],
+          aiChangeAnalysis: report['aiChangeAnalysis'],
+          initialAnalysisId: report['initialAnalysisId']
         );
 
         final String base64Pdf = base64Encode(pdfBytes);

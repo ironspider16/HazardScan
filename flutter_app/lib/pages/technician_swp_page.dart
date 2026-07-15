@@ -54,8 +54,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   final Map<int, bool> _checklistCompletionStates = {};
   final List<Uint8List> _globalImageBytes =
       []; // Stores raw bytes of all captured images for analysis and reporting
+
   Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
+  Map<String, dynamic>? _firstAiData; // Nullable, set on first successful AI call
+  List<Uint8List> _firstAttemptedImages = [];
+  List<Uint8List> _lastAttemptedImages = [];
+  int _attemptCount = 0;
+  String _aiChangeAnalysis = "";
+
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
@@ -194,17 +201,27 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   // --- CAMERA: CAPTURE AND APPEND MULTIPLE PHOTOS ---
   Future<void> _pickGlobalImage() async {
+    if (_globalImageBytes.length >= 2) {
+      _showErrorDialog(
+        "Image Limit Reached",
+        "You can only capture a maximum of 2 images for analysis. Please remove an existing image before adding a new one.",
+      );
+      return;
+    }
+
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
     if (pickedFile != null) {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
-        // Appends the new photo bytes to the list array instead of overwriting it
-        _globalImageBytes.add(bytes);
-
-        // Reset old AI data states so user is forced to re-analyze the new batch
-        _globalAiData = null;
+        _globalImageBytes.add(
+          bytes,
+        ); // Appends the new photo bytes to the list array instead of overwriting it
+        _globalAiData =
+            null; // Reset old AI data states so user is forced to re-analyze the new batch
+        _globalPdfBytes =
+            null; // Invalidate any cached PDF so it regenerates with new images
       });
     }
   }
@@ -218,9 +235,10 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     dynamic decodedData;
 
     try {
-      // 1. Execute Local Object Detection
+      final Uint8List imageToAnalyze = _globalImageBytes.last;
+
       final detections = await _yoloService.runYoloDetect(
-        imageBytes: _globalImageBytes.first, // Pass raw bytes to YOLO service
+        imageBytes: imageToAnalyze, // Pass raw bytes to YOLO service
         isMounted: () => mounted,
         context: context,
       );
@@ -241,23 +259,26 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         _isSpreaderUnlocked = status;
       });
 
-      // 2. Compress Images for Network Payload Optimization
+      // Compress Images for Network Payload Optimization
       final List<Uint8List> compressedImages = await Future.wait(
         _globalImageBytes.map((bytes) => _prepareEmailImage(bytes)),
       );
 
-      // 3. Dispatch Multi-Angle Payload to Edge Function Gateway
+      // Dispatch Multi-Angle Payload to Edge Function Gateway
       final analysisResult = await GeminiService.detectHazards(
         compressedImages,
         _globalDetailsCtrl.text,
+        _attemptCount > 0 ? _firstAiData: null,
       );
 
       stopwatch.stop(); // Halt stopwatch upon response retrieval
       final double latencySeconds = stopwatch.elapsedMilliseconds / 1000.0;
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
-      // 4. Save Network Telemetry & Routing States
+      // Save Network Telemetry & Routing States
       setState(() {
         _lastAiCallMetrics = {
           'timestamp': DateTime.now().toString().split('.').first,
@@ -294,7 +315,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         "Error: ${analysisResult.errorType ?? 'none'}",
       );
 
-      // 5. Evaluate Edge Function Level System Faults
+      // Evaluate Edge Function Level System Faults
       if (analysisResult.isError) {
         setState(() {
           _isAnalyzing = false;
@@ -334,7 +355,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return;
       }
 
-      // 6. Handle Soft Notices (E.g., Backup model was deployed instead of primary)
+      // Handle Soft Notices (E.g., Backup model was deployed instead of primary)
       if (analysisResult.systemNotice != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -345,7 +366,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         );
       }
 
-      // 7. Parse Structural Payload JSON Schema Data
+      // Parse Structural Payload JSON Schema Data
       try {
         decodedData = jsonDecode(analysisResult.jsonPayload);
       } catch (e) {
@@ -357,8 +378,33 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return;
       }
 
+      _attemptCount++;
+      final String incomingStatus =
+          decodedData['overallStatus']?.toString() ?? "N/A";
+
       setState(() {
         _globalAiData = decodedData;
+
+        if (_attemptCount == 1) {
+          _firstAiData = decodedData;
+          _firstAttemptedImages = [imageToAnalyze];
+        }
+
+        _lastAttemptedImages = [imageToAnalyze];
+
+        if (incomingStatus == 'SAFE') {
+          if (_attemptCount > 1 && _firstAiData != null) {
+            _aiChangeAnalysis =
+                "Workspace transitioned dynamically from an unsafe to a safe state. Hazards flagged during the initial iteration were mitigated and re-evaluated through the verification loop.";
+          } else {
+            _aiChangeAnalysis =
+                'Safe state detected on the first analysis attempt. No hazards were flagged and no adjustments are required.';
+          }
+        } else {
+          _isAnalyzing = false;
+        }
+
+        _globalPdfBytes = null;
         _isAnalyzing = false;
       });
     } catch (e) {
@@ -696,10 +742,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                             location: locationCtrl.text,
                                             supervisor: nameCtrl.text,
                                             employer: deptCtrl.text,
-                                            manualNotes:
-                                                _globalDetailsCtrl.text,
-                                            initialAiData: _globalAiData ?? {},
-                                            imagesBytes: _globalImageBytes,
+                                            manualNotes: _globalDetailsCtrl.text,
+                                            initialAiData: _firstAiData ?? _globalAiData ?? {},
+                                            finalAiData: _globalAiData ?? {},
+                                            totalAttempts: _attemptCount,
+                                            aiChangeAnalysis: _aiChangeAnalysis,
+                                            initialImagesBytes: _firstAttemptedImages,
+                                            finalImagesBytes: _lastAttemptedImages,
                                           );
 
                                       setState(() {
@@ -865,11 +914,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         supervisor: name,
         employer: department,
         manualNotes: _globalDetailsCtrl.text,
-        initialAiData:
-            _globalAiData ??
-            {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
-        imagesBytes:
-            _globalImageBytes, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
+        initialAiData: _firstAiData ?? _globalAiData ?? {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
+        finalAiData: _globalAiData ?? {},
+        totalAttempts: _attemptCount,
+        aiChangeAnalysis: _aiChangeAnalysis,
+        initialImagesBytes: _firstAttemptedImages, // Pass initial list of images to ensure report has all photos, even if PDF preview wasn't generated
+        finalImagesBytes: _lastAttemptedImages, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
       );
 
       final activeSubCategoryIds = selectedSubCategories.values
@@ -889,7 +939,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       if (_globalAiData != null) {
         final insertedWahData = await supabase
-            .from('WAH_safetyVariables')
+            .from('safety_variables')
             .insert({
               'Overall Status': _globalAiData!['overallStatus'] ?? 'N/A',
               'ladderheight': _globalAiData!['ladderHeight'] ?? {},
@@ -924,7 +974,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'WAH_safetyVariables_FK': category == "Work At Height"
+          'safety_variables_FK': category == "Work At Height"
               ? globalWahSafetyForeignKey
               : null,
           'report_code': reportCode,
@@ -1053,9 +1103,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             bool isPtwValid = ptw.trim().isNotEmpty;
             bool hasImage = _globalImageBytes.isNotEmpty;
             final status = _globalAiData?['overallStatus'];
-            // bool isCompliant =
-            //     status != null && status != "DANGEROUS" && status != "N/A";
-            bool hasValidStatus = status != null && status != "N/A";
+            bool hasValidStatus = status == "SAFE";
 
             return isChecklistDone && isPtwValid && hasImage && hasValidStatus;
           } else {

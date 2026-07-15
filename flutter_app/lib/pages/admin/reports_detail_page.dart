@@ -26,7 +26,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
   @override
   void initState() {
     super.initState();
-    safetyVar = widget.report['WAH_safetyVariables_FK'] ?? {};
+    safetyVar = widget.report['safety_variables_FK'] ?? {};
     final String location =
         widget.report['location']?.toString() ?? 'No location';
     final String designation =

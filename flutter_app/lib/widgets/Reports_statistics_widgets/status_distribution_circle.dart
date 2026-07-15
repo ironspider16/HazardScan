@@ -16,8 +16,8 @@ class StatusDistributionCircle extends StatelessWidget {
 
     Map<String, int> statusCounts = {};
     for (var report in reports) {
-      if (report["WAH_safetyVariables_FK"] != null) {
-        final vars = report['WAH_safetyVariables_FK'];
+      if (report["safety_variables_FK"] != null) {
+        final vars = report['safety_variables_FK'];
         final status = vars != null ? (vars['Overall Status'] ?? 'N/A') : 'N/A';
         statusCounts[status] = (statusCounts[status] ?? 0) + 1;
       }

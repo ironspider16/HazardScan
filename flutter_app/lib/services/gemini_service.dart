@@ -30,6 +30,7 @@ class GeminiService {
   static Future<HazardAnalysisResult> detectHazards(
     List<Uint8List> imagesBytes, [
     String userContext = "",
+    Map<String, dynamic>? previousAnalysis, 
   ]) async {
     try {
       final base64Images = imagesBytes.map((bytes) => base64Encode(bytes)).toList();
@@ -39,6 +40,7 @@ class GeminiService {
         body: {
           'imagesBase64': base64Images,
           'userContext': userContext,
+          'previousAnalysis': previousAnalysis, 
         },
       );
 
