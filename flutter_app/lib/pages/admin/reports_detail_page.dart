@@ -22,36 +22,55 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
   late final String date;
   late final String reportCode;
   late final String category;
+  late final bool spreaderUnlocked;
+
+  // Helper method to safely evaluate dynamic data to a boolean without throwing TypeErrors
+  bool _parseBool(dynamic value) {
+    if (value == null) return false;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final lower = value.trim().toLowerCase();
+      return lower == 'true' || lower == '1' || lower == 'yes';
+    }
+    return false;
+  }
 
   @override
   void initState() {
     super.initState();
-    safetyVar = widget.report['safety_variables_FK'] ?? {};
-    final String location =
-        widget.report['location']?.toString() ?? 'No location';
-    final String designation =
-        widget.report['designation']?.toString() ?? 'N/A';
-    final String department = widget.report['department']?.toString() ?? 'N/A';
-    final String details =
-        widget.report['Details']?.toString() ?? 'No details provided';
-    final String ptwNumber =
-        widget.report['wah_permit_numbers']?.toString() ?? 'N/A';
-    final String techName =
-        widget.report['technician_name']?.toString() ?? 'N/A';
-    final String date = widget.report['submitted_at']?.toString() ?? 'N/A';
-    final String reportCode = widget.report["report_code"]?.toString() ?? 'unknown ID';
-    final String category = "${widget.report['swp_templates']?['category']} - ${widget.report['swp_templates']?['title']}";
-    setState(() {
-      this.location = location;
-      this.designation = designation;
-      this.department = department;
-      this.details = details;
-      this.ptwNumber = ptwNumber;
-      this.techName = techName;
-      this.date = date;
-      this.reportCode = reportCode;
-      this.category = category;
-    });
+
+    // Safely parse safety_variables_FK in case it arrives as a JSON string instead of a map
+    dynamic rawSafetyVar = widget.report['safety_variables_FK'];
+    Map<String, dynamic> parsedSafetyVar = {};
+    if (rawSafetyVar is Map) {
+      parsedSafetyVar = Map<String, dynamic>.from(rawSafetyVar);
+    } else if (rawSafetyVar is String) {
+      try {
+        parsedSafetyVar = Map<String, dynamic>.from(jsonDecode(rawSafetyVar));
+      } catch (_) {}
+    }
+    safetyVar = parsedSafetyVar;
+
+    // Directly assign properties without setState to prevent lifecycle issues
+    location = widget.report['location']?.toString() ?? 'No location';
+    designation = widget.report['designation']?.toString() ?? 'N/A';
+    department = widget.report['department']?.toString() ?? 'N/A';
+    details = widget.report['Details']?.toString() ?? 'No details provided';
+    ptwNumber = widget.report['wah_permit_numbers']?.toString() ?? 'N/A';
+    techName = widget.report['technician_name']?.toString() ?? 'N/A';
+    date = widget.report['submitted_at']?.toString() ?? 'N/A';
+    reportCode = widget.report['report_code']?.toString() ?? 'unknown ID';
+
+    final swp = widget.report['swp_templates'];
+    if (swp is Map) {
+      category = "${swp['category']} - ${swp['title']}";
+    } else {
+      category = "N/A";
+    }
+
+    // Safely evaluate the boolean using the helper
+    spreaderUnlocked = _parseBool(safetyVar['spreaderUnlocked']);
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
@@ -140,7 +159,11 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
               elevation: 0,
               color: AppColors.primaryTint,
               surfaceTintColor: AppColors.primaryTint,
-              margin: const EdgeInsets.all(AppPadding.medium),
+              margin: const EdgeInsets.fromLTRB(
+                AppPadding.medium,
+                AppPadding.medium,
+                AppPadding.medium,
+                AppPadding.tight),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(0),
               ),
@@ -203,14 +226,49 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppPadding.medium,
-                    AppPadding.tight,
+                    0,
                     AppPadding.medium,
                     0,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Modified: Significantly increased padding and font size for the status container
+                      if (spreaderUnlocked) ...[
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppPadding.tight,
+                                vertical: AppPadding.tight,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade700.withAlpha(26),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.error,
+                                    color: Colors.red.shade700,
+                                  ),
+                                  const SizedBox(width: AppPadding.tight),
+                                  Text(
+                                    "LADDER'S SPREADER BAR UNLOCKED",
+                                    style: TextStyle(
+                                      color: Colors.red.shade700,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      letterSpacing: 1.0, // Increased from 10
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      const SizedBox(height: AppPadding.tight),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppPadding.tight,
@@ -219,7 +277,6 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                         decoration: BoxDecoration(
                           color: statusColor.withAlpha(26),
                         ),
-
                         child: Text(
                           overallStatus,
                           style: TextStyle(

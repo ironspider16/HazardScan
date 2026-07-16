@@ -107,6 +107,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
       final String overallStatus = safetyVar != null
           ? (safetyVar['Overall Status'] ?? '').toString().toLowerCase()
           : '';
+      final String reportCode = (report['report_code'] ?? '')
+          .toString()
+          .toLowerCase();
       return techName.contains(query) ||
           details.contains(query) ||
           department.contains(query) ||
@@ -115,7 +118,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
           location.contains(query) ||
           templateCategory.contains(query) ||
           templateTitle.contains(query) ||
-          overallStatus.contains(query);
+          overallStatus.contains(query) ||
+          reportCode.contains(query);
     }).toList();
   }
 
@@ -254,7 +258,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
           visualDensity: VisualDensity.compact,
         ),
         Chip(
-          label: Text(info["category"]?["string"] as String? ?? "Unknown category"),
+          label: Text(
+            info["category"]?["string"] as String? ?? "Unknown category",
+          ),
           avatar: Icon(info["category"]?["icon"] as IconData),
           side: const BorderSide(
             style: BorderStyle.none,
@@ -288,7 +294,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
     Map<String, Map<String, dynamic>> info = {
       "location": {"string": location, "icon": Icons.location_on_outlined},
       "date": {"string": date, "icon": Icons.calendar_month_outlined},
-      "category" : {"string" : "$safetyProcedure - $safetyProcedureCategory", "icon" : Icons.category}
+      "category": {
+        "string": "$safetyProcedure - $safetyProcedureCategory",
+        "icon": Icons.category,
+      },
     };
 
     return Container(
@@ -756,9 +765,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           'electricalMachinery':
               safetyVar?['eletricalMachinery'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
-          'spreaderUnlocked':
-              safetyVar?['spreaderUnlocked'] ??
-              false,
+          'spreaderUnlocked': safetyVar?['spreaderUnlocked'] ?? false,
         };
 
         final Map<String, dynamic> finalAiData = {
@@ -778,9 +785,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           'electricalMachinery':
               safetyVar?['eletricalMachinery'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
-          'spreaderUnlocked':
-              safetyVar?['spreaderUnlocked'] ??
-              false,
+          'spreaderUnlocked': safetyVar?['spreaderUnlocked'] ?? false,
         };
 
         // Compile PDF locally without image evidence
@@ -794,7 +799,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           submittedAt: report['submitted_at'],
           totalAttempts: report['totalAttempts'],
           aiChangeAnalysis: report['aiChangeAnalysis'],
-          initialAnalysisId: report['initialAnalysisId']
+          initialAnalysisId: report['initialAnalysisId'],
         );
 
         final String base64Pdf = base64Encode(pdfBytes);
