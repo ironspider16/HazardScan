@@ -265,7 +265,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       'Electrical And Machinery': 0,
     };
 
-    final totalWahReports = reports
+    final totalReports = reports
         .where((r) => r["safety_variables_FK"] != null)
         .length;
 
@@ -290,7 +290,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
           (e) => {
             'category': e.key,
             'score': e.value,
-            "totalWah": totalWahReports,
+            "total": totalReports,
           },
         )
         .toList();

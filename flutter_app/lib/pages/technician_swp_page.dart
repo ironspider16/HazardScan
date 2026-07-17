@@ -67,6 +67,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
+  bool _finishedAnalyzing = false;
 
   Map<String, dynamic>? _lastAiCallMetrics;
 
@@ -223,6 +224,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             null; // Reset old AI data states so user is forced to re-analyze the new batch
         _globalPdfBytes =
             null; // Invalidate any cached PDF so it regenerates with new images
+        _finishedAnalyzing = false;
       });
     }
   }
@@ -321,6 +323,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         setState(() {
           _isAnalyzing = false;
           _globalAiData = null;
+          _finishedAnalyzing = true;
         });
 
         final errorType = analysisResult.errorType ?? "";
@@ -375,7 +378,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           "Parse Error",
           "The server returned an unreadable response.",
         );
-        setState(() => _isAnalyzing = false);
+        setState(() {
+          _isAnalyzing = false;
+          _globalAiData = null;
+          _finishedAnalyzing = true;
+        });
         return;
       }
 
@@ -429,6 +436,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       setState(() {
         _isAnalyzing = false;
+        _globalAiData = null;
+        _finishedAnalyzing = true;
         _lastAiCallMetrics = {
           'timestamp': DateTime.now().toString().split('.').first,
           'success': false,
@@ -958,7 +967,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           .cast<int>()
           .toList();
 
-      int? globalWahSafetyForeignKey;
+      int? globalSafetyForeignKey;
       Uint8List? compressedImageBytes;
 
       if (_globalImageBytes.isNotEmpty) {
@@ -969,7 +978,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
 
       if (_globalAiData != null) {
-        final insertedWahData = await supabase
+        final insertedData = await supabase
             .from('safety_variables')
             .insert({
               'Overall Status': _globalAiData!['overallStatus'] ?? 'N/A',
@@ -984,7 +993,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             .select('id')
             .single();
 
-        globalWahSafetyForeignKey = insertedWahData['id'];
+        globalSafetyForeignKey = insertedData['id'];
       }
 
       List<Map<String, dynamic>> recordsToInsert = [];
@@ -1005,9 +1014,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'safety_variables_FK': category == "Work At Height"
-              ? globalWahSafetyForeignKey
-              : null,
+          'safety_variables_FK': globalSafetyForeignKey,
           'report_code': reportCode,
         });
 
@@ -1109,16 +1116,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             if (ptw.trim().isEmpty) {
               return "Permit To Work (PTW) number is required.";
             }
-
-            if (_globalImageBytes.isEmpty) {
-              return "Please upload a site photo for Work at Height tasks.";
-            }
-
-            final status = _globalAiData?['overallStatus'];
-            if (status == "N/A" || status == null) {
-              return "Photo analysis required or shows N/A. Please analyze/retake.";
-            }
           }
+
+          if (_globalImageBytes.isEmpty) {
+            return "Please upload a site photo for safety analysis";
+          }
+
+          final status = _globalAiData?['overallStatus'];
+          if (status != "SAFE" && !_finishedAnalyzing) {
+            return "Photo analysis and SAFE overall status required. Please analyze/retake.";
+          }
+
           return null;
         })
         .firstWhere((msg) => msg != null, orElse: () => null);
@@ -1127,19 +1135,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         activeSubCategoryIds.isNotEmpty &&
         activeSubCategoryIds.every((id) {
           bool isChecklistDone = _checklistCompletionStates[id] == true;
-          bool isAbove3m = _savedAbove3m[id] ?? false;
           String ptw = _savedPtwNumbers[id] ?? "";
+          bool isAbove3m = _savedAbove3m[id] ?? false;
 
-          if (isAbove3m) {
-            bool isPtwValid = ptw.trim().isNotEmpty;
-            bool hasImage = _globalImageBytes.isNotEmpty;
-            final status = _globalAiData?['overallStatus'];
-            bool hasValidStatus = status == "SAFE";
+          bool isPtwValid = ptw.trim().isNotEmpty;
+          bool requiresPtw = isAbove3m ? isPtwValid : true;
+          bool hasImage = _globalImageBytes.isNotEmpty;
+          final status = _globalAiData?['overallStatus'];
+          bool hasValidStatus = (status == "SAFE");
 
-            return isChecklistDone && isPtwValid && hasImage && hasValidStatus;
-          } else {
-            return isChecklistDone;
-          }
+          return (isChecklistDone &&
+              requiresPtw &&
+              hasImage &&
+              (hasValidStatus || _finishedAnalyzing));
         });
 
     return SelectionArea(
