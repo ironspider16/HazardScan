@@ -53,8 +53,7 @@ class LocalReportCompiler {
     List<Uint8List>? finalImagesBytes,
   }) async {
     final pdf      = pw.Document();
-    // FIXED: Swapped symbols font out for standard alphanumeric regular text font
-    final font     = await PdfGoogleFonts.notoSansRegular();
+    final font     = await PdfGoogleFonts.notoSansSymbols2Regular();
     final fontBold = await PdfGoogleFonts.notoSansBold();
 
     final String headerDate = submittedAt != null
@@ -89,6 +88,7 @@ class LocalReportCompiler {
           _statusBanner(finalAiData['overallStatus'] ?? 'SAFE'),
           pw.SizedBox(height: 16),
 
+          // Section 1 — Site details
           _sectionHeader('1. Site & Personnel Details'),
           pw.SizedBox(height: 8),
           _infoGrid([
@@ -102,6 +102,7 @@ class LocalReportCompiler {
           ]),
           pw.SizedBox(height: 16),
 
+          // Section 2 — AI summary
           _sectionHeader(
             isComparative
                 ? '2. Rectification Summary (AI Insight)'
@@ -117,14 +118,15 @@ class LocalReportCompiler {
           ),
           pw.SizedBox(height: 16),
 
-          // FIXED: Changed unicode character to cross-platform standard text arrow
+          // Section 3 — Evolution matrix (comparative only)
           if (isComparative) ...[
-            _sectionHeader('3. Metric Evolution (Before -> After)'),
+            _sectionHeader('3. Metric Evolution (Before  ➔  After)'),
             pw.SizedBox(height: 8),
             _evolutionTable(initialAiData, finalAiData, getField),
             pw.SizedBox(height: 16),
           ],
 
+          // Manual notes (truncated at 600 chars to prevent page 1 overflow)
           if (manualNotes.isNotEmpty) ...[
             _notesBox(
               manualNotes.length > 600
@@ -139,6 +141,8 @@ class LocalReportCompiler {
 
     // ─────────────────────────────────────────────────────────────────────
     // PAGE 2 — INITIAL INSPECTION HAZARD DETAILS
+    // Uses pw.Table per category so MultiPage can break at row boundaries —
+    // prevents near-empty overflow pages caused by long reasoning text.
     // ─────────────────────────────────────────────────────────────────────
     pdf.addPage(
       pw.MultiPage(
@@ -192,7 +196,7 @@ class LocalReportCompiler {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // LAST PAGE — IMAGE EVIDENCE
+    // LAST PAGE — IMAGE EVIDENCE (fixed pw.Page, not MultiPage)
     // ─────────────────────────────────────────────────────────────────────
     pdf.addPage(
       pw.Page(
@@ -215,6 +219,7 @@ class LocalReportCompiler {
                     ),
                     pw.SizedBox(height: 12),
 
+                    // Image area — expands to fill remaining page
                     pw.Expanded(
                       child: isComparative
                           ? pw.Row(
@@ -253,18 +258,14 @@ class LocalReportCompiler {
                                 _imageColumnHeader('SITE EVIDENCE — COMPLIANT STATE', _green),
                                 pw.SizedBox(height: 6),
                                 pw.Expanded(
-                                  // Gaps Fix: If initial images are missing in a single pass context, fall back to final images array
-                                  child: _imageStack(
-                                    (initialImagesBytes != null && initialImagesBytes.isNotEmpty)
-                                        ? initialImagesBytes
-                                        : (finalImagesBytes ?? []),
-                                  ),
+                                  child: _imageStack(initialImagesBytes ?? []),
                                 ),
                               ],
                             ),
                     ),
 
                     pw.SizedBox(height: 10),
+                    // Disclaimer note
                     pw.Container(
                       width: double.infinity,
                       padding: const pw.EdgeInsets.all(8),
@@ -296,6 +297,8 @@ class LocalReportCompiler {
 
   // ─────────────────────────────────────────────────────────────────────────
   // HAZARD DETAIL WIDGETS
+  // Each category renders as a pw.Table so MultiPage can break at row
+  // boundaries instead of pushing entire cards to the next page.
   // ─────────────────────────────────────────────────────────────────────────
   static List<pw.Widget> _hazardDetailWidgets(
     Map<String, dynamic> aiData,
@@ -314,48 +317,62 @@ class LocalReportCompiler {
     for (final cat in categories) {
       final block      = aiData[cat[1]] as Map<String, dynamic>? ?? {};
       final compliance = getField(block, 'compliance').toUpperCase();
+      final color      = _statusColor(compliance);
       final tint       = _statusTint(compliance);
 
       widgets.add(
-        // FIXED: Wrapped the sub-table component block in a KeepTogether to prevent broken overflow page cuts
-        pw.KeepTogether(
-          child: pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 32),
-            child: pw.Table(
-              border: pw.TableBorder.all(color: _border, width: 0.5),
-              columnWidths: const {
-                0: pw.FixedColumnWidth(110),
-                1: pw.FlexColumnWidth(1),
-              },
-              children: [
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: tint),
-                  children: [
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      child: pw.Text(
-                        cat[0],
-                        style: pw.TextStyle(
-                          fontSize: 9,
-                          fontWeight: pw.FontWeight.bold,
-                          color: _textMain,
-                        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+          child: pw.Table(
+            border: pw.TableBorder.all(color: _border, width: 0.5),
+            columnWidths: const {
+              0: pw.FixedColumnWidth(110),
+              1: pw.FlexColumnWidth(1),
+            },
+            children: [
+              // Category header row
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: tint),
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    child: pw.Text(
+                      cat[0],
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold,
+                        color: _textMain,
                       ),
                     ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      child: pw.Align(
-                        alignment: pw.Alignment.centerRight,
-                        child: _inlineBadge(compliance),
-                      ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    child: pw.Align(
+                      alignment: pw.Alignment.centerRight,
+                      child: _inlineBadge(compliance),
                     ),
-                  ],
-                ),
-                _fieldRow('Observation', getField(block, 'description')),
-                _fieldRow('Reasoning', getField(block, 'reasoning')),
-                _fieldRow('Corrective Action', getField(block, 'advice')),
-              ],
-            ),
+                  ),
+                ],
+              ),
+              // Observation row
+              _fieldRow(
+                'Observation',
+                getField(block, 'description'),
+                isHeader: false,
+              ),
+              // Reasoning row
+              _fieldRow(
+                'Reasoning',
+                getField(block, 'reasoning'),
+                isHeader: false,
+              ),
+              // Corrective Action row
+              _fieldRow(
+                'Corrective Action',
+                getField(block, 'advice'),
+                isHeader: false,
+              ),
+            ],
           ),
         ),
       );
@@ -365,7 +382,8 @@ class LocalReportCompiler {
     return widgets;
   }
 
-  static pw.TableRow _fieldRow(String label, String value) {
+  // Single data row inside a category table
+  static pw.TableRow _fieldRow(String label, String value, {bool isHeader = false}) {
     return pw.TableRow(
       children: [
         pw.Container(
@@ -419,7 +437,7 @@ class LocalReportCompiler {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // IMAGE STACK
+  // IMAGE STACK — 1 or 2 images stacked vertically
   // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _imageStack(List<Uint8List> images) {
     if (images.isEmpty) return _emptyPaneFrame('No image captured');
@@ -437,8 +455,7 @@ class LocalReportCompiler {
     return pw.ClipRRect(
       horizontalRadius: 4,
       verticalRadius: 4,
-      // FIXED: Swapped BoxFit.cover out for BoxFit.contain to retain complete structural image bounds
-      child: pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.contain),
+      child: pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.cover),
     );
   }
 
@@ -620,7 +637,7 @@ class LocalReportCompiler {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // INFO GRID
+  // INFO GRID (site details table)
   // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _infoGrid(List<List<String>> rows) {
     return pw.Padding(
@@ -724,7 +741,7 @@ class LocalReportCompiler {
               pw.Padding(
                 padding: const pw.EdgeInsets.all(8),
                 child: pw.Text(
-                  'Status Transformation (Initial -> Verified)',
+                  'Status Transformation (Initial  ➔  Verified)',
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
                     color: _white,
@@ -761,7 +778,7 @@ class LocalReportCompiler {
                       pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(horizontal: 10),
                         child: pw.Text(
-                          '->', // FIXED: Swapped unicode arrow symbol for clean standard text string
+                          '➔',
                           style: pw.TextStyle(
                             fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
