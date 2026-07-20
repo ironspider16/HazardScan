@@ -75,7 +75,7 @@ class PastWeeklyReportsPageState extends State<AllWeeklyReportsPage> {
         : int.tryParse(report['id']?.toString() ?? '0') ?? 0;
 
     final String formattedDate = formatDateRange(startDate, endDate);
-    final int position = index + 1;
+    final int position = weeklyReports.length - index;
 
     return Container(
       margin: const EdgeInsets.only(top: AppPadding.medium),

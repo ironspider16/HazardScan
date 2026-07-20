@@ -29,7 +29,7 @@ class RiskLeaderboardWidget extends StatelessWidget {
           return _buildRiskLeaderboardItem(
             item["category"],
             item["score"],
-            item["totalWah"],
+            item["total"],
           );
         }),
       ],
@@ -39,9 +39,9 @@ class RiskLeaderboardWidget extends StatelessWidget {
   Widget _buildRiskLeaderboardItem(
     String categoryName,
     int rawScore,
-    int totalWahReports,
+    int totalReports,
   ) {
-    final int maxScore = totalWahReports * 1;
+    final int maxScore = totalReports * 1;
     final double riskRatio = maxScore > 0 ? rawScore / maxScore : 0.0;
     final int riskPercentage = (riskRatio * 100).round();
 
@@ -132,7 +132,7 @@ class RiskLeaderboardWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: AppPadding.tight),
                 const Text(
-                  '• Raw Score: The total risk points accumulated from all reports.\n• Max Score: Calculated as (Total WAH Reports × 1 points).\n• Risk Percentage: Shows how close a category is to the worst-case scenario (100% risk).',
+                  '• Raw Score: The total risk points accumulated from all reports.\n• Max Score: Calculated as (Total Reports × 1 points).\n• Risk Percentage: Shows how close a category is to the worst-case scenario (100% risk).',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.black87,

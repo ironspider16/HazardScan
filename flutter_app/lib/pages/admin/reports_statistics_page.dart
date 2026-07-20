@@ -49,22 +49,16 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
   String? selectedCategory;
   String? selectedTitle;
   String? selectedComplianceLevel;
+  String? selectedLocation;
+  String? selectedDepartment;
+  bool sortAscending = false;
 
   // Filter Configuration Constants
-  final List<String> categories = [
-    'Work At Height',
-    'Confined Space Work',
-    'Chemical Hazard',
-  ];
-  final List<String> titles = [
-    'Ladder',
-    'Personnel Lifter',
-    'Scaffold',
-    'Liquid Nitrogen (LN2) Transportation',
-    'Liquid Nitrogen (LN2) Refilling',
-    'General',
-  ];
-  final List<String> complianceLevels = ['SAFE', 'DANGEROUS'];
+  List<String> categories = [];
+  List<String> titles = [];
+  List<String> departments = [];
+  List<String> locations = [];
+  List<String> complianceLevels = ['SAFE', 'DANGEROUS'];
 
   // ==========================================
   // LIFECYCLE METHODS
@@ -150,14 +144,59 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     }
   }
 
+  Future<void> loadFilterLists() async {
+    try {
+      final templatesData = await supabase
+          .from("swp_templates")
+          .select("category , title");
+      Set<String> setCategories = {};
+      Set<String> setTitles = {};
+      Set<String> setLocations = {};
+      Set<String> setDepartments = {};
+
+      setCategories = templatesData
+          .map((item) => item["category"].toString())
+          .whereType<String>()
+          .where((category) => category.isNotEmpty)
+          .toSet();
+
+      setTitles = templatesData
+          .map((item) => item["title"].toString())
+          .whereType<String>()
+          .where((title) => title.isNotEmpty)
+          .toSet();
+
+      setLocations = reports
+          .map((r) => r["location"]?.toString().trim())
+          .whereType<String>()
+          .where((location) => location.isNotEmpty)
+          .toSet();
+
+      setDepartments = reports
+          .map((d) => d["department"]?.toString().trim())
+          .whereType<String>()
+          .where((department) => department.isNotEmpty)
+          .toSet();
+
+      setState(() {
+        categories = setCategories.toList();
+        titles = setTitles.toList();
+        locations = setLocations.toList();
+        departments = setDepartments.toList();
+      });
+    } catch (e) {
+      debugPrint("Error loading filter lists: $e");
+    }
+  }
+
   Future<void> loadReports() async {
     setState(() => isLoading = true);
+
     try {
-      final complianceJoinModifier = selectedComplianceLevel != null
-          ? '!inner'
-          : '';
-      final selectQuery =
-          '*, swp_templates!inner(id, category, title), safety_variables_FK$complianceJoinModifier(*)';
+      final bool filterbyCompliance = selectedComplianceLevel != null;
+      String selectQuery = filterbyCompliance
+          ? '*, swp_templates!inner(id, category, title), safety_variables_FK!inner(*)'
+          : '*, swp_templates!inner(id, category, title), safety_variables_FK(*)';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
@@ -172,32 +211,45 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             );
       }
 
+      // Filter by SWP Template Category
       if (selectedCategory != null) {
         query = query.eq('swp_templates.category', selectedCategory!);
       }
 
+      // Filter by SWP Template Title
       if (selectedTitle != null) {
         query = query.eq('swp_templates.title', selectedTitle!);
       }
 
       if (selectedComplianceLevel != null) {
-        query = query.eq('swp_templates.category', 'Work At Height');
         query = query.eq(
           'safety_variables_FK.Overall Status',
           selectedComplianceLevel!,
         );
       }
 
-      final response = await query.order('submitted_at', ascending: false);
+      if (selectedLocation != null) {
+        query = query.eq('location', selectedLocation!);
+      }
+
+      if (selectedDepartment != null) {
+        query = query.eq('department', selectedDepartment!);
+      }
+
+      final response = await query.order(
+        'submitted_at',
+        ascending: sortAscending,
+      );
       setState(() {
         reports = List<Map<String, dynamic>>.from(response);
+        debugPrint(reports.toString());
         isLoading = false;
       });
+      loadFilterLists();
     } catch (e) {
       setState(() => isLoading = false);
     }
   }
-
   // ==========================================
   // BUSINESS LOGIC & DATA TRANSFORMATIONS
   // ==========================================
@@ -265,7 +317,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
       'Electrical And Machinery': 0,
     };
 
-    final totalWahReports = reports
+    final totalReports = reports
         .where((r) => r["safety_variables_FK"] != null)
         .length;
 
@@ -287,11 +339,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
 
     final List<Map<String, dynamic>> leaderboard = scores.entries
         .map(
-          (e) => {
-            'category': e.key,
-            'score': e.value,
-            "totalWah": totalWahReports,
-          },
+          (e) => {'category': e.key, 'score': e.value, "total": totalReports},
         )
         .toList();
 
@@ -386,6 +434,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     String? tempCategory = selectedCategory;
     String? tempTitle = selectedTitle;
     String? tempComplianceLevel = selectedComplianceLevel;
+    String? tempLocation = selectedLocation;
+    String? tempDepartment = selectedDepartment;
 
     await showDialog(
       context: context,
@@ -393,9 +443,18 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text(
-                'Filter Reports',
-                style: AppTypography.Bluesubheading,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Filter Reports', style: AppTypography.Bluesubheading),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.primaryTint,
+                    ),
+                  ),
+                ],
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -429,6 +488,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       ),
                     ),
                     const SizedBox(height: AppPadding.medium),
+
                     Text(
                       'Category',
                       style: AppTypography.Blacksubheading.copyWith(
@@ -439,16 +499,18 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       isExpanded: true,
                       value: tempCategory,
                       hint: const Text('All Categories'),
-                      items: categories
-                          .map(
-                            (val) =>
-                                DropdownMenuItem(value: val, child: Text(val)),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setDialogState(() => tempCategory = val),
+                      items: categories.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempCategory = newValue);
+                      },
                     ),
                     const SizedBox(height: AppPadding.tight),
+
                     Text(
                       'Title',
                       style: AppTypography.Blacksubheading.copyWith(
@@ -459,15 +521,16 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       isExpanded: true,
                       value: tempTitle,
                       hint: const Text('All Titles'),
-                      items: titles
-                          .map(
-                            (val) =>
-                                DropdownMenuItem(value: val, child: Text(val)),
-                          )
-                          .toList(),
-                      onChanged: (val) => setDialogState(() => tempTitle = val),
+                      items: titles.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempTitle = newValue);
+                      },
                     ),
-                    const SizedBox(height: AppPadding.tight),
                     Text(
                       'Compliance Level',
                       style: AppTypography.Blacksubheading.copyWith(
@@ -478,52 +541,109 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                       isExpanded: true,
                       value: tempComplianceLevel,
                       hint: const Text('All Levels'),
-                      items: complianceLevels
-                          .map(
-                            (val) =>
-                                DropdownMenuItem(value: val, child: Text(val)),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setDialogState(() => tempComplianceLevel = val),
+                      items: complianceLevels.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempComplianceLevel = newValue);
+                      },
+                    ),
+                    Text(
+                      'Location',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempLocation,
+                      hint: const Text('All Locations'),
+                      items: locations.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempLocation = newValue);
+                      },
+                    ),
+                    Text(
+                      'Department',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempDepartment,
+                      hint: const Text('All Departments'),
+                      items: departments.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempDepartment = newValue);
+                      },
                     ),
                   ],
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () {
-                    setDialogState(() {
-                      tempRange = null;
-                      tempCategory = null;
-                      tempTitle = null;
-                      tempComplianceLevel = null;
-                    });
-                  },
-                  child: const Text(
-                    'Clear All',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                MenuButton(
-                  label: 'Apply Filters',
-                  isPrimary: true,
-                  width: 120,
-                  height: 40,
-                  onTap: () {
-                    setState(() {
-                      selectedRange = tempRange;
-                      selectedCategory = tempCategory;
-                      selectedTitle = tempTitle;
-                      selectedComplianceLevel = tempComplianceLevel;
-                    });
-                    Navigator.pop(context);
-                    loadReports();
-                  },
+                Row(
+                  children: [
+                    Expanded(
+                      child: MenuButton(
+                        label: "Clear All",
+                        isMini: true,
+                        isDelete: true,
+                        onTap: () {
+                          setDialogState(() {
+                            tempRange = null;
+                            tempCategory = null;
+                            tempComplianceLevel = null;
+                            tempTitle = null;
+                            tempDepartment = null;
+                            tempLocation = null;
+                          });
+                          setState(() {
+                            selectedRange = null;
+                            selectedCategory = null;
+                            selectedComplianceLevel = null;
+                            selectedTitle = null;
+                            selectedDepartment = null;
+                            selectedLocation = null;
+                          });
+                          loadReports();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppPadding.tight),
+                    Expanded(
+                      child: MenuButton(
+                        label: 'Apply Filters',
+                        isPrimary: true,
+                        isMini: true,
+                        onTap: () {
+                          setState(() {
+                            selectedRange = tempRange;
+                            selectedCategory = tempCategory;
+                            selectedTitle = tempTitle;
+                            selectedComplianceLevel = tempComplianceLevel;
+                            selectedLocation = tempLocation;
+                            selectedDepartment = tempDepartment;
+                          });
+                          Navigator.pop(context);
+                          loadReports();
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );
@@ -543,7 +663,9 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
         selectedRange != null ||
         selectedCategory != null ||
         selectedTitle != null ||
-        selectedComplianceLevel != null;
+        selectedComplianceLevel != null ||
+        selectedDepartment != null ||
+        selectedLocation != null;
 
     final leaderboard = _calculateRiskLeaderboard();
     final ratioData = _calculateComplianceRatios();
@@ -570,48 +692,61 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                   selectedCategory = null;
                   selectedTitle = null;
                   selectedComplianceLevel = null;
+                  selectedDepartment = null;
+                  selectedLocation = null;
                 });
                 loadReports();
               },
             ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppPadding.page),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: AppPadding.medium * 3),
-              ReportTimelineWidget(reports: reports),
-              const SizedBox(height: AppPadding.medium),
-              _buildResponsiveChartsRow(),
-              const SizedBox(height: AppPadding.medium),
-              _buildChartContainer(
-                UnlockedSpreaderDistributionCircle(reports: reports),
+      body: isLoading
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppDimensions.radiusMedium),
+                child: CircularProgressIndicator(),
               ),
-              const SizedBox(height: AppPadding.medium),
-              _buildComplianceDistributionCard(ratioData),
-              const SizedBox(height: AppPadding.medium),
-              _buildChartContainer(
-                RiskLeaderboardWidget(leaderboardData: leaderboard),
-              ),
-              const SizedBox(height: AppPadding.medium),
-              _buildWeeklyReportSection(),
-              const SizedBox(height: AppPadding.medium),
-              _buildMonthlyReportSection(),
-              const SizedBox(height: AppPadding.medium),
-              _buildChartContainer(
-                LocationRiskLeaderboardWidget(
-                  locationDangerAverages: locationDangerAverages,
+            )
+          : reports.isEmpty
+          ? _buildEmptyState(isFiltering)
+          : SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppPadding.page,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: AppPadding.medium * 3),
+                    ReportTimelineWidget(reports: reports),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildResponsiveChartsRow(),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildChartContainer(
+                      UnlockedSpreaderDistributionCircle(reports: reports),
+                    ),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildComplianceDistributionCard(ratioData),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildChartContainer(
+                      RiskLeaderboardWidget(leaderboardData: leaderboard),
+                    ),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildWeeklyReportSection(),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildMonthlyReportSection(),
+                    const SizedBox(height: AppPadding.medium),
+                    _buildChartContainer(
+                      LocationRiskLeaderboardWidget(
+                        locationDangerAverages: locationDangerAverages,
+                      ),
+                    ),
+
+                    const SizedBox(height: AppPadding.medium),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: AppPadding.medium),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 
@@ -990,6 +1125,56 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isFiltering) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppPadding.page,
+          vertical: 60,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isFiltering
+                  ? 'No Matching Reports Found'
+                  : 'No Reports Available',
+              style: AppTypography.Bluesubheading,
+            ),
+            const SizedBox(height: AppPadding.tight),
+            Text(
+              isFiltering
+                  ? 'None of the safety reports match your selected filters.'
+                  : 'There are currently no safety reports submitted in the system.',
+              textAlign: TextAlign.center,
+              style: AppTypography.body,
+            ),
+            const SizedBox(height: AppPadding.medium * 2),
+            if (isFiltering)
+              SizedBox(
+                width: 200,
+                child: MenuButton(
+                  label: 'Clear All Filters',
+                  isDelete: true,
+                  onTap: () {
+                    setState(() {
+                      selectedRange = null;
+                      selectedCategory = null;
+                      selectedTitle = null;
+                      selectedComplianceLevel = null;
+                      selectedLocation = null;
+                      selectedDepartment = null;
+                    });
+                    loadReports();
+                  },
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

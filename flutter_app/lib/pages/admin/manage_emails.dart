@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import 'package:kkhazardscan/supabase_client.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
@@ -701,15 +702,6 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                         ],
                       ),
               ),
-              if (!_isSelectionMode) ...[
-                _AddEmailButton(onTap: _showAddEmailDialog),
-                const SizedBox(height: AppPadding.medium),
-                MenuButton(
-                  label: "Add Email Group",
-                  icon: Icons.group_add_outlined,
-                  onTap: () => _showAddEmailGroupDialog(),
-                ),
-              ],
               if (_isSelectionMode) ...[
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -744,6 +736,46 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
           ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
+
+      floatingActionButton: _isSelectionMode
+          ? null
+          : Padding(
+              padding: const EdgeInsets.all(AppPadding.medium),
+              child: SpeedDial(
+                spacing: AppPadding.medium,
+                icon: Icons.add,
+                foregroundColor: AppColors.backgroundWhite,
+                activeIcon: Icons.close,
+                // 2. Control deployment direction and label orientation
+                direction: SpeedDialDirection.up,
+                switchLabelPosition: false,
+                backgroundColor: AppColors.primaryBlue,
+                childMargin: EdgeInsets.symmetric(horizontal: AppPadding.tight),
+                children: [
+                  SpeedDialChild(
+                    elevation: 0,
+                    label: "Add Email Group",
+                    child: const Icon(Icons.group_add_outlined),
+                    onTap: () => _showAddEmailGroupDialog(),
+                    backgroundColor: Color.fromARGB(255, 236, 242, 253),
+                    foregroundColor: AppColors.primaryBlue,
+                    labelBackgroundColor: Color.fromARGB(255, 236, 242, 253),
+                    labelShadow: [],
+                  ),
+                  SpeedDialChild(
+                    elevation: 0,
+                    child: const Icon(Icons.email_outlined),
+                    label: "Add Email",
+                    backgroundColor: Color.fromARGB(255, 236, 242, 253),
+                    foregroundColor: AppColors.primaryBlue,
+                    labelBackgroundColor: Color.fromARGB(255, 236, 242, 253),
+                    labelShadow: [],
+                    onTap: () => _showAddEmailDialog(),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -776,19 +808,20 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      key: UniqueKey(),
-                      backgroundColor: Colors.yellow,
-                      child: Icon(
-                        Icons.mail_outline,
-                        color: Colors.grey.shade700,
-                        size: 20,
+                    Switch(
+                      value: true,
+                      onChanged: (bool value) {},
+                      activeThumbColor: AppColors.primaryBlue,
+                      activeTrackColor: AppColors.primaryBlueLight.withValues(
+                        alpha: 0.3,
                       ),
                     ),
                     const SizedBox(width: AppPadding.tight),
-                    const Text(
-                      "Means it's an immediate email",
-                      style: AppTypography.body,
+                    Expanded(
+                      child: Text(
+                        "Means it's an immediate email",
+                        style: AppTypography.body,
+                      ),
                     ),
                   ],
                 ),
@@ -994,24 +1027,6 @@ class _EmailGroupChipsState extends State<_EmailGroupChips> {
   }
 }
 
-class _AddEmailButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _AddEmailButton({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: MenuButton(
-        label: "Add Supervisor Email",
-        isPrimary: true,
-        onTap: onTap,
-        icon: Icons.add_circle_outline,
-      ),
-    );
-  }
-}
 
 bool isMobile(BuildContext context) {
   return MediaQuery.sizeOf(context).width < 500;

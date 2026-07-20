@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kkhazardscan/Design/status_Colors.dart';
@@ -28,6 +27,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
   String? selectedCategory;
   String? selectedTitle;
   String? selectedComplianceLevel;
+  String? selectedLocation;
+  String? selectedDepartment;
 
   bool sortAscending = false;
 
@@ -40,26 +41,11 @@ class _ReportsListPageState extends State<ReportsListPage> {
   bool get _isSelectionMode => _selectedReports.isNotEmpty;
   bool selectEmailGroupStep = false;
 
-  final List<String> categories = [
-    'Work At Height',
-    'Confined Space Work',
-    'Chemical Hazard',
-  ];
-  final List<String> titles = [
-    'Ladder',
-    'Personnel Lifter',
-    'Scaffold',
-    'Liquid Nitrogen (LN2) Transportation',
-    'Liquid Nitrogen (LN2) Refilling',
-    'General',
-  ];
-
-  final List<String> complianceLevels = [
-    'SAFE',
-    'COMPLIANT',
-    'PARTIALLY COMPLIANT',
-    'DANGEROUS',
-  ];
+  List<String> categories = [];
+  List<String> titles = [];
+  List<String> departments = [];
+  List<String> locations = [];
+  List<String> complianceLevels = ["SAFE", "DANGEROUS"];
 
   @override
   void initState() {
@@ -72,6 +58,51 @@ class _ReportsListPageState extends State<ReportsListPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> loadFilterLists() async {
+    try {
+      final templatesData = await supabase
+          .from("swp_templates")
+          .select("category , title");
+      Set<String> setCategories = {};
+      Set<String> setTitles = {};
+      Set<String> setLocations = {};
+      Set<String> setDepartments = {};
+
+      setCategories = templatesData
+          .map((item) => item["category"].toString())
+          .whereType<String>()
+          .where((category) => category.isNotEmpty)
+          .toSet();
+
+      setTitles = templatesData
+          .map((item) => item["title"].toString())
+          .whereType<String>()
+          .where((title) => title.isNotEmpty)
+          .toSet();
+
+      setLocations = reports
+          .map((r) => r["location"]?.toString().trim())
+          .whereType<String>()
+          .where((location) => location.isNotEmpty)
+          .toSet();
+
+      setDepartments = reports
+          .map((d) => d["department"]?.toString().trim())
+          .whereType<String>()
+          .where((department) => department.isNotEmpty)
+          .toSet();
+
+      setState(() {
+        categories = setCategories.toList();
+        titles = setTitles.toList();
+        locations = setLocations.toList();
+        departments = setDepartments.toList();
+      });
+    } catch (e) {
+      debugPrint("Error loading filter lists: $e");
+    }
   }
 
   List<Map<String, dynamic>> get _filteredReports {
@@ -107,6 +138,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
       final String overallStatus = safetyVar != null
           ? (safetyVar['Overall Status'] ?? '').toString().toLowerCase()
           : '';
+      final String reportCode = (report['report_code'] ?? '')
+          .toString()
+          .toLowerCase();
       return techName.contains(query) ||
           details.contains(query) ||
           department.contains(query) ||
@@ -115,7 +149,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
           location.contains(query) ||
           templateCategory.contains(query) ||
           templateTitle.contains(query) ||
-          overallStatus.contains(query);
+          overallStatus.contains(query) ||
+          reportCode.contains(query);
     }).toList();
   }
 
@@ -123,13 +158,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
     setState(() => isLoading = true);
 
     try {
-      // Include the foreign key join to load audit safety variables
-      String complianceJoinModifier = selectedComplianceLevel != null
-          ? '!inner'
-          : '';
-
-      String selectQuery =
-          '*, swp_templates!inner(id, category, title), safety_variables_FK$complianceJoinModifier(*)';
+      final bool filterbyCompliance = selectedComplianceLevel != null;
+      String selectQuery = filterbyCompliance
+          ? '*, swp_templates!inner(id, category, title), safety_variables_FK!inner(*)'
+          : '*, swp_templates!inner(id, category, title), safety_variables_FK(*)';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
@@ -155,11 +187,18 @@ class _ReportsListPageState extends State<ReportsListPage> {
       }
 
       if (selectedComplianceLevel != null) {
-        query = query.eq('swp_templates.category', 'Work At Height');
         query = query.eq(
           'safety_variables_FK.Overall Status',
           selectedComplianceLevel!,
         );
+      }
+
+      if (selectedLocation != null) {
+        query = query.eq('location', selectedLocation!);
+      }
+
+      if (selectedDepartment != null) {
+        query = query.eq('department', selectedDepartment!);
       }
 
       final response = await query.order(
@@ -168,8 +207,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
       );
       setState(() {
         reports = List<Map<String, dynamic>>.from(response);
+        debugPrint(reports.toString());
         isLoading = false;
       });
+      loadFilterLists();
     } catch (e) {
       setState(() => isLoading = false);
     }
@@ -254,7 +295,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
           visualDensity: VisualDensity.compact,
         ),
         Chip(
-          label: Text(info["category"]?["string"] as String? ?? "Unknown category"),
+          label: Text(
+            info["category"]?["string"] as String? ?? "Unknown category",
+          ),
           avatar: Icon(info["category"]?["icon"] as IconData),
           side: const BorderSide(
             style: BorderStyle.none,
@@ -288,7 +331,10 @@ class _ReportsListPageState extends State<ReportsListPage> {
     Map<String, Map<String, dynamic>> info = {
       "location": {"string": location, "icon": Icons.location_on_outlined},
       "date": {"string": date, "icon": Icons.calendar_month_outlined},
-      "category" : {"string" : "$safetyProcedure - $safetyProcedureCategory", "icon" : Icons.category}
+      "category": {
+        "string": "$safetyProcedure - $safetyProcedureCategory",
+        "icon": Icons.category,
+      },
     };
 
     return Container(
@@ -407,6 +453,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
     String? tempCategory = selectedCategory;
     String? tempTitle = selectedTitle;
     String? tempComplianceLevel = selectedComplianceLevel;
+    String? tempLocation = selectedLocation;
+    String? tempDepartment = selectedDepartment;
 
     await showDialog(
       context: context,
@@ -414,9 +462,18 @@ class _ReportsListPageState extends State<ReportsListPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text(
-                'Filter Reports',
-                style: AppTypography.Bluesubheading,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Filter Reports', style: AppTypography.Bluesubheading),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close),
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppColors.primaryTint,
+                    ),
+                  ),
+                ],
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -513,44 +570,99 @@ class _ReportsListPageState extends State<ReportsListPage> {
                         setDialogState(() => tempComplianceLevel = newValue);
                       },
                     ),
+                    Text(
+                      'Location',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempLocation,
+                      hint: const Text('All Locations'),
+                      items: locations.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempLocation = newValue);
+                      },
+                    ),
+                    Text(
+                      'Department',
+                      style: AppTypography.Blacksubheading.copyWith(
+                        fontSize: 14,
+                      ),
+                    ),
+                    DropdownButton<String>(
+                      isExpanded: true,
+                      value: tempDepartment,
+                      hint: const Text('All Departments'),
+                      items: departments.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setDialogState(() => tempDepartment = newValue);
+                      },
+                    ),
                   ],
                 ),
               ),
               actions: [
-                TextButton(
-                  onPressed: () {
-                    setDialogState(() {
-                      tempRange = null;
-                      tempCategory = null;
-                      tempComplianceLevel = null;
-                      tempTitle = null;
-                    });
-                  },
-                  child: const Text(
-                    'Clear All',
-                    style: TextStyle(color: Colors.red),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                MenuButton(
-                  label: 'Apply Filters',
-                  isPrimary: true,
-                  width:
-                      120, // Set a fixed width that fits the dialog action area
-                  height: 40,
-                  onTap: () {
-                    setState(() {
-                      selectedRange = tempRange;
-                      selectedCategory = tempCategory;
-                      selectedTitle = tempTitle;
-                      selectedComplianceLevel = tempComplianceLevel;
-                    });
-                    Navigator.pop(context);
-                    loadReports();
-                  },
+                Row(
+                  children: [
+                    Expanded(
+                      child: MenuButton(
+                        label: "Clear All",
+                        isMini: true,
+                        isDelete: true,
+                        onTap: () {
+                          setDialogState(() {
+                            tempRange = null;
+                            tempCategory = null;
+                            tempComplianceLevel = null;
+                            tempTitle = null;
+                            tempDepartment = null;
+                            tempLocation = null;
+                          });
+                          setState(() {
+                            selectedRange = null;
+                            selectedCategory = null;
+                            selectedComplianceLevel = null;
+                            selectedTitle = null;
+                            selectedDepartment = null;
+                            selectedLocation = null;
+                          });
+                          loadReports();
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppPadding.tight),
+                    Expanded(
+                      child: MenuButton(
+                        label: 'Apply Filters',
+                        isPrimary: true,
+                        isMini: true,
+                        onTap: () {
+                          setState(() {
+                            selectedRange = tempRange;
+                            selectedCategory = tempCategory;
+                            selectedTitle = tempTitle;
+                            selectedComplianceLevel = tempComplianceLevel;
+                            selectedLocation = tempLocation;
+                            selectedDepartment = tempDepartment;
+                          });
+                          Navigator.pop(context);
+                          loadReports();
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );
@@ -754,11 +866,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
               safetyVar?['areaHazards'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'electricalMachinery':
-              safetyVar?['eletricalMachinery'] ??
+              safetyVar?['electricalMachinery'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
-          'spreaderUnlocked':
-              safetyVar?['spreaderUnlocked'] ??
-              false,
+          'spreaderUnlocked': safetyVar?['spreaderUnlocked'] ?? false,
         };
 
         final Map<String, dynamic> finalAiData = {
@@ -776,11 +886,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
               safetyVar?['areaHazards'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'electricalMachinery':
-              safetyVar?['eletricalMachinery'] ??
+              safetyVar?['electricalMachinery'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
-          'spreaderUnlocked':
-              safetyVar?['spreaderUnlocked'] ??
-              false,
+          'spreaderUnlocked': safetyVar?['spreaderUnlocked'] ?? false,
         };
 
         // Compile PDF locally without image evidence
@@ -794,7 +902,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
           submittedAt: report['submitted_at'],
           totalAttempts: report['totalAttempts'],
           aiChangeAnalysis: report['aiChangeAnalysis'],
-          initialAnalysisId: report['initialAnalysisId']
+          initialAnalysisId: report['initialAnalysisId'],
         );
 
         final String base64Pdf = base64Encode(pdfBytes);
@@ -850,7 +958,9 @@ class _ReportsListPageState extends State<ReportsListPage> {
         selectedRange != null ||
         selectedCategory != null ||
         selectedTitle != null ||
-        selectedComplianceLevel != null;
+        selectedComplianceLevel != null ||
+        selectedDepartment != null ||
+        selectedLocation != null;
 
     final filteredData = _filteredReports;
     return Scaffold(
@@ -890,6 +1000,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
                   selectedCategory = null;
                   selectedTitle = null;
                   selectedComplianceLevel = null;
+                  selectedLocation = null;
+                  selectedDepartment = null;
                 });
                 loadReports();
               },

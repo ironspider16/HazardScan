@@ -57,7 +57,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
   Uint8List? _globalPdfBytes;
   Map<String, dynamic>? _globalAiData;
-  Map<String, dynamic>? _firstAiData; // Nullable, set on first successful AI call
+  Map<String, dynamic>?
+  _firstAiData; // Nullable, set on first successful AI call
   List<Uint8List> _firstAttemptedImages = [];
   List<Uint8List> _lastAttemptedImages = [];
   int _attemptCount = 0;
@@ -66,6 +67,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   bool? _isSpreaderUnlocked = false;
   final TextEditingController _globalDetailsCtrl = TextEditingController();
   bool _isAnalyzing = false;
+  bool _finishedAnalyzing = false;
 
   Map<String, dynamic>? _lastAiCallMetrics;
 
@@ -222,6 +224,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             null; // Reset old AI data states so user is forced to re-analyze the new batch
         _globalPdfBytes =
             null; // Invalidate any cached PDF so it regenerates with new images
+        _finishedAnalyzing = false;
       });
     }
   }
@@ -268,7 +271,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       final analysisResult = await GeminiService.detectHazards(
         compressedImages,
         _globalDetailsCtrl.text,
-        _attemptCount > 0 ? _firstAiData: null,
+        _attemptCount > 0 ? _firstAiData : null,
       );
 
       stopwatch.stop(); // Halt stopwatch upon response retrieval
@@ -320,6 +323,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         setState(() {
           _isAnalyzing = false;
           _globalAiData = null;
+          _finishedAnalyzing = true;
         });
 
         final errorType = analysisResult.errorType ?? "";
@@ -374,7 +378,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           "Parse Error",
           "The server returned an unreadable response.",
         );
-        setState(() => _isAnalyzing = false);
+        setState(() {
+          _isAnalyzing = false;
+          _globalAiData = null;
+          _finishedAnalyzing = true;
+        });
         return;
       }
 
@@ -428,6 +436,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       setState(() {
         _isAnalyzing = false;
+        _globalAiData = null;
+        _finishedAnalyzing = true;
         _lastAiCallMetrics = {
           'timestamp': DateTime.now().toString().split('.').first,
           'success': false,
@@ -562,6 +572,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                 "Safety Acknowledgement",
                 style: AppTypography.Bluesubheading,
               ),
+              // 1. Leave actions empty or remove the parameter entirely
+              actions: null,
               content: dialogSubmitting
                   ? const SizedBox(
                       height: 200,
@@ -701,170 +713,193 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                   ),
                                 ),
                               ),
+
+                              const SizedBox(height: AppPadding.medium),
+
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                  vertical: 4.0,
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 2,
+                                          child: MenuButton(
+                                            label: "Cancel",
+                                            isMini: true,
+                                            onTap: () =>
+                                                Navigator.pop(dialogContext),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          flex: 3,
+                                          child: MenuButton(
+                                            label: "Preview",
+                                            isPrimary: false,
+                                            isMini: true,
+                                            icon: Icons.remove_red_eye,
+                                            onTap: () async {
+                                              final Uint8List pdfBytes =
+                                                  await LocalReportCompiler.generateWshReport(
+                                                    //call report compiler with global state
+                                                    location: locationCtrl.text,
+                                                    supervisor: nameCtrl.text,
+                                                    employer: deptCtrl.text,
+                                                    manualNotes:
+                                                        _globalDetailsCtrl.text,
+                                                    initialAiData:
+                                                        _firstAiData ??
+                                                        _globalAiData ??
+                                                        {},
+                                                    finalAiData:
+                                                        _globalAiData ?? {},
+                                                    totalAttempts:
+                                                        _attemptCount,
+                                                    aiChangeAnalysis:
+                                                        _aiChangeAnalysis,
+                                                    initialImagesBytes:
+                                                        _firstAttemptedImages,
+                                                    finalImagesBytes:
+                                                        _lastAttemptedImages,
+                                                  );
+
+                                              setState(() {
+                                                _globalPdfBytes = pdfBytes;
+                                              });
+
+                                              if (!context.mounted) return;
+
+                                              if (kIsWeb) {
+                                                // On web: open PDF as blob URL in a new browser tab
+                                                final blob = html.Blob([
+                                                  pdfBytes,
+                                                ], 'application/pdf');
+                                                final url =
+                                                    html.Url.createObjectUrlFromBlob(
+                                                      blob,
+                                                    );
+                                                html.window.open(url, '_blank');
+                                                html.Url.revokeObjectUrl(url);
+                                              } else {
+                                                // On native: use in-app PdfPreview screen
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => Scaffold(
+                                                      appBar: AppBar(
+                                                        title: const Text(
+                                                          "Report Preview",
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.white,
+                                                        foregroundColor:
+                                                            Colors.black,
+                                                        elevation: 1,
+                                                      ),
+                                                      body: PdfPreview(
+                                                        build: (_) => pdfBytes,
+                                                        allowPrinting: false,
+                                                        allowSharing: true,
+                                                        canChangePageFormat:
+                                                            false,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: AppPadding.tight),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: MenuButton(
+                                            label: "Submit",
+                                            isPrimary: true,
+                                            isMini: true,
+                                            icon: Icons
+                                                .assignment_turned_in_rounded,
+                                            onTap: () async {
+                                              if (!(formKey.currentState
+                                                      ?.validate() ??
+                                                  false)) {
+                                                return;
+                                              }
+
+                                              setDialogState(
+                                                () => dialogSubmitting = true,
+                                              );
+
+                                              bool success =
+                                                  await _executeSubmitReport(
+                                                    name: nameCtrl.text.trim(),
+                                                    designation: desigCtrl.text
+                                                        .trim(),
+                                                    department: deptCtrl.text
+                                                        .trim(),
+                                                    location: locationCtrl.text
+                                                        .trim(),
+                                                  );
+
+                                              if (success && mounted) {
+                                                Navigator.pop(dialogContext);
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      "All safety checks successfully submitted!",
+                                                    ),
+                                                    backgroundColor:
+                                                        Colors.green,
+                                                  ),
+                                                );
+
+                                                final anonymousTechnician =
+                                                    AppUser(
+                                                      id: 0,
+                                                      email:
+                                                          "technician@example.com",
+                                                      password: '',
+                                                      role: UserRole.user,
+                                                    );
+
+                                                Navigator.pushAndRemoveUntil(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) => MainMenu(
+                                                      user: anonymousTechnician,
+                                                    ),
+                                                  ),
+                                                  (route) => false,
+                                                );
+                                              } else {
+                                                setDialogState(
+                                                  () =>
+                                                      dialogSubmitting = false,
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
                       ),
                     ),
-              actions: dialogSubmitting
-                  ? []
-                  : [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0,
-                          vertical: 4.0,
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: MenuButton(
-                                    label: "Cancel",
-                                    isMini: true,
-                                    onTap: () => Navigator.pop(dialogContext),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  flex: 3,
-                                  child: MenuButton(
-                                    label: "Preview",
-                                    isPrimary: false,
-                                    isMini: true,
-                                    icon: Icons.remove_red_eye,
-                                    onTap: () async {
-                                      final Uint8List pdfBytes =
-                                          await LocalReportCompiler.generateWshReport(
-                                            //call report compiler with global state
-                                            location: locationCtrl.text,
-                                            supervisor: nameCtrl.text,
-                                            employer: deptCtrl.text,
-                                            manualNotes: _globalDetailsCtrl.text,
-                                            initialAiData: _firstAiData ?? _globalAiData ?? {},
-                                            finalAiData: _globalAiData ?? {},
-                                            totalAttempts: _attemptCount,
-                                            aiChangeAnalysis: _aiChangeAnalysis,
-                                            initialImagesBytes: _firstAttemptedImages,
-                                            finalImagesBytes: _lastAttemptedImages,
-                                          );
-
-                                      setState(() {
-                                        _globalPdfBytes = pdfBytes;
-                                      });
-
-                                      if (!context.mounted) return;
-
-                                      if (kIsWeb) {
-                                        // On web: open PDF as blob URL in a new browser tab
-                                        final blob = html.Blob([
-                                          pdfBytes,
-                                        ], 'application/pdf');
-                                        final url = html
-                                            .Url.createObjectUrlFromBlob(blob);
-                                        html.window.open(url, '_blank');
-                                        html.Url.revokeObjectUrl(url);
-                                      } else {
-                                        // On native: use in-app PdfPreview screen
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => Scaffold(
-                                              appBar: AppBar(
-                                                title: const Text(
-                                                  "Report Preview",
-                                                ),
-                                                backgroundColor: Colors.white,
-                                                foregroundColor: Colors.black,
-                                                elevation: 1,
-                                              ),
-                                              body: PdfPreview(
-                                                build: (_) => pdfBytes,
-                                                allowPrinting: false,
-                                                allowSharing: true,
-                                                canChangePageFormat: false,
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                            ),
-                            const SizedBox(height: AppPadding.tight),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: MenuButton(
-                                    label: "Submit",
-                                    isPrimary: true,
-                                    isMini: true,
-                                    icon: Icons.assignment_turned_in_rounded,
-                                    onTap: () async {
-                                      if (!(formKey.currentState?.validate() ??
-                                          false)) {
-                                        return;
-                                      }
-
-                                      setDialogState(
-                                        () => dialogSubmitting = true,
-                                      );
-
-                                      bool success = await _executeSubmitReport(
-                                        name: nameCtrl.text.trim(),
-                                        designation: desigCtrl.text.trim(),
-                                        department: deptCtrl.text.trim(),
-                                        location: locationCtrl.text.trim(),
-                                      );
-
-                                      if (success && mounted) {
-                                        Navigator.pop(dialogContext);
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              "All safety checks successfully submitted!",
-                                            ),
-                                            backgroundColor: Colors.green,
-                                          ),
-                                        );
-
-                                        final anonymousTechnician = AppUser(
-                                          id: 0,
-                                          email: "technician@example.com",
-                                          password: '',
-                                          role: UserRole.user,
-                                        );
-
-                                        Navigator.pushAndRemoveUntil(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (_) => MainMenu(
-                                              user: anonymousTechnician,
-                                            ),
-                                          ),
-                                          (route) => false,
-                                        );
-                                      } else {
-                                        setDialogState(
-                                          () => dialogSubmitting = false,
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
             );
           },
         );
@@ -914,12 +949,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         supervisor: name,
         employer: department,
         manualNotes: _globalDetailsCtrl.text,
-        initialAiData: _firstAiData ?? _globalAiData ?? {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
+        initialAiData:
+            _firstAiData ??
+            _globalAiData ??
+            {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
         finalAiData: _globalAiData ?? {},
         totalAttempts: _attemptCount,
         aiChangeAnalysis: _aiChangeAnalysis,
-        initialImagesBytes: _firstAttemptedImages, // Pass initial list of images to ensure report has all photos, even if PDF preview wasn't generated
-        finalImagesBytes: _lastAttemptedImages, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
+        initialImagesBytes:
+            _firstAttemptedImages, // Pass initial list of images to ensure report has all photos, even if PDF preview wasn't generated
+        finalImagesBytes:
+            _lastAttemptedImages, // Pass current list of images to ensure report has all photos, even if PDF preview wasn't generated
       );
 
       final activeSubCategoryIds = selectedSubCategories.values
@@ -927,7 +967,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           .cast<int>()
           .toList();
 
-      int? globalWahSafetyForeignKey;
+      int? globalSafetyForeignKey;
       Uint8List? compressedImageBytes;
 
       if (_globalImageBytes.isNotEmpty) {
@@ -938,7 +978,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       }
 
       if (_globalAiData != null) {
-        final insertedWahData = await supabase
+        final insertedData = await supabase
             .from('safety_variables')
             .insert({
               'Overall Status': _globalAiData!['overallStatus'] ?? 'N/A',
@@ -953,7 +993,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             .select('id')
             .single();
 
-        globalWahSafetyForeignKey = insertedWahData['id'];
+        globalSafetyForeignKey = insertedData['id'];
       }
 
       List<Map<String, dynamic>> recordsToInsert = [];
@@ -974,9 +1014,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'designation': designation,
           'department': department,
           'location': location,
-          'safety_variables_FK': category == "Work At Height"
-              ? globalWahSafetyForeignKey
-              : null,
+          'safety_variables_FK': globalSafetyForeignKey,
           'report_code': reportCode,
         });
 
@@ -1078,16 +1116,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             if (ptw.trim().isEmpty) {
               return "Permit To Work (PTW) number is required.";
             }
-
-            if (_globalImageBytes.isEmpty) {
-              return "Please upload a site photo for Work at Height tasks.";
-            }
-
-            final status = _globalAiData?['overallStatus'];
-            if (status == "N/A" || status == null) {
-              return "Photo analysis required or shows N/A. Please analyze/retake.";
-            }
           }
+
+          if (_globalImageBytes.isEmpty) {
+            return "Please upload a site photo for safety analysis";
+          }
+
+          final status = _globalAiData?['overallStatus'];
+          if (status != "SAFE" && !_finishedAnalyzing) {
+            return "Photo analysis and SAFE overall status required. Please analyze/retake.";
+          }
+
           return null;
         })
         .firstWhere((msg) => msg != null, orElse: () => null);
@@ -1096,19 +1135,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         activeSubCategoryIds.isNotEmpty &&
         activeSubCategoryIds.every((id) {
           bool isChecklistDone = _checklistCompletionStates[id] == true;
-          bool isAbove3m = _savedAbove3m[id] ?? false;
           String ptw = _savedPtwNumbers[id] ?? "";
+          bool isAbove3m = _savedAbove3m[id] ?? false;
 
-          if (isAbove3m) {
-            bool isPtwValid = ptw.trim().isNotEmpty;
-            bool hasImage = _globalImageBytes.isNotEmpty;
-            final status = _globalAiData?['overallStatus'];
-            bool hasValidStatus = status == "SAFE";
+          bool isPtwValid = ptw.trim().isNotEmpty;
+          bool requiresPtw = isAbove3m ? isPtwValid : true;
+          bool hasImage = _globalImageBytes.isNotEmpty;
+          final status = _globalAiData?['overallStatus'];
+          bool hasValidStatus = (status == "SAFE");
 
-            return isChecklistDone && isPtwValid && hasImage && hasValidStatus;
-          } else {
-            return isChecklistDone;
-          }
+          return (isChecklistDone &&
+              requiresPtw &&
+              hasImage &&
+              (hasValidStatus || _finishedAnalyzing));
         });
 
     return SelectionArea(
