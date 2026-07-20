@@ -378,19 +378,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         return;
       }
 
-      _attemptCount++;
       final String incomingStatus =
           decodedData['overallStatus']?.toString() ?? "N/A";
 
       setState(() {
+        _attemptCount++;
         _globalAiData = decodedData;
 
         if (_attemptCount == 1) {
           _firstAiData = decodedData;
-          _firstAttemptedImages = [imageToAnalyze];
+          _firstAttemptedImages = List<Uint8List>.from(_globalImageBytes);
         }
 
-        _lastAttemptedImages = [imageToAnalyze];
+        _lastAttemptedImages = List<Uint8List>.from(_globalImageBytes);
 
         if (incomingStatus == 'SAFE') {
           if (_attemptCount > 1 && _firstAiData != null) {

@@ -4,221 +4,484 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 
 class LocalReportCompiler {
-  // --- COLOUR PALETTE (mirrors app theme) ---
-  static const PdfColor _blue = PdfColor.fromInt(0xFF1A56DB);
-  static const PdfColor _blueTint = PdfColor.fromInt(0xFFEBF2FF);
-  static const PdfColor _red = PdfColor.fromInt(0xFFB91C1C);
-  static const PdfColor _redTint = PdfColor.fromInt(0xFFFEE2E2);
-  static const PdfColor _orange = PdfColor.fromInt(0xFFC2410C);
-  static const PdfColor _orangeTint = PdfColor.fromInt(0xFFFFEDD5);
-  static const PdfColor _green = PdfColor.fromInt(0xFF15803D);
+  // ─── COLOUR PALETTE ──────────────────────────────────────────────────────
+  static const PdfColor _blue      = PdfColor.fromInt(0xFF1A56DB);
+  static const PdfColor _blueTint  = PdfColor.fromInt(0xFFEBF2FF);
+  static const PdfColor _red       = PdfColor.fromInt(0xFFB91C1C);
+  static const PdfColor _redTint   = PdfColor.fromInt(0xFFFEE2E2);
+  static const PdfColor _green     = PdfColor.fromInt(0xFF15803D);
   static const PdfColor _greenTint = PdfColor.fromInt(0xFFDCFCE7);
-  static const PdfColor _grey = PdfColor.fromInt(0xFF6B7280);
-  static const PdfColor _greyTint = PdfColor.fromInt(0xFFF3F4F6);
-  static const PdfColor _white = PdfColor.fromInt(0xFFFFFFFF);
-  static const PdfColor _textMain = PdfColor.fromInt(0xFF111827);
+  static const PdfColor _grey      = PdfColor.fromInt(0xFF6B7280);
+  static const PdfColor _greyTint  = PdfColor.fromInt(0xFFF3F4F6);
+  static const PdfColor _white     = PdfColor.fromInt(0xFFFFFFFF);
+  static const PdfColor _textMain  = PdfColor.fromInt(0xFF111827);
   static const PdfColor _textFaint = PdfColor.fromInt(0xFF6B7280);
-  static const PdfColor _border = PdfColor.fromInt(0xFFE5E7EB);
+  static const PdfColor _border    = PdfColor.fromInt(0xFFE5E7EB);
 
-  // --- STATUS HELPERS ---
-  static PdfColor _statusColor(String status) {
-    switch (status.trim().toUpperCase()) {
-      case 'DANGEROUS':
-        return _red;
-      case 'SAFE':
-        return _green;
-      default:
-        return _grey;
+  static PdfColor _statusColor(String s) {
+    switch (s.trim().toUpperCase()) {
+      case 'DANGEROUS': return _red;
+      case 'SAFE':      return _green;
+      default:          return _grey;
     }
   }
 
-  static PdfColor _statusTint(String status) {
-    switch (status.trim().toUpperCase()) {
-      case 'DANGEROUS':
-        return _redTint;
-      case 'SAFE':
-        return _greenTint;
-      default:
-        return _greyTint;
+  static PdfColor _statusTint(String s) {
+    switch (s.trim().toUpperCase()) {
+      case 'DANGEROUS': return _redTint;
+      case 'SAFE':      return _greenTint;
+      default:          return _greyTint;
     }
   }
 
-  // --- MAIN COMPARATIVE GENERATOR ---
+  // ─────────────────────────────────────────────────────────────────────────
+  // MAIN ENTRY POINT
+  // ─────────────────────────────────────────────────────────────────────────
   static Future<Uint8List> generateWshReport({
     required String location,
     required String supervisor,
     required String employer,
-    int? initialAnalysisId,
     required int totalAttempts,
     required String aiChangeAnalysis,
-    bool? spreaderUnlocked,
     required Map<String, dynamic> initialAiData,
     required Map<String, dynamic> finalAiData,
     required String manualNotes,
+    bool? spreaderUnlocked,
+    int? initialAnalysisId,
     String? submittedAt,
     List<Uint8List>? initialImagesBytes,
     List<Uint8List>? finalImagesBytes,
   }) async {
-    final pdf = pw.Document();
-    final font = await PdfGoogleFonts.notoSansSymbols2Regular();
+    final pdf      = pw.Document();
+    // FIXED: Swapped symbols font out for standard alphanumeric regular text font
+    final font     = await PdfGoogleFonts.notoSansRegular();
     final fontBold = await PdfGoogleFonts.notoSansBold();
 
-    final String currentDate =
-        submittedAt ?? DateTime.now().toIso8601String().split('T')[0];
-    final String currentTime = submittedAt != null
-        ? ''
-        : "${DateTime.now().hour.toString().padLeft(2, '0')}:"
-              "${DateTime.now().minute.toString().padLeft(2, '0')}";
+    final String headerDate = submittedAt != null
+        ? submittedAt.split('T')[0]
+        : DateTime.now().toIso8601String().split('T')[0];
+    final String headerTime = submittedAt != null
+        ? submittedAt.contains('T')
+            ? submittedAt.split('T')[1].substring(0, 5)
+            : ''
+        : '${DateTime.now().hour.toString().padLeft(2, '0')}:'
+          '${DateTime.now().minute.toString().padLeft(2, '0')}';
+
+    final bool isComparative = totalAttempts > 1;
 
     String getField(Map<String, dynamic> block, String field) =>
         block[field]?.toString().trim() ?? 'Not Declared';
 
-    // ─────────────────────────────────────────────────────────────────
-    // PAGE 1: AUDIT LOG, SUMMARY AND EVOLUTION MATRIX
-    // ─────────────────────────────────────────────────────────────────
+    final pw.ThemeData theme = pw.ThemeData.withFont(base: font, bold: fontBold);
+
+    // ─────────────────────────────────────────────────────────────────────
+    // PAGE 1 — SUMMARY, EVOLUTION MATRIX, NOTES
+    // ─────────────────────────────────────────────────────────────────────
     pdf.addPage(
       pw.MultiPage(
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+        theme: theme,
         pageFormat: PdfPageFormat.a4,
         margin: pw.EdgeInsets.zero,
-        header: (_) => _pageHeader(currentDate, currentTime),
+        header: (_) => _pageHeader(headerDate, headerTime),
         footer: (ctx) => _pageFooter(ctx),
-        build: (pw.Context context) => [
+        build: (_) => [
           pw.SizedBox(height: 16),
-
-          // --- OVERALL STATUS BANNER (Reflects Final Rectified State) ---
           _statusBanner(finalAiData['overallStatus'] ?? 'SAFE'),
           pw.SizedBox(height: 16),
 
-          // --- SECTION 1: Site Details ---
           _sectionHeader('1. Site & Personnel Details'),
           pw.SizedBox(height: 8),
           _infoGrid([
-            ['Location', location.isEmpty ? 'Not Declared' : location],
-            ['Supervisor', supervisor.isEmpty ? 'Unassigned' : supervisor],
-            ['Employer / Contractor', employer.isEmpty ? 'Not Declared' : employer],
-            ['Inspection Time', '$currentDate  $currentTime SGT'],
-            ['Total Rectification Attempts', '$totalAttempts Attempt(s) to achieve compliance'],
+            ['Location',              location.isEmpty   ? 'Not Declared' : location],
+            ['Supervisor',            supervisor.isEmpty ? 'Unassigned'   : supervisor],
+            ['Employer / Contractor', employer.isEmpty   ? 'Not Declared' : employer],
+            ['Inspection Time',       '$headerDate  $headerTime SGT'],
+            ['Rectification Attempts', isComparative
+                ? '$totalAttempts Attempt(s) required to achieve compliance'
+                : 'Site passed on first analysis — no rectification required'],
           ]),
           pw.SizedBox(height: 16),
 
-          // --- SECTION 2: AI Intermittent Comparison Summary ---
-          _sectionHeader('2. Rectification Summary (AI Insight)'),
+          _sectionHeader(
+            isComparative
+                ? '2. Rectification Summary (AI Insight)'
+                : '2. First-Pass Compliance Notice',
+          ),
           pw.SizedBox(height: 8),
-          _aiSummaryBox(aiChangeAnalysis),
+          _aiSummaryBox(
+            isComparative
+                ? aiChangeAnalysis
+                : 'The workspace was assessed as fully compliant on the first inspection pass. '
+                  'No corrective action was required. All safety categories met the required '
+                  'standard without any intermediate rectification steps.',
+          ),
           pw.SizedBox(height: 16),
 
-          // --- SECTION 3: Safety Metric Evolution Matrix ---
-          _sectionHeader('3. Metric Evolution (Before ➔ After)'),
-          pw.SizedBox(height: 8),
-          _evolutionTable(initialAiData, finalAiData, getField),
-          pw.SizedBox(height: 16),
+          // FIXED: Changed unicode character to cross-platform standard text arrow
+          if (isComparative) ...[
+            _sectionHeader('3. Metric Evolution (Before -> After)'),
+            pw.SizedBox(height: 8),
+            _evolutionTable(initialAiData, finalAiData, getField),
+            pw.SizedBox(height: 16),
+          ],
 
-          // Manual notes box if provided
           if (manualNotes.isNotEmpty) ...[
-            _notesBox(manualNotes),
+            _notesBox(
+              manualNotes.length > 600
+                  ? '${manualNotes.substring(0, 600)}… [truncated]'
+                  : manualNotes,
+            ),
             pw.SizedBox(height: 16),
           ],
         ],
       ),
     );
 
-    // ─────────────────────────────────────────────────────────────────
-    // PAGE 2: EXCLUSIVE VISUAL COMPARISON LAUNCH WINDOW
-    // ─────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // PAGE 2 — INITIAL INSPECTION HAZARD DETAILS
+    // ─────────────────────────────────────────────────────────────────────
     pdf.addPage(
-      pw.Page(
-        theme: pw.ThemeData.withFont(base: font, bold: fontBold),
+      pw.MultiPage(
+        theme: theme,
         pageFormat: PdfPageFormat.a4,
         margin: pw.EdgeInsets.zero,
-        build: (pw.Context context) {
-          return pw.Column(
-            children: [
-              _pageHeader(currentDate, currentTime),
-              pw.Padding(
-                padding: const pw.EdgeInsets.all(32),
+        header: (_) => _pageHeader(headerDate, headerTime),
+        footer: (ctx) => _pageFooter(ctx),
+        build: (_) => [
+          pw.SizedBox(height: 16),
+          _sectionHeader(
+            isComparative
+                ? '4. Initial Inspection — Hazard Identification'
+                : '3. Hazard Identification & Assessment',
+          ),
+          pw.SizedBox(height: 8),
+          _passLabel(
+            isComparative
+                ? 'INITIAL AUDIT PASS — UNSAFE STATE'
+                : 'SINGLE PASS — COMPLIANT STATE',
+            isComparative ? _red   : _green,
+            isComparative ? _redTint : _greenTint,
+          ),
+          pw.SizedBox(height: 12),
+          ..._hazardDetailWidgets(initialAiData, getField),
+        ],
+      ),
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // PAGE 3 — RECTIFIED HAZARD DETAILS (comparative only)
+    // ─────────────────────────────────────────────────────────────────────
+    if (isComparative) {
+      pdf.addPage(
+        pw.MultiPage(
+          theme: theme,
+          pageFormat: PdfPageFormat.a4,
+          margin: pw.EdgeInsets.zero,
+          header: (_) => _pageHeader(headerDate, headerTime),
+          footer: (ctx) => _pageFooter(ctx),
+          build: (_) => [
+            pw.SizedBox(height: 16),
+            _sectionHeader('5. Rectified Inspection — Verified Safe State'),
+            pw.SizedBox(height: 8),
+            _passLabel('RECTIFIED AUDIT PASS — SAFE STATE', _green, _greenTint),
+            pw.SizedBox(height: 12),
+            ..._hazardDetailWidgets(finalAiData, getField),
+          ],
+        ),
+      );
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // LAST PAGE — IMAGE EVIDENCE
+    // ─────────────────────────────────────────────────────────────────────
+    pdf.addPage(
+      pw.Page(
+        theme: theme,
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero,
+        build: (ctx) => pw.Column(
+          children: [
+            _pageHeader(headerDate, headerTime),
+            pw.Expanded(
+              child: pw.Padding(
+                padding: const pw.EdgeInsets.fromLTRB(32, 16, 32, 0),
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _sectionHeader('4. Side-By-Side Evidence Comparison'),
-                    pw.SizedBox(height: 16),
-                    pw.Container(
-                      height: 400,
-                      child: pw.Row(
-                        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                        children: [
-                          // Left column: Before Pane
-                          pw.Expanded(
-                            child: pw.Column(
-                              children: [
-                                pw.Container(
-                                  width: double.infinity,
-                                  color: _red,
-                                  padding: const pw.EdgeInsets.all(6),
-                                  child: pw.Text(
-                                    'INITIAL AUDIT (UNSAFE)',
-                                    textAlign: pw.TextAlign.center,
-                                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: _white, fontSize: 9),
-                                  ),
-                                ),
-                                pw.SizedBox(height: 8),
-                                pw.Expanded(
-                                  child: (initialImagesBytes != null && initialImagesBytes.isNotEmpty)
-                                      ? _sideBySideImageFrame(initialImagesBytes.first)
-                                      : _emptyPaneFrame('No initial image logged'),
-                                ),
-                              ],
-                            ),
-                          ),
-                          pw.SizedBox(width: 16),
+                    _sectionHeader(
+                      isComparative
+                          ? '6. Side-By-Side Visual Evidence Comparison'
+                          : '4. Site Evidence Photography',
+                    ),
+                    pw.SizedBox(height: 12),
 
-                          // Right column: After Pane
-                          pw.Expanded(
-                            child: pw.Column(
+                    pw.Expanded(
+                      child: isComparative
+                          ? pw.Row(
+                              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                               children: [
-                                pw.Container(
-                                  width: double.infinity,
-                                  color: _green,
-                                  padding: const pw.EdgeInsets.all(6),
-                                  child: pw.Text(
-                                    'RECTIFIED WORKSPACE (SAFE)',
-                                    textAlign: pw.TextAlign.center,
-                                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: _white, fontSize: 9),
+                                pw.Expanded(
+                                  child: pw.Column(
+                                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                                    children: [
+                                      _imageColumnHeader('INITIAL AUDIT (UNSAFE)', _red),
+                                      pw.SizedBox(height: 6),
+                                      pw.Expanded(
+                                        child: _imageStack(initialImagesBytes ?? []),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                pw.SizedBox(height: 8),
+                                pw.SizedBox(width: 12),
                                 pw.Expanded(
-                                  child: (finalImagesBytes != null && finalImagesBytes.isNotEmpty)
-                                      ? _sideBySideImageFrame(finalImagesBytes.first)
-                                      : _emptyPaneFrame('No rectification image logged'),
+                                  child: pw.Column(
+                                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                                    children: [
+                                      _imageColumnHeader('RECTIFIED WORKSPACE (SAFE)', _green),
+                                      pw.SizedBox(height: 6),
+                                      pw.Expanded(
+                                        child: _imageStack(finalImagesBytes ?? []),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          : pw.Column(
+                              crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                              children: [
+                                _imageColumnHeader('SITE EVIDENCE — COMPLIANT STATE', _green),
+                                pw.SizedBox(height: 6),
+                                pw.Expanded(
+                                  // Gaps Fix: If initial images are missing in a single pass context, fall back to final images array
+                                  child: _imageStack(
+                                    (initialImagesBytes != null && initialImagesBytes.isNotEmpty)
+                                        ? initialImagesBytes
+                                        : (finalImagesBytes ?? []),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                    ),
+
+                    pw.SizedBox(height: 10),
+                    pw.Container(
+                      width: double.infinity,
+                      padding: const pw.EdgeInsets.all(8),
+                      decoration: pw.BoxDecoration(
+                        color: _greyTint,
+                        border: pw.Border.all(color: _border, width: 0.5),
+                      ),
+                      child: pw.Text(
+                        isComparative
+                            ? 'Representative images from the initial and rectified inspection passes are shown. '
+                              'All analysis attempts were logged to the HazardScan audit database. '
+                              'Intermediate pass images are not included in this report.'
+                            : 'Site evidence captured during the single compliant inspection pass.',
+                        style: pw.TextStyle(fontSize: 7, color: _textFaint),
                       ),
                     ),
                   ],
                 ),
               ),
-              pw.Spacer(),
-              _pageFooter(context),
-            ],
-          );
-        },
+            ),
+            _pageFooter(ctx),
+          ],
+        ),
       ),
     );
 
     return pdf.save();
   }
 
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // HAZARD DETAIL WIDGETS
+  // ─────────────────────────────────────────────────────────────────────────
+  static List<pw.Widget> _hazardDetailWidgets(
+    Map<String, dynamic> aiData,
+    String Function(Map<String, dynamic>, String) getField,
+  ) {
+    final categories = [
+      ['Working at Heights',               'ladderHeight'],
+      ['Personal Protective Equipment',     'ppe'],
+      ['Buddy System Requirements',         'buddySystem'],
+      ['Electrical & Machinery Safeguards', 'electricalMachinery'],
+      ['Housekeeping and Area Hazards',     'areaHazards'],
+    ];
+
+    final List<pw.Widget> widgets = [];
+
+    for (final cat in categories) {
+      final block      = aiData[cat[1]] as Map<String, dynamic>? ?? {};
+      final compliance = getField(block, 'compliance').toUpperCase();
+      final tint       = _statusTint(compliance);
+
+      widgets.add(
+        // FIXED: Wrapped the sub-table component block in a KeepTogether to prevent broken overflow page cuts
+        pw.KeepTogether(
+          child: pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+            child: pw.Table(
+              border: pw.TableBorder.all(color: _border, width: 0.5),
+              columnWidths: const {
+                0: pw.FixedColumnWidth(110),
+                1: pw.FlexColumnWidth(1),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(color: tint),
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: pw.Text(
+                        cat[0],
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          fontWeight: pw.FontWeight.bold,
+                          color: _textMain,
+                        ),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      child: pw.Align(
+                        alignment: pw.Alignment.centerRight,
+                        child: _inlineBadge(compliance),
+                      ),
+                    ),
+                  ],
+                ),
+                _fieldRow('Observation', getField(block, 'description')),
+                _fieldRow('Reasoning', getField(block, 'reasoning')),
+                _fieldRow('Corrective Action', getField(block, 'advice')),
+              ],
+            ),
+          ),
+        ),
+      );
+      widgets.add(pw.SizedBox(height: 10));
+    }
+
+    return widgets;
+  }
+
+  static pw.TableRow _fieldRow(String label, String value) {
+    return pw.TableRow(
+      children: [
+        pw.Container(
+          color: _greyTint,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 8,
+              fontWeight: pw.FontWeight.bold,
+              color: _textFaint,
+            ),
+          ),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 8, color: _textMain, lineSpacing: 2),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PASS LABEL BANNER
+  // ─────────────────────────────────────────────────────────────────────────
+  static pw.Widget _passLabel(String text, PdfColor color, PdfColor tint) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32),
+      child: pw.Container(
+        width: double.infinity,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: pw.BoxDecoration(
+          color: tint,
+          border: pw.Border.all(color: color, width: 0.5),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        ),
+        child: pw.Text(
+          text,
+          style: pw.TextStyle(
+            fontSize: 8,
+            fontWeight: pw.FontWeight.bold,
+            color: color,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // IMAGE STACK
+  // ─────────────────────────────────────────────────────────────────────────
+  static pw.Widget _imageStack(List<Uint8List> images) {
+    if (images.isEmpty) return _emptyPaneFrame('No image captured');
+    if (images.length == 1) return _imageFrame(images[0]);
+    return pw.Column(
+      children: [
+        pw.Expanded(child: _imageFrame(images[0])),
+        pw.SizedBox(height: 8),
+        pw.Expanded(child: _imageFrame(images[1])),
+      ],
+    );
+  }
+
+  static pw.Widget _imageFrame(Uint8List bytes) {
+    return pw.ClipRRect(
+      horizontalRadius: 4,
+      verticalRadius: 4,
+      // FIXED: Swapped BoxFit.cover out for BoxFit.contain to retain complete structural image bounds
+      child: pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.contain),
+    );
+  }
+
+  static pw.Widget _emptyPaneFrame(String message) {
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        color: _greyTint,
+        border: pw.Border.all(color: _border, width: 0.5),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+      ),
+      child: pw.Center(
+        child: pw.Text(message, style: pw.TextStyle(fontSize: 9, color: _textFaint)),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // IMAGE COLUMN HEADER
+  // ─────────────────────────────────────────────────────────────────────────
+  static pw.Widget _imageColumnHeader(String text, PdfColor color) {
+    return pw.Container(
+      width: double.infinity,
+      color: color,
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        text,
+        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          fontWeight: pw.FontWeight.bold,
+          color: _white,
+          fontSize: 9,
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
   // PAGE HEADER
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _pageHeader(String date, String time) {
     return pw.Container(
       color: _blue,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 14),
       child: pw.Row(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
@@ -228,7 +491,7 @@ class LocalReportCompiler {
               pw.Text(
                 'WSH INSPECTION RECTIFICATION REPORT',
                 style: pw.TextStyle(
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: pw.FontWeight.bold,
                   color: _white,
                 ),
@@ -236,7 +499,7 @@ class LocalReportCompiler {
               pw.SizedBox(height: 2),
               pw.Text(
                 'Workplace Safety & Health — Intermittent Compliance Validation Audit',
-                style: pw.TextStyle(fontSize: 8, color: _white),
+                style: pw.TextStyle(fontSize: 7.5, color: _white),
               ),
             ],
           ),
@@ -251,10 +514,7 @@ class LocalReportCompiler {
                   color: _white,
                 ),
               ),
-              pw.Text(
-                '$time SGT',
-                style: pw.TextStyle(fontSize: 8, color: _white),
-              ),
+              pw.Text('$time SGT', style: pw.TextStyle(fontSize: 7.5, color: _white)),
             ],
           ),
         ],
@@ -262,9 +522,9 @@ class LocalReportCompiler {
     );
   }
 
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // PAGE FOOTER
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _pageFooter(pw.Context ctx) {
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32, vertical: 8),
@@ -276,23 +536,23 @@ class LocalReportCompiler {
         children: [
           pw.Text(
             'CONFIDENTIAL — HazardScan Verification Network',
-            style: pw.TextStyle(fontSize: 8, color: _textFaint),
+            style: pw.TextStyle(fontSize: 7.5, color: _textFaint),
           ),
           pw.Text(
             'Page ${ctx.pageNumber} of ${ctx.pagesCount}',
-            style: pw.TextStyle(fontSize: 8, color: _textFaint),
+            style: pw.TextStyle(fontSize: 7.5, color: _textFaint),
           ),
         ],
       ),
     );
   }
 
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // STATUS BANNER
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _statusBanner(String status) {
     final color = _statusColor(status);
-    final tint = _statusTint(status);
+    final tint  = _statusTint(status);
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Container(
@@ -334,17 +594,17 @@ class LocalReportCompiler {
     );
   }
 
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // SECTION HEADER
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _sectionHeader(String title) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Container(
         padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: pw.BoxDecoration(
+        decoration: const pw.BoxDecoration(
           color: _blueTint,
-          border: const pw.Border(left: pw.BorderSide(color: _blue, width: 4)),
+          border: pw.Border(left: pw.BorderSide(color: _blue, width: 4)),
         ),
         child: pw.Text(
           title.toUpperCase(),
@@ -359,17 +619,17 @@ class LocalReportCompiler {
     );
   }
 
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   // INFO GRID
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _infoGrid(List<List<String>> rows) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Table(
         border: pw.TableBorder.all(color: _border, width: 0.5),
-        columnWidths: {
-          0: const pw.FlexColumnWidth(1.4),
-          1: const pw.FlexColumnWidth(2.6),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(1.4),
+          1: pw.FlexColumnWidth(2.6),
         },
         children: rows.map((row) {
           return pw.TableRow(
@@ -379,7 +639,11 @@ class LocalReportCompiler {
                 padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 child: pw.Text(
                   row[0],
-                  style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: _textFaint),
+                  style: pw.TextStyle(
+                    fontSize: 8,
+                    fontWeight: pw.FontWeight.bold,
+                    color: _textFaint,
+                  ),
                 ),
               ),
               pw.Container(
@@ -396,10 +660,10 @@ class LocalReportCompiler {
     );
   }
 
-  // ─────────────────────────────────────────
-  // AI RECTIFICATION SUMMARY BOX
-  // ─────────────────────────────────────────
-  static pw.Widget _aiSummaryBox(String summaryText) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // AI SUMMARY BOX
+  // ─────────────────────────────────────────────────────────────────────────
+  static pw.Widget _aiSummaryBox(String text) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Container(
@@ -411,76 +675,101 @@ class LocalReportCompiler {
           borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
         ),
         child: pw.Text(
-          summaryText.isEmpty ? "No systemic alteration insights evaluated by intelligence core." : summaryText,
-          style: pw.TextStyle(fontSize: 9, color: _textMain, height: 1.4),
+          text.isEmpty ? 'No systemic alteration insights available.' : text,
+          style: pw.TextStyle(fontSize: 9, color: _textMain, lineSpacing: 2),
         ),
       ),
     );
   }
 
-  // ─────────────────────────────────────────
-  // DYNAMIC EVOLUTION MATRIX TABLE
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // EVOLUTION MATRIX TABLE
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _evolutionTable(
     Map<String, dynamic> initial,
     Map<String, dynamic> finalData,
     String Function(Map<String, dynamic>, String) getField,
   ) {
     final modules = [
-      ['Working at Heights', 'ladderHeight'],
-      ['Personal Protective Equipment', 'ppe'],
-      ['Buddy System Requirements', 'buddySystem'],
+      ['Working at Heights',               'ladderHeight'],
+      ['Personal Protective Equipment',     'ppe'],
+      ['Buddy System Requirements',         'buddySystem'],
       ['Electrical & Machinery Safeguards', 'electricalMachinery'],
-      ['Housekeeping and Area Hazards', 'areaHazards'],
+      ['Housekeeping and Area Hazards',     'areaHazards'],
     ];
 
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Table(
         border: pw.TableBorder.all(color: _border, width: 0.5),
-        columnWidths: {
-          0: const pw.FlexColumnWidth(1.5),
-          1: const pw.FlexColumnWidth(2.5),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(1.6),
+          1: pw.FlexColumnWidth(2.4),
         },
         children: [
-          // Table Header
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: _blue),
             children: [
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
-                child: pw.Text('Safety Check Module', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: _white, fontSize: 9)),
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(
+                  'Safety Check Module',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    color: _white,
+                    fontSize: 9,
+                  ),
+                ),
               ),
               pw.Padding(
-                padding: const pw.EdgeInsets.all(6),
-                child: pw.Text('Status Transformation (Initial  ➔  Current Verified)', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: _white, fontSize: 9)),
+                padding: const pw.EdgeInsets.all(8),
+                child: pw.Text(
+                  'Status Transformation (Initial -> Verified)',
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    color: _white,
+                    fontSize: 9,
+                  ),
+                ),
               ),
             ],
           ),
-          // Rows populated dynamically mapping status evolution
           ...modules.map((mod) {
-            final initialBlock = initial[mod[1]] ?? {};
-            final finalBlock = finalData[mod[1]] ?? {};
-            final beforeStatus = getField(initialBlock, 'compliance').toUpperCase();
-            final afterStatus = getField(finalBlock, 'compliance').toUpperCase();
+            final initialBlock = initial[mod[1]]   as Map<String, dynamic>? ?? {};
+            final finalBlock   = finalData[mod[1]] as Map<String, dynamic>? ?? {};
+            final before = getField(initialBlock, 'compliance').toUpperCase();
+            final after  = getField(finalBlock,   'compliance').toUpperCase();
 
             return pw.TableRow(
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.all(8),
-                  alignment: pw.Alignment.centerLeft,
-                  child: pw.Text(mod[0], style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: _textMain)),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: pw.Text(
+                    mod[0],
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _textMain,
+                    ),
+                  ),
                 ),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(8),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   child: pw.Row(
                     children: [
-                      _inlineBadge(beforeStatus),
+                      _inlineBadge(before),
                       pw.Padding(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 12),
-                        child: pw.Text('➔', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: _grey)),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 10),
+                        child: pw.Text(
+                          '->', // FIXED: Swapped unicode arrow symbol for clean standard text string
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            color: _grey,
+                          ),
+                        ),
                       ),
-                      _inlineBadge(afterStatus),
+                      _inlineBadge(after),
                     ],
                   ),
                 ),
@@ -492,9 +781,12 @@ class LocalReportCompiler {
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // INLINE STATUS BADGE
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _inlineBadge(String status) {
     final color = _statusColor(status);
-    final tint = _statusTint(status);
+    final tint  = _statusTint(status);
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: pw.BoxDecoration(
@@ -504,44 +796,18 @@ class LocalReportCompiler {
       ),
       child: pw.Text(
         status.isEmpty ? 'N/A' : status,
-        style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold, color: color),
+        style: pw.TextStyle(
+          fontSize: 7,
+          fontWeight: pw.FontWeight.bold,
+          color: color,
+        ),
       ),
     );
   }
 
-  // ─────────────────────────────────────────
-  // IMAGE BOX COMPONENT DESIGN
-  // ─────────────────────────────────────────
-  static pw.Widget _sideBySideImageFrame(Uint8List bytes) {
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: _border, width: 1),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-      ),
-      child: pw.ClipRRect(
-        horizontalRadius: 6,
-        verticalRadius: 6,
-        child: pw.Image(pw.MemoryImage(bytes), fit: pw.BoxFit.cover),
-      ),
-    );
-  }
-
-  static pw.Widget _emptyPaneFrame(String instructions) {
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        color: _greyTint,
-        border: pw.Border.all(color: _border, width: 0.5),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-      ),
-      child: pw.Center(
-        child: pw.Text(instructions, style: pw.TextStyle(fontSize: 9, color: _textFaint)),
-      ),
-    );
-  }
-
-  // ─────────────────────────────────────────
-  // MANUAL NOTES BOX
-  // ─────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────
+  // NOTES BOX
+  // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _notesBox(String notes) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
@@ -566,7 +832,7 @@ class LocalReportCompiler {
               ),
             ),
             pw.SizedBox(height: 4),
-            pw.Text(notes, style: pw.TextStyle(fontSize: 9, color: _textMain)),
+            pw.Text(notes, style: pw.TextStyle(fontSize: 9, color: _textMain, lineSpacing: 2)),
           ],
         ),
       ),
