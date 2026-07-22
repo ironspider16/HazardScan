@@ -109,7 +109,6 @@ serve(async (req: Request) => {
     const prompt =
       `You are an expert industrial safety inspector enforcing a hospital's strict Safe Work Procedures (SWP). 
 Analyze these workspace images collectively (which may present different perspective angles or close-ups of the same environment) and evaluate them against the specific Non-Compliance (NC) list below, as well as general safety hazards.
- W
 ADDITIONAL SITE CONTEXT PROVIDED BY THE TECHNICIAN ON-SITE:
 "${userContext || "No additional context provided."}"
 "${previousContext}" 
