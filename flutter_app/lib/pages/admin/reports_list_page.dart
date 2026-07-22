@@ -39,6 +39,13 @@ class _ReportsListPageState extends State<ReportsListPage> {
   List<int> _selectedReports = [];
   PersistentBottomSheetController? _bottomSheetController;
   bool get _isSelectionMode => _selectedReports.isNotEmpty;
+  bool get _isSelectAll {
+    if (_filteredReports.isEmpty) return false;
+    return _filteredReports.every(
+      (report) => _selectedReports.contains(report['id']),
+    );
+  }
+
   bool selectEmailGroupStep = false;
 
   List<String> categories = [];
@@ -258,6 +265,25 @@ class _ReportsListPageState extends State<ReportsListPage> {
     _bottomSheetController?.setState?.call(() {});
   }
 
+  void _toggleSelectAll() {
+    HapticFeedback.lightImpact();
+    setState(() {
+      if (_isSelectAll) {
+        for (var report in _filteredReports) {
+          _selectedReports.remove(report['id']);
+        }
+      } else {
+        for (var report in _filteredReports) {
+          final id = report['id'] as int;
+          if (!_selectedReports.contains(id)) {
+            _selectedReports.add(id);
+          }
+        }
+      }
+    });
+    _bottomSheetController?.setState?.call(() {});
+  }
+
   void _conditionalCloseBottomSheet() {
     if (_selectedReports.isEmpty) {
       _bottomSheetController?.close();
@@ -401,7 +427,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
                                         : Icons.chevron_right_rounded,
                                     color: isSelected
                                         ? AppColors.primaryBlue
-                                        : Colors.black.withOpacity(0.35),
+                                        : Colors.black.withValues(alpha: 0.35),
                                   ),
                                 ],
                               ),
@@ -963,6 +989,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
         selectedLocation != null;
 
     final filteredData = _filteredReports;
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.backgroundWhite,
@@ -1037,6 +1064,39 @@ class _ReportsListPageState extends State<ReportsListPage> {
                       )
                     : null,
               ),
+              if (_isSelectionMode) ...[
+                const SizedBox(height: AppPadding.tight),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.radiusMedium,
+                  ),
+                  child: InkWell(
+                    onTap: _toggleSelectAll,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppPadding.medium,
+                        vertical: AppPadding.tight,
+                      ),
+                      color: AppColors.primaryTint,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Text("Select All Shown", style: AppTypography.body),
+                          const Spacer(),
+                          Icon(
+                            _isSelectAll
+                                ? Icons.check_circle
+                                : Icons.radio_button_unchecked,
+                            color: _isSelectAll
+                                ? AppColors.primaryBlue
+                                : Colors.black.withValues(alpha: 0.35),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
 
               Expanded(
                 child: isLoading
