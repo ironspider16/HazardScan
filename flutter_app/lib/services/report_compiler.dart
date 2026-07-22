@@ -5,32 +5,38 @@ import 'package:printing/printing.dart';
 
 class LocalReportCompiler {
   // ─── COLOUR PALETTE ──────────────────────────────────────────────────────
-  static const PdfColor _blue      = PdfColor.fromInt(0xFF1A56DB);
-  static const PdfColor _blueTint  = PdfColor.fromInt(0xFFEBF2FF);
-  static const PdfColor _red       = PdfColor.fromInt(0xFFB91C1C);
-  static const PdfColor _redTint   = PdfColor.fromInt(0xFFFEE2E2);
-  static const PdfColor _green     = PdfColor.fromInt(0xFF15803D);
+  static const PdfColor _blue = PdfColor.fromInt(0xFF1A56DB);
+  static const PdfColor _blueTint = PdfColor.fromInt(0xFFEBF2FF);
+  static const PdfColor _red = PdfColor.fromInt(0xFFB91C1C);
+  static const PdfColor _redTint = PdfColor.fromInt(0xFFFEE2E2);
+  static const PdfColor _green = PdfColor.fromInt(0xFF15803D);
   static const PdfColor _greenTint = PdfColor.fromInt(0xFFDCFCE7);
-  static const PdfColor _grey      = PdfColor.fromInt(0xFF6B7280);
-  static const PdfColor _greyTint  = PdfColor.fromInt(0xFFF3F4F6);
-  static const PdfColor _white     = PdfColor.fromInt(0xFFFFFFFF);
-  static const PdfColor _textMain  = PdfColor.fromInt(0xFF111827);
+  static const PdfColor _grey = PdfColor.fromInt(0xFF6B7280);
+  static const PdfColor _greyTint = PdfColor.fromInt(0xFFF3F4F6);
+  static const PdfColor _white = PdfColor.fromInt(0xFFFFFFFF);
+  static const PdfColor _textMain = PdfColor.fromInt(0xFF111827);
   static const PdfColor _textFaint = PdfColor.fromInt(0xFF6B7280);
-  static const PdfColor _border    = PdfColor.fromInt(0xFFE5E7EB);
+  static const PdfColor _border = PdfColor.fromInt(0xFFE5E7EB);
 
   static PdfColor _statusColor(String s) {
     switch (s.trim().toUpperCase()) {
-      case 'DANGEROUS': return _red;
-      case 'SAFE':      return _green;
-      default:          return _grey;
+      case 'DANGEROUS':
+        return _red;
+      case 'SAFE':
+        return _green;
+      default:
+        return _grey;
     }
   }
 
   static PdfColor _statusTint(String s) {
     switch (s.trim().toUpperCase()) {
-      case 'DANGEROUS': return _redTint;
-      case 'SAFE':      return _greenTint;
-      default:          return _greyTint;
+      case 'DANGEROUS':
+        return _redTint;
+      case 'SAFE':
+        return _greenTint;
+      default:
+        return _greyTint;
     }
   }
 
@@ -52,8 +58,8 @@ class LocalReportCompiler {
     List<Uint8List>? initialImagesBytes,
     List<Uint8List>? finalImagesBytes,
   }) async {
-    final pdf      = pw.Document();
-    final font     = await PdfGoogleFonts.notoSansSymbols2Regular();
+    final pdf = pw.Document();
+    final font = await PdfGoogleFonts.notoSansSymbols2Regular();
     final fontBold = await PdfGoogleFonts.notoSansBold();
 
     final String headerDate = submittedAt != null
@@ -61,17 +67,20 @@ class LocalReportCompiler {
         : DateTime.now().toIso8601String().split('T')[0];
     final String headerTime = submittedAt != null
         ? submittedAt.contains('T')
-            ? submittedAt.split('T')[1].substring(0, 5)
-            : ''
+              ? submittedAt.split('T')[1].substring(0, 5)
+              : ''
         : '${DateTime.now().hour.toString().padLeft(2, '0')}:'
-          '${DateTime.now().minute.toString().padLeft(2, '0')}';
+              '${DateTime.now().minute.toString().padLeft(2, '0')}';
 
     final bool isComparative = totalAttempts > 1;
 
     String getField(Map<String, dynamic> block, String field) =>
         block[field]?.toString().trim() ?? 'Not Declared';
 
-    final pw.ThemeData theme = pw.ThemeData.withFont(base: font, bold: fontBold);
+    final pw.ThemeData theme = pw.ThemeData.withFont(
+      base: font,
+      bold: fontBold,
+    );
 
     // ─────────────────────────────────────────────────────────────────────
     // PAGE 1 — SUMMARY, EVOLUTION MATRIX, NOTES
@@ -92,13 +101,19 @@ class LocalReportCompiler {
           _sectionHeader('1. Site & Personnel Details'),
           pw.SizedBox(height: 8),
           _infoGrid([
-            ['Location',              location.isEmpty   ? 'Not Declared' : location],
-            ['technician',            technician.isEmpty ? 'Unassigned'   : technician],
-            ['Employer / Contractor', employer.isEmpty   ? 'Not Declared' : employer],
-            ['Inspection Time',       '$headerDate  $headerTime SGT'],
-            ['Rectification Attempts', isComparative
-                ? '$totalAttempts Attempt(s) required to achieve compliance'
-                : 'Site passed on first analysis — no rectification required'],
+            ['Location', location.isEmpty ? 'Not Declared' : location],
+            ['technician', technician.isEmpty ? 'Unassigned' : technician],
+            [
+              'Employer / Contractor',
+              employer.isEmpty ? 'Not Declared' : employer,
+            ],
+            ['Inspection Time', '$headerDate  $headerTime SGT'],
+            [
+              'Rectification Attempts',
+              isComparative
+                  ? '$totalAttempts Attempt(s) required to achieve compliance'
+                  : 'Site passed on first analysis — no rectification required',
+            ],
           ]),
           pw.SizedBox(height: 16),
 
@@ -113,8 +128,8 @@ class LocalReportCompiler {
             isComparative
                 ? aiChangeAnalysis
                 : 'The workspace was assessed as fully compliant on the first inspection pass. '
-                  'No corrective action was required. All safety categories met the required '
-                  'standard without any intermediate rectification steps.',
+                      'No corrective action was required. All safety categories met the required '
+                      'standard without any intermediate rectification steps.',
           ),
           pw.SizedBox(height: 16),
 
@@ -163,7 +178,7 @@ class LocalReportCompiler {
             isComparative
                 ? 'INITIAL AUDIT PASS — UNSAFE STATE'
                 : 'SINGLE PASS — COMPLIANT STATE',
-            isComparative ? _red   : _green,
+            isComparative ? _red : _green,
             isComparative ? _redTint : _greenTint,
           ),
           pw.SizedBox(height: 12),
@@ -227,12 +242,18 @@ class LocalReportCompiler {
                               children: [
                                 pw.Expanded(
                                   child: pw.Column(
-                                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        pw.CrossAxisAlignment.stretch,
                                     children: [
-                                      _imageColumnHeader('INITIAL AUDIT (UNSAFE)', _red),
+                                      _imageColumnHeader(
+                                        'INITIAL AUDIT (UNSAFE)',
+                                        _red,
+                                      ),
                                       pw.SizedBox(height: 6),
                                       pw.Expanded(
-                                        child: _imageStack(initialImagesBytes ?? []),
+                                        child: _imageStack(
+                                          initialImagesBytes ?? [],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -240,12 +261,18 @@ class LocalReportCompiler {
                                 pw.SizedBox(width: 12),
                                 pw.Expanded(
                                   child: pw.Column(
-                                    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                                    crossAxisAlignment:
+                                        pw.CrossAxisAlignment.stretch,
                                     children: [
-                                      _imageColumnHeader('RECTIFIED WORKSPACE (SAFE)', _green),
+                                      _imageColumnHeader(
+                                        'RECTIFIED WORKSPACE (SAFE)',
+                                        _green,
+                                      ),
                                       pw.SizedBox(height: 6),
                                       pw.Expanded(
-                                        child: _imageStack(finalImagesBytes ?? []),
+                                        child: _imageStack(
+                                          finalImagesBytes ?? [],
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -255,7 +282,10 @@ class LocalReportCompiler {
                           : pw.Column(
                               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
                               children: [
-                                _imageColumnHeader('SITE EVIDENCE — COMPLIANT STATE', _green),
+                                _imageColumnHeader(
+                                  'SITE EVIDENCE — COMPLIANT STATE',
+                                  _green,
+                                ),
                                 pw.SizedBox(height: 6),
                                 pw.Expanded(
                                   child: _imageStack(initialImagesBytes ?? []),
@@ -276,8 +306,8 @@ class LocalReportCompiler {
                       child: pw.Text(
                         isComparative
                             ? 'Representative images from the initial and rectified inspection passes are shown. '
-                              'All analysis attempts were logged to the HazardScan audit database. '
-                              'Intermediate pass images are not included in this report.'
+                                  'All analysis attempts were logged to the HazardScan audit database. '
+                                  'Intermediate pass images are not included in this report.'
                             : 'Site evidence captured during the single compliant inspection pass.',
                         style: pw.TextStyle(fontSize: 7, color: _textFaint),
                       ),
@@ -305,20 +335,20 @@ class LocalReportCompiler {
     String Function(Map<String, dynamic>, String) getField,
   ) {
     final categories = [
-      ['Working at Heights',               'ladderHeight'],
-      ['Personal Protective Equipment',     'ppe'],
-      ['Buddy System Requirements',         'buddySystem'],
+      ['Working at Heights', 'ladderHeight'],
+      ['Personal Protective Equipment', 'ppe'],
+      ['Buddy System Requirements', 'buddySystem'],
       ['Electrical & Machinery Safeguards', 'electricalMachinery'],
-      ['Housekeeping and Area Hazards',     'areaHazards'],
+      ['Housekeeping and Area Hazards', 'areaHazards'],
     ];
 
     final List<pw.Widget> widgets = [];
 
     for (final cat in categories) {
-      final block      = aiData[cat[1]] as Map<String, dynamic>? ?? {};
+      final block = aiData[cat[1]] as Map<String, dynamic>? ?? {};
       final compliance = getField(block, 'compliance').toUpperCase();
-      final color      = _statusColor(compliance);
-      final tint       = _statusTint(compliance);
+      final color = _statusColor(compliance);
+      final tint = _statusTint(compliance);
 
       widgets.add(
         pw.Padding(
@@ -335,7 +365,10 @@ class LocalReportCompiler {
                 decoration: pw.BoxDecoration(color: tint),
                 children: [
                   pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     child: pw.Text(
                       cat[0],
                       style: pw.TextStyle(
@@ -346,7 +379,10 @@ class LocalReportCompiler {
                     ),
                   ),
                   pw.Padding(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     child: pw.Align(
                       alignment: pw.Alignment.centerRight,
                       child: _inlineBadge(compliance),
@@ -383,7 +419,11 @@ class LocalReportCompiler {
   }
 
   // Single data row inside a category table
-  static pw.TableRow _fieldRow(String label, String value, {bool isHeader = false}) {
+  static pw.TableRow _fieldRow(
+    String label,
+    String value, {
+    bool isHeader = false,
+  }) {
     return pw.TableRow(
       children: [
         pw.Container(
@@ -467,7 +507,10 @@ class LocalReportCompiler {
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
       ),
       child: pw.Center(
-        child: pw.Text(message, style: pw.TextStyle(fontSize: 9, color: _textFaint)),
+        child: pw.Text(
+          message,
+          style: pw.TextStyle(fontSize: 9, color: _textFaint),
+        ),
       ),
     );
   }
@@ -531,7 +574,10 @@ class LocalReportCompiler {
                   color: _white,
                 ),
               ),
-              pw.Text('$time SGT', style: pw.TextStyle(fontSize: 7.5, color: _white)),
+              pw.Text(
+                '$time SGT',
+                style: pw.TextStyle(fontSize: 7.5, color: _white),
+              ),
             ],
           ),
         ],
@@ -569,7 +615,7 @@ class LocalReportCompiler {
   // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _statusBanner(String status) {
     final color = _statusColor(status);
-    final tint  = _statusTint(status);
+    final tint = _statusTint(status);
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 32),
       child: pw.Container(
@@ -591,7 +637,10 @@ class LocalReportCompiler {
               ),
             ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 4,
+              ),
               decoration: pw.BoxDecoration(
                 color: color,
                 borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
@@ -653,7 +702,10 @@ class LocalReportCompiler {
             children: [
               pw.Container(
                 color: _greyTint,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 child: pw.Text(
                   row[0],
                   style: pw.TextStyle(
@@ -664,7 +716,10 @@ class LocalReportCompiler {
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const pw.EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 child: pw.Text(
                   row[1],
                   style: pw.TextStyle(fontSize: 9, color: _textMain),
@@ -692,7 +747,9 @@ class LocalReportCompiler {
           borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
         ),
         child: pw.Text(
-          text.isEmpty ? 'Analysis marked as safe on first attempt, No comparison can be made.' : text,
+          text.isEmpty
+              ? 'Analysis marked as safe on first attempt, No comparison can be made.'
+              : text,
           style: pw.TextStyle(fontSize: 9, color: _textMain, lineSpacing: 2),
         ),
       ),
@@ -708,11 +765,11 @@ class LocalReportCompiler {
     String Function(Map<String, dynamic>, String) getField,
   ) {
     final modules = [
-      ['Working at Heights',               'ladderHeight'],
-      ['Personal Protective Equipment',     'ppe'],
-      ['Buddy System Requirements',         'buddySystem'],
+      ['Working at Heights', 'ladderHeight'],
+      ['Personal Protective Equipment', 'ppe'],
+      ['Buddy System Requirements', 'buddySystem'],
       ['Electrical & Machinery Safeguards', 'electricalMachinery'],
-      ['Housekeeping and Area Hazards',     'areaHazards'],
+      ['Housekeeping and Area Hazards', 'areaHazards'],
     ];
 
     return pw.Padding(
@@ -752,15 +809,18 @@ class LocalReportCompiler {
             ],
           ),
           ...modules.map((mod) {
-            final initialBlock = initial[mod[1]]   as Map<String, dynamic>? ?? {};
-            final finalBlock   = finalData[mod[1]] as Map<String, dynamic>? ?? {};
+            final initialBlock = initial[mod[1]] as Map<String, dynamic>? ?? {};
+            final finalBlock = finalData[mod[1]] as Map<String, dynamic>? ?? {};
             final before = getField(initialBlock, 'compliance').toUpperCase();
-            final after  = getField(finalBlock,   'compliance').toUpperCase();
+            final after = getField(finalBlock, 'compliance').toUpperCase();
 
             return pw.TableRow(
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   child: pw.Text(
                     mod[0],
                     style: pw.TextStyle(
@@ -771,7 +831,10 @@ class LocalReportCompiler {
                   ),
                 ),
                 pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   child: pw.Row(
                     children: [
                       _inlineBadge(before),
@@ -803,7 +866,7 @@ class LocalReportCompiler {
   // ─────────────────────────────────────────────────────────────────────────
   static pw.Widget _inlineBadge(String status) {
     final color = _statusColor(status);
-    final tint  = _statusTint(status);
+    final tint = _statusTint(status);
     return pw.Container(
       padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: pw.BoxDecoration(
@@ -849,7 +912,14 @@ class LocalReportCompiler {
               ),
             ),
             pw.SizedBox(height: 4),
-            pw.Text(notes, style: pw.TextStyle(fontSize: 9, color: _textMain, lineSpacing: 2)),
+            pw.Text(
+              notes,
+              style: pw.TextStyle(
+                fontSize: 9,
+                color: _textMain,
+                lineSpacing: 2,
+              ),
+            ),
           ],
         ),
       ),

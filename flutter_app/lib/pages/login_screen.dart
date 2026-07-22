@@ -6,7 +6,6 @@ import 'package:kkhazardscan/supabase_client.dart';
 import '../Design/style_constant.dart';
 import '../widgets/Menu_button.dart';
 import '../widgets/App_Textfield.dart';
-import 'camera_page.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

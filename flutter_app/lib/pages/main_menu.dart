@@ -38,7 +38,6 @@ class MainMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final roleText = isAdmin ? "Admin" : "Technician";
 
     return Scaffold(
       backgroundColor: Colors.white,

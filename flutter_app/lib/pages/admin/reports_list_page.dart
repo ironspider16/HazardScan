@@ -1037,10 +1037,14 @@ class _ReportsListPageState extends State<ReportsListPage> {
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppPadding.medium),
+          padding: const EdgeInsets.fromLTRB(
+            AppPadding.medium,
+            0,
+            AppPadding.medium,
+            AppPadding.medium,
+          ),
           child: Column(
             children: [
-              const SizedBox(height: AppPadding.tight),
               AppTextfield(
                 label: "reports",
                 islabel: false,

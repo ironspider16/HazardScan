@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:kkhazardscan/widgets/swp_checklist.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/WAH_Permit.dart';
@@ -69,28 +67,14 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
 
   Future<void> _loadItems() async {
     try {
-      final String languageCode = Localizations.localeOf(context).languageCode;
-
-      String jsonString;
-      try {
-        jsonString = await rootBundle.loadString(
-          'assets/checklists/checklists_$languageCode.json',
-        );
-      } catch (_) {
-        jsonString = await rootBundle.loadString(
-          'assets/checklists/checklists_en.json',
-        );
-      }
-
-      final Map<String, dynamic> data = json.decode(jsonString);
-      final List<dynamic>? checklistForTemplate =
-          data[widget.templateId.toString()];
+      final response = await supabase
+          .from('swp_items')
+          .select('description')
+          .eq('template_id', widget.templateId);
 
       if (mounted) {
         setState(() {
-          items = checklistForTemplate != null
-              ? List<String>.from(checklistForTemplate)
-              : [];
+          items = List<String>.from(response.map((x) => x['description']));
           isLoading = false;
         });
       }
