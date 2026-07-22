@@ -29,6 +29,7 @@ serve(async (req: Request) => {
       modelUsed,
       systemNotice: null,
       overallStatus: "N/A",
+      aiChangeAnalysis: "",
       ladderHeight: {
         compliance: "N/A",
         description: `Diagnostic: ${title}`,
@@ -125,7 +126,8 @@ OUTPUT INSTRUCTIONS:
 - For compliance fields, choose exactly one value from this list: [SAFE, DANGEROUS, N/A].
 - If the images are too ambiguous to make a clear judgment on a category, mark it as "N/A" or "SAFE" and explain in the reasoning field what information is missing or unclear. Do not invent details that are not visible across the images, but you can make logical inferences based on what is visible (e.g., if you see a ladder but cannot confirm if the spreader bars are locked, you can infer potential risk and mark as "N/A" with reasoning).
 - If multiple images show the same area from different angles, you can combine the information to make a more informed assessment. (e.g., if one image shows a worker on a ladder with no buddy, but one of the other images shows a second worker nearby, you can infer that a buddy system is in place and mark as "SAFE" with reasoning).
-- If visual cues and technician manual context differ, trust the technician as long as it is not too far fetched. 
+- If visual cues and technician manual context differ, trust the technician as long as it is not too far fetched.
+- If PREVIOUS INSPECTION FINDINGS are provided above, populate the aiChangeAnalysis field with 2-3 sentences summarising what changed between the initial and current inspection, what was corrected, and why the site is now considered safe. If no previous findings are provided, return an empty string for this field.
 
 **CRITICAL LOGIC RULE:** 
 - Choose "SAFE" only if the items are present and compliant, or if the hazard type does not exist in the scene.
@@ -283,6 +285,10 @@ OUTPUT INSTRUCTIONS:
                       "advice",
                     ],
                   },
+                  aiChangeAnalysis : { 
+                    type: "STRING",
+                    description: "2-3 sentences summarizing changes between initial and current inspection. Return an empty string if no previous analysis exists.",
+                  }
                 },
                 required: [
                   "overallStatus",
@@ -291,6 +297,7 @@ OUTPUT INSTRUCTIONS:
                   "buddySystem",
                   "electricalMachinery",
                   "areaHazards",
+                  "aiChangeAnalysis"
                 ],
               },
             },

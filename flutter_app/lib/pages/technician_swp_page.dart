@@ -399,16 +399,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         }
 
         _lastAttemptedImages = List<Uint8List>.from(_globalImageBytes);
-
-        if (incomingStatus == 'SAFE') {
-          if (_attemptCount > 1 && _firstAiData != null) {
-            _aiChangeAnalysis =
-                "Workspace transitioned dynamically from an unsafe to a safe state. Hazards flagged during the initial iteration were mitigated and re-evaluated through the verification loop.";
-          } else {
-            _aiChangeAnalysis =
-                'Safe state detected on the first analysis attempt. No hazards were flagged and no adjustments are required.';
-          }
-        } else {
+        _aiChangeAnalysis = (decodedData['aiChangeAnalysis'] as String? ?? '').trim();
+        if (incomingStatus != 'SAFE') {
           _isAnalyzing = false;
         }
 
@@ -748,7 +740,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                                   await LocalReportCompiler.generateWshReport(
                                                     //call report compiler with global state
                                                     location: locationCtrl.text,
-                                                    supervisor: nameCtrl.text,
+                                                    technician: nameCtrl.text,
                                                     employer: deptCtrl.text,
                                                     manualNotes:
                                                         _globalDetailsCtrl.text,
@@ -946,7 +938,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
       Uint8List? finalPdfBytes = _globalPdfBytes;
       finalPdfBytes ??= await LocalReportCompiler.generateWshReport(
         location: location,
-        supervisor: name,
+        technician: name,
         employer: department,
         manualNotes: _globalDetailsCtrl.text,
         initialAiData:
@@ -986,14 +978,31 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'electricalMachinery':
-                  _globalAiData!['electricalMachinery'] ?? {},
+              'electricalMachinery':_globalAiData!['electricalMachinery'] ?? {},
               'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
             .single();
 
         globalSafetyForeignKey = insertedData['id'];
+      }
+      
+      int? initialSafetyVarId;
+      if (_firstAiData != null && _attemptCount > 1) {
+        final insertedInitial = await supabase
+            .from('safety_variables')
+            .insert({
+              'Overall Status':      _firstAiData!['overallStatus'] ?? 'N/A',
+              'ladderheight':        _firstAiData!['ladderHeight'] ?? {},
+              'ppe':                 _firstAiData!['ppe'] ?? {},
+              'buddySystem':         _firstAiData!['buddySystem'] ?? {},
+              'areaHazards':         _firstAiData!['areaHazards'] ?? {},
+              'electricalMachinery': _firstAiData!['electricalMachinery'] ?? {},
+              'spreaderUnlocked':    _isSpreaderUnlocked ?? false,
+            })
+            .select('id')
+            .single();
+          initialSafetyVarId = insertedInitial['id'];
       }
 
       List<Map<String, dynamic>> recordsToInsert = [];
@@ -1016,6 +1025,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'location': location,
           'safety_variables_FK': globalSafetyForeignKey,
           'report_code': reportCode,
+          'initialAnalysisId' : initialSafetyVarId,
+          'totalAttempts': _attemptCount,
+          'aiChangeAnalysis': _aiChangeAnalysis.isNotEmpty
+            ? _aiChangeAnalysis
+            : null,
         });
 
         // Trigger edge function email process

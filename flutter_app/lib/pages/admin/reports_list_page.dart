@@ -920,7 +920,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
         // Compile PDF locally without image evidence
         final Uint8List pdfBytes = await LocalReportCompiler.generateWshReport(
           location: report['location']?.toString() ?? 'Not Declared',
-          supervisor: report['technician_name']?.toString() ?? 'Unassigned',
+          technician: report['technician_name']?.toString() ?? 'Unassigned',
           employer: report['department']?.toString() ?? 'Not Declared',
           initialAiData: initialAiData,
           finalAiData: finalAiData,

@@ -39,7 +39,7 @@ class LocalReportCompiler {
   // ─────────────────────────────────────────────────────────────────────────
   static Future<Uint8List> generateWshReport({
     required String location,
-    required String supervisor,
+    required String technician,
     required String employer,
     required int totalAttempts,
     required String aiChangeAnalysis,
@@ -93,7 +93,7 @@ class LocalReportCompiler {
           pw.SizedBox(height: 8),
           _infoGrid([
             ['Location',              location.isEmpty   ? 'Not Declared' : location],
-            ['Supervisor',            supervisor.isEmpty ? 'Unassigned'   : supervisor],
+            ['technician',            technician.isEmpty ? 'Unassigned'   : technician],
             ['Employer / Contractor', employer.isEmpty   ? 'Not Declared' : employer],
             ['Inspection Time',       '$headerDate  $headerTime SGT'],
             ['Rectification Attempts', isComparative
@@ -120,7 +120,7 @@ class LocalReportCompiler {
 
           // Section 3 — Evolution matrix (comparative only)
           if (isComparative) ...[
-            _sectionHeader('3. Metric Evolution (Before  ➔  After)'),
+            _sectionHeader('3. Metric Evolution (Before  =>  After)'),
             pw.SizedBox(height: 8),
             _evolutionTable(initialAiData, finalAiData, getField),
             pw.SizedBox(height: 16),
@@ -692,7 +692,7 @@ class LocalReportCompiler {
           borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
         ),
         child: pw.Text(
-          text.isEmpty ? 'No systemic alteration insights available.' : text,
+          text.isEmpty ? 'Analysis marked as safe on first attempt, No comparison can be made.' : text,
           style: pw.TextStyle(fontSize: 9, color: _textMain, lineSpacing: 2),
         ),
       ),
@@ -741,7 +741,7 @@ class LocalReportCompiler {
               pw.Padding(
                 padding: const pw.EdgeInsets.all(8),
                 child: pw.Text(
-                  'Status Transformation (Initial  ➔  Verified)',
+                  'Status Transformation (Initial => Verified)',
                   style: pw.TextStyle(
                     fontWeight: pw.FontWeight.bold,
                     color: _white,
@@ -778,7 +778,7 @@ class LocalReportCompiler {
                       pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(horizontal: 10),
                         child: pw.Text(
-                          '➔',
+                          '=>',
                           style: pw.TextStyle(
                             fontSize: 9,
                             fontWeight: pw.FontWeight.bold,
