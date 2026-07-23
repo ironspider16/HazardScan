@@ -7,6 +7,7 @@ import '../Design/style_constant.dart';
 class TechnicianSwpSection extends StatefulWidget {
   final int templateId;
   final String categoryName;
+  final bool requiresPermit;
 
   final String initialPtw;
   final bool initialAbove3m;
@@ -20,6 +21,7 @@ class TechnicianSwpSection extends StatefulWidget {
     super.key,
     required this.templateId,
     required this.categoryName,
+    required this.requiresPermit,
     required this.onPtwChanged,
     required this.initialPtw,
     required this.initialCheckedItems,
@@ -40,15 +42,12 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
   bool isLoading = true;
   bool _hasLoadedData = false;
 
-  bool get isWAH =>
-      widget.categoryName.toLowerCase().contains("work at height");
-
   @override
   void initState() {
     super.initState();
     _loadItems();
 
-    if (widget.categoryName.toLowerCase().contains("work at height")) {
+    if (widget.requiresPermit) {
       isPtwCleared = !widget.initialAbove3m || widget.initialPtw.isNotEmpty;
     } else {
       isPtwCleared = true;
@@ -70,7 +69,8 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
       final response = await supabase
           .from('swp_items')
           .select('description')
-          .eq('template_id', widget.templateId);
+          .eq('template_id', widget.templateId)
+          .order('id', ascending: true);
 
       if (mounted) {
         setState(() {
@@ -103,7 +103,7 @@ class _TechnicianSwpSectionState extends State<TechnicianSwpSection> {
           bool isMobile = constraints.maxWidth < 420;
           return Column(
             children: [
-              if (isWAH)
+              if (widget.requiresPermit)
                 WAHPermitWidget(
                   isMobile: true,
                   initialPtw: widget.initialPtw,

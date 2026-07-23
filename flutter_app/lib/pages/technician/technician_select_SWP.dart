@@ -37,6 +37,7 @@ class _TechnicianSelectSwpState extends State<TechnicianSelectSwp> {
       final response = await supabase
           .from('swp_templates')
           .select('id, category')
+          .eq('is_active', true)
           .order('category');
 
       final allSWPs = response.map((item) => item['category'] as String);

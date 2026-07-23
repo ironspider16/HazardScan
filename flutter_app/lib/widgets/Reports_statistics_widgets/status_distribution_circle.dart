@@ -55,7 +55,7 @@ class StatusDistributionCircle extends StatelessWidget {
         ),
         const SizedBox(height: AppPadding.tight),
         const Text(
-          "Overall Safety Status for Work at height",
+          "Overall Safety Status",
           style: AppTypography.body,
           textAlign: TextAlign.center,
         ),

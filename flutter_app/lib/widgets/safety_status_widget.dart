@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/status_colors.dart';
 import '../Design/style_constant.dart';
 
-enum SafetyStatus { dangerous, partiallyCompliant, compliant, safe, na }
+enum SafetyStatus { dangerous, safe, na }
 
 class SafetyStatusWidget extends StatelessWidget {
   final Map<String, dynamic>? aiData;
@@ -21,10 +21,6 @@ class SafetyStatusWidget extends StatelessWidget {
     switch (rawStatus.trim().toUpperCase()) {
       case 'DANGEROUS':
         return SafetyStatus.dangerous;
-      case 'PARTIALLY COMPLIANT':
-        return SafetyStatus.partiallyCompliant;
-      case 'COMPLIANT':
-        return SafetyStatus.compliant;
       case 'SAFE':
         return SafetyStatus.safe;
       default:
@@ -36,10 +32,6 @@ class SafetyStatusWidget extends StatelessWidget {
     switch (status) {
       case SafetyStatus.dangerous:
         return "DANGEROUS";
-      case SafetyStatus.partiallyCompliant:
-        return "PARTIALLY COMPLIANT";
-      case SafetyStatus.compliant:
-        return "COMPLIANT";
       case SafetyStatus.safe:
         return "SAFE";
       case SafetyStatus.na:
@@ -375,9 +367,7 @@ class SafetyStatusWidget extends StatelessWidget {
     final String statusText = _getStatusText(statusType);
     final statusColor = SafetyStatusHelper.getColor(statusText);
 
-    final String buttonLabel =
-        (statusType == SafetyStatus.dangerous ||
-            statusType == SafetyStatus.partiallyCompliant)
+    final String buttonLabel = statusType == SafetyStatus.dangerous
         ? "Why?"
         : "View Log";
 
@@ -395,8 +385,7 @@ class SafetyStatusWidget extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            statusType == SafetyStatus.safe ||
-                    statusType == SafetyStatus.compliant
+            statusType == SafetyStatus.safe
                 ? Icons.check_circle
                 : (statusType == SafetyStatus.na
                       ? Icons.help_outline
@@ -427,8 +416,7 @@ class SafetyStatusWidget extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => _showReasonsDialog(context),
               icon: Icon(
-                statusType == SafetyStatus.dangerous ||
-                        statusType == SafetyStatus.partiallyCompliant
+                statusType == SafetyStatus.dangerous
                     ? Icons.info_outline
                     : Icons.analytics_outlined,
                 size: 16,

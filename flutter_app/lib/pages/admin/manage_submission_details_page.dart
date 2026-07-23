@@ -4,6 +4,7 @@ import 'package:kkhazardscan/pages/admin/manage_departments_page.dart';
 import 'package:kkhazardscan/pages/admin/manage_designations_page.dart';
 import 'package:kkhazardscan/pages/admin/manage_emails.dart';
 import 'package:kkhazardscan/pages/admin/manage_locations_page.dart';
+import 'package:kkhazardscan/pages/admin/manage_safety_work_procedure.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 
@@ -88,6 +89,17 @@ class _ManageSubmissionDetailsState extends State<ManageSubmissionDetailsPage> {
                   tooltip: 'Explain',
                   onPressed: () => _showImmediateEmailsExplanation(context),
                 ),
+              ),
+              const SizedBox(height: AppPadding.medium),
+              MenuButton(
+                label: "Manage Safety Work Prodecures",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ManageSafetyWorkProcedurePage()),
+                  );
+                },
+                icon: Icons.category,
               ),
             ],
           ),

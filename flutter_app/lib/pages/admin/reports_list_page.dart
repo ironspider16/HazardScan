@@ -994,9 +994,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
       key: _scaffoldKey,
       backgroundColor: AppColors.backgroundWhite,
       appBar: UniversalAppBar(
-        title: _isSelectionMode
-            ? "All Reports (${_selectedReports.length} Selected) "
-            : "All Reports",
+        title: "All Reports",
         actions: [
           IconButton(
             icon: const Icon(Icons.swap_vert_rounded, color: Colors.black),

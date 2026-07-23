@@ -717,7 +717,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const SizedBox(height: AppPadding.medium * 3),
+                    const SizedBox(height: AppPadding.medium),
                     ReportTimelineWidget(reports: reports),
                     const SizedBox(height: AppPadding.medium),
                     _buildResponsiveChartsRow(),

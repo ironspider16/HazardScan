@@ -25,6 +25,10 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
 
   // Verify whether the app bar should switch to batch actions view
   bool get _isSelectionMode => _selectedIds.isNotEmpty;
+  final RegExp emailRegex = RegExp(
+    r"^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$",
+    caseSensitive: false,
+  );
 
   @override
   void initState() {
@@ -332,7 +336,7 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                   isPrimary: true,
                   onTap: () async {
                     final text = controller.text.trim();
-                    if (text.isEmpty || !text.contains('@')) {
+                    if (text.isEmpty || !(emailRegex.hasMatch(text))) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text("Please enter a valid email."),
@@ -407,7 +411,8 @@ class _ManageEmailsPageState extends State<ManageEmailsPage> {
                   isPrimary: true,
                   onTap: () async {
                     final updatedText = controller.text.trim();
-                    if (updatedText.isEmpty || !updatedText.contains('@')) {
+                    if (updatedText.isEmpty ||
+                        !(emailRegex.hasMatch(updatedText))) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text("Please enter a valid email."),
@@ -1026,7 +1031,6 @@ class _EmailGroupChipsState extends State<_EmailGroupChips> {
     );
   }
 }
-
 
 bool isMobile(BuildContext context) {
   return MediaQuery.sizeOf(context).width < 500;

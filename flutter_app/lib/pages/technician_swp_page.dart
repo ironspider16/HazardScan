@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,7 +7,6 @@ import 'package:kkhazardscan/config/app_users.dart';
 import 'package:kkhazardscan/pages/main_menu.dart';
 import 'package:kkhazardscan/widgets/App_Textfield.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
-import 'package:random_string/random_string.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:kkhazardscan/pages/edit_report_data_screen.dart';
 import '../design/style_constant.dart';
@@ -127,7 +127,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       final response = await supabase
           .from('swp_templates')
-          .select('id, category, title')
+          .select('id, category, title, requires_permit')
+          .eq('is_active', true)
           .order('title');
 
       final templateList = List<Map<String, dynamic>>.from(response);
@@ -399,7 +400,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         }
 
         _lastAttemptedImages = List<Uint8List>.from(_globalImageBytes);
-        _aiChangeAnalysis = (decodedData['aiChangeAnalysis'] as String? ?? '').trim();
+        _aiChangeAnalysis = (decodedData['aiChangeAnalysis'] as String? ?? '')
+            .trim();
         if (incomingStatus != 'SAFE') {
           _isAnalyzing = false;
         }
@@ -907,7 +909,15 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     final String hour = now.hour.toString().padLeft(2, '0');
     final String minute = now.minute.toString().padLeft(2, '0');
     final String second = now.second.toString().padLeft(2, '0');
-    final String random = randomAlphaNumeric(3).toUpperCase();
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    // constant pool of characters
+    Random rnd = Random();
+    // creating random number generator
+    final String random = Iterable.generate(
+      3,
+      (_) => chars[rnd.nextInt(chars.length)],
+    ).join();
+    // Iterable.generate run inside 3 times
 
     return "KKH-$year$month$day-$hour$minute$second-$random";
   }
@@ -978,7 +988,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
               'ppe': _globalAiData!['ppe'] ?? {},
               'buddySystem': _globalAiData!['buddySystem'] ?? {},
               'areaHazards': _globalAiData!['areaHazards'] ?? {},
-              'electricalMachinery':_globalAiData!['electricalMachinery'] ?? {},
+              'electricalMachinery':
+                  _globalAiData!['electricalMachinery'] ?? {},
               'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
@@ -986,23 +997,23 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
         globalSafetyForeignKey = insertedData['id'];
       }
-      
+
       int? initialSafetyVarId;
       if (_firstAiData != null && _attemptCount > 1) {
         final insertedInitial = await supabase
             .from('safety_variables')
             .insert({
-              'Overall Status':      _firstAiData!['overallStatus'] ?? 'N/A',
-              'ladderheight':        _firstAiData!['ladderHeight'] ?? {},
-              'ppe':                 _firstAiData!['ppe'] ?? {},
-              'buddySystem':         _firstAiData!['buddySystem'] ?? {},
-              'areaHazards':         _firstAiData!['areaHazards'] ?? {},
+              'Overall Status': _firstAiData!['overallStatus'] ?? 'N/A',
+              'ladderheight': _firstAiData!['ladderHeight'] ?? {},
+              'ppe': _firstAiData!['ppe'] ?? {},
+              'buddySystem': _firstAiData!['buddySystem'] ?? {},
+              'areaHazards': _firstAiData!['areaHazards'] ?? {},
               'electricalMachinery': _firstAiData!['electricalMachinery'] ?? {},
-              'spreaderUnlocked':    _isSpreaderUnlocked ?? false,
+              'spreaderUnlocked': _isSpreaderUnlocked ?? false,
             })
             .select('id')
             .single();
-          initialSafetyVarId = insertedInitial['id'];
+        initialSafetyVarId = insertedInitial['id'];
       }
 
       List<Map<String, dynamic>> recordsToInsert = [];
@@ -1025,11 +1036,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           'location': location,
           'safety_variables_FK': globalSafetyForeignKey,
           'report_code': reportCode,
-          'initialAnalysisId' : initialSafetyVarId,
+          'initialAnalysisId': initialSafetyVarId,
           'totalAttempts': _attemptCount,
           'aiChangeAnalysis': _aiChangeAnalysis.isNotEmpty
-            ? _aiChangeAnalysis
-            : null,
+              ? _aiChangeAnalysis
+              : null,
         });
 
         // Trigger edge function email process
@@ -1197,6 +1208,14 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                 .where((t) => t['category'] == category)
                                 .toList();
 
+                        final bool requiresPermit = currentSelectedId != null
+                            ? (categoryTemplates.firstWhere(
+                                    (t) => t['id'] == currentSelectedId,
+                                    orElse: () => {'requires_permit': false},
+                                  )['requires_permit'] ==
+                                  true)
+                            : false;
+
                         return Card(
                           color: AppColors.primaryTint,
                           margin: const EdgeInsets.only(
@@ -1276,6 +1295,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                     key: ValueKey(currentSelectedId),
                                     templateId: currentSelectedId,
                                     categoryName: category,
+                                    requiresPermit: requiresPermit,
                                     initialPtw:
                                         _savedPtwNumbers[currentSelectedId] ??
                                         "",

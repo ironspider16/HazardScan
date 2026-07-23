@@ -4,7 +4,7 @@ import 'package:kkhazardscan/Design/style_constant.dart';
 class SafetyStatusHelper {
   static Color getColor(String? status) {
     if (status == null) return Colors.grey.shade600;
-    
+
     final String upperStatus = status.toUpperCase();
 
     if (upperStatus == 'DANGEROUS') {

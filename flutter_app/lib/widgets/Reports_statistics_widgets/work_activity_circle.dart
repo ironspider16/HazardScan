@@ -43,6 +43,9 @@ class _WorkActivityCircleState extends State<WorkActivityCircle> {
       const Color.fromARGB(255, 175, 79, 76),
       Colors.purple,
       Colors.teal,
+      Colors.indigo,
+      Colors.brown,
+      Colors.black
     ];
 
     int index = 0;
