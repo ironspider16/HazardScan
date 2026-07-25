@@ -77,7 +77,7 @@ class _ManageSafetyWorkProcedurePageState
     required List<int> idsToEdit,
     required String name,
     required bool isCategory,
-    required bool? requires_permit,
+    required bool? requiresPermit,
   }) async {
     // Initialize controller with the existing name for easier editing
     final TextEditingController controller = TextEditingController(text: name);
@@ -113,9 +113,9 @@ class _ManageSafetyWorkProcedurePageState
                         "Requires Permit?",
                         style: AppTypography.body,
                       ),
-                      value: requires_permit ?? false,
+                      value: requiresPermit ?? false,
                       onChanged: (val) {
-                        setDialogState(() => requires_permit = val);
+                        setDialogState(() => requiresPermit = val);
                       },
                     ),
                   ],
@@ -168,7 +168,7 @@ class _ManageSafetyWorkProcedurePageState
         } else {
           await supabase
               .from('swp_templates')
-              .update({'title': inputName, 'requires_permit': requires_permit})
+              .update({'title': inputName, 'requires_permit': requiresPermit})
               .filter(
                 'id',
                 'in',
@@ -553,7 +553,7 @@ class _ManageSafetyWorkProcedurePageState
                                           idsToEdit: categoryIds,
                                           name: categoryName,
                                           isCategory: true,
-                                          requires_permit: null,
+                                          requiresPermit: null,
                                         ),
                                       ),
                                       IconButton(
@@ -630,7 +630,7 @@ class _ManageSafetyWorkProcedurePageState
                                                 idsToEdit: [id],
                                                 name: activity['name'],
                                                 isCategory: false,
-                                                requires_permit:
+                                                requiresPermit:
                                                     isRequiredPermit,
                                               ),
                                             ),
@@ -652,7 +652,7 @@ class _ManageSafetyWorkProcedurePageState
                                             ),
                                             IconButton(
                                               icon: const Icon(
-                                                Icons.delete_forever,
+                                                Icons.delete_outline,
                                                 color: Colors.red,
                                               ),
                                               onPressed: () => _deleteSwp(

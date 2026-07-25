@@ -388,7 +388,7 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                               margin: const EdgeInsets.only(bottom: 12, top: 6),
                               padding: const EdgeInsets.all(AppPadding.medium),
                               decoration: BoxDecoration(
-                                color: Colors.blueAccent.withOpacity(0.04),
+                                color: Colors.blueAccent.withValues(alpha : 0.04),
                                 borderRadius: BorderRadius.circular(8),
                                 border: const Border(
                                   left: BorderSide(

@@ -45,7 +45,7 @@ class _WorkActivityCircleState extends State<WorkActivityCircle> {
       Colors.teal,
       Colors.indigo,
       Colors.brown,
-      Colors.black
+      Colors.black,
     ];
 
     int index = 0;

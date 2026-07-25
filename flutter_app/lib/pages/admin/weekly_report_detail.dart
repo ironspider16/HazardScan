@@ -164,7 +164,7 @@ class _WeeklyReportDetailScreenState extends State<WeeklyReportDetailScreen> {
             ),
             padding: const EdgeInsets.all(AppPadding.medium),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50.withOpacity(0.4),
+              color: Colors.blue.shade50.withValues(alpha : 0.4),
             ),
 
             child: SizedBox(

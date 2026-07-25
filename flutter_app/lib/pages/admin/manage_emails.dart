@@ -903,7 +903,7 @@ class _EmailCard extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4.0),
       decoration: BoxDecoration(
         color: isSelected
-            ? AppColors.primaryBlue.withOpacity(0.08)
+            ? AppColors.primaryBlue.withValues(alpha : 0.08)
             : AppColors.primaryTint,
         borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
         border: Border.all(

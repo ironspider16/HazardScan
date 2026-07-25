@@ -5,6 +5,7 @@ import 'package:kkhazardscan/pages/admin/manage_designations_page.dart';
 import 'package:kkhazardscan/pages/admin/manage_emails.dart';
 import 'package:kkhazardscan/pages/admin/manage_locations_page.dart';
 import 'package:kkhazardscan/pages/admin/manage_safety_work_procedure.dart';
+import 'package:kkhazardscan/pages/admin/select_category_manage_checklist_items.dart';
 import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 
@@ -82,13 +83,6 @@ class _ManageSubmissionDetailsState extends State<ManageSubmissionDetailsPage> {
                   );
                 },
                 icon: Icons.email_outlined,
-                leading2: IconButton(
-                  icon: const Icon(Icons.help_outline),
-                  iconSize: 20,
-                  color: AppColors.primaryBlue,
-                  tooltip: 'Explain',
-                  onPressed: () => _showImmediateEmailsExplanation(context),
-                ),
               ),
               const SizedBox(height: AppPadding.medium),
               MenuButton(
@@ -101,45 +95,21 @@ class _ManageSubmissionDetailsState extends State<ManageSubmissionDetailsPage> {
                 },
                 icon: Icons.category,
               ),
+              const SizedBox(height: AppPadding.medium),
+              MenuButton(
+                label: "Manage Procedure Checklist Items",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SelectCategoryManageCheckListItems()),
+                  );
+                },
+                icon: Icons.checklist,
+              ),
             ],
           ),
         ),
       ),
-    );
-  }
-
-  void _showImmediateEmailsExplanation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            "What is an immediate Email?",
-            style: AppTypography.Bluesubheading,
-          ),
-
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'These are the email addresses that will automatically receive the completed checklist report as soon as the technician submits it.',
-                  style: TextStyle(fontSize: 14, color: Colors.black87),
-                ),
-                const SizedBox(height: AppPadding.medium),
-                const Text('You can add, edit and delete them as you wish.'),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        );
-      },
     );
   }
 }

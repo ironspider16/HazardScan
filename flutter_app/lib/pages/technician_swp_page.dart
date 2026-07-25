@@ -231,8 +231,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   }
 
   Future<void> _analyzeGlobalImage() async {
-    if (_globalImageBytes.isEmpty)
-      return; // Guard against no images before analysis
+    if (_globalImageBytes.isEmpty) {
+      return;
+     } // Guard against no images before analysis
 
     setState(() => _isAnalyzing = true);
     final stopwatch = Stopwatch()..start(); // Start timing the analysis process
