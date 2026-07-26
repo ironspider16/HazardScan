@@ -233,7 +233,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
   Future<void> _analyzeGlobalImage() async {
     if (_globalImageBytes.isEmpty) {
       return;
-     } // Guard against no images before analysis
+    } // Guard against no images before analysis
 
     setState(() => _isAnalyzing = true);
     final stopwatch = Stopwatch()..start(); // Start timing the analysis process
@@ -971,13 +971,13 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           .toList();
 
       int? globalSafetyForeignKey;
-      Uint8List? compressedImageBytes;
-
-      if (_globalImageBytes.isNotEmpty) {
-        // Ensure there's at least one image before trying to compress
-        compressedImageBytes = await _prepareEmailImage(
-          _globalImageBytes.first,
-        );
+      List<Uint8List> compressedInitialImages = [];
+      for (var img in _firstAttemptedImages) {
+        compressedInitialImages.add(await _prepareEmailImage(img));
+      }
+      List<Uint8List> compressedFinalImages = [];
+      for (var img in _lastAttemptedImages) {
+        compressedFinalImages.add(await _prepareEmailImage(img));
       }
 
       if (_globalAiData != null) {
@@ -1054,11 +1054,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           designation: designation,
           department: department,
           location: location,
-          imageBytes:
-              compressedImageBytes ??
-              (_globalImageBytes.isNotEmpty
-                  ? _globalImageBytes.first
-                  : null), // Pass compressed image bytes if available, otherwise fallback to first raw image bytes if any exist
+          initialImages: compressedInitialImages.isNotEmpty
+              ? compressedInitialImages
+              : null,
+          finalImages: compressedFinalImages.isNotEmpty
+              ? compressedFinalImages
+              : null,
           pdfBytes: finalPdfBytes,
           reportCode: reportCode,
         );
@@ -1082,13 +1083,19 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
     required String category,
     required String location,
     required String reportCode,
-    Uint8List? imageBytes,
+    List<Uint8List>? initialImages,
+    List<Uint8List>? finalImages,
     Uint8List? pdfBytes,
   }) async {
     try {
-      String? base64Image;
-      if (imageBytes != null) {
-        base64Image = base64Encode(imageBytes);
+      List<String>? base64Initial;
+      if (initialImages != null) {
+        base64Initial = initialImages.map((img) => base64Encode(img)).toList();
+      }
+
+      List<String>? base64Final;
+      if (finalImages != null) {
+        base64Final = finalImages.map((img) => base64Encode(img)).toList();
       }
 
       String? base64Pdf;
@@ -1108,7 +1115,8 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
           "designation": designation,
           "department": department,
           "location": location,
-          "image": base64Image,
+          "initial_images": base64Initial,
+          "last_images": base64Final,
           "pdf": base64Pdf,
           "report_code": reportCode,
         },
