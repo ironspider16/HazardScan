@@ -972,12 +972,17 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
       int? globalSafetyForeignKey;
       List<Uint8List> compressedInitialImages = [];
-      for (var img in _firstAttemptedImages) {
-        compressedInitialImages.add(await _prepareEmailImage(img));
+      if (_firstAttemptedImages.isNotEmpty) {
+        for (var img in _firstAttemptedImages) {
+          compressedInitialImages.add(await _prepareEmailImage(img));
+        }
       }
       List<Uint8List> compressedFinalImages = [];
-      for (var img in _lastAttemptedImages) {
-        compressedFinalImages.add(await _prepareEmailImage(img));
+
+      if (_attemptCount > 1 && _lastAttemptedImages.isNotEmpty) {
+        for (var img in _lastAttemptedImages) {
+          compressedFinalImages.add(await _prepareEmailImage(img));
+        }
       }
 
       if (_globalAiData != null) {
