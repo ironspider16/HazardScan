@@ -193,10 +193,14 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     setState(() => isLoading = true);
 
     try {
-      final bool filterbyCompliance = selectedComplianceLevel != null;
-      String selectQuery = filterbyCompliance
-          ? '*, swp_templates!inner(id, category, title), safety_variables_FK!inner(*)'
-          : '*, swp_templates!inner(id, category, title), safety_variables_FK(*)';
+      // Removed the trailing comma and the dynamic !inner joins.
+      // Enforcing !inner on mutually exclusive columns drops all valid rows.
+      final String selectQuery = '''
+        *, 
+        swp_templates!inner(id, category, title), 
+        safety_variables_FK(*),
+        initialAnalysisId(*)
+      ''';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
@@ -211,21 +215,12 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
             );
       }
 
-      // Filter by SWP Template Category
       if (selectedCategory != null) {
         query = query.eq('swp_templates.category', selectedCategory!);
       }
 
-      // Filter by SWP Template Title
       if (selectedTitle != null) {
         query = query.eq('swp_templates.title', selectedTitle!);
-      }
-
-      if (selectedComplianceLevel != null) {
-        query = query.eq(
-          'safety_variables_FK.Overall Status',
-          selectedComplianceLevel!,
-        );
       }
 
       if (selectedLocation != null) {
@@ -240,11 +235,34 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
         'submitted_at',
         ascending: sortAscending,
       );
+
+      final List<Map<String, dynamic>> rawData =
+          List<Map<String, dynamic>>.from(response);
+
+      // Map and coalesce the correct safety variables payload per row
+      var processedReports = rawData.map((report) {
+        final hasInitialAnalysisId = report['initialAnalysisId'] != null;
+        final activeVariables = hasInitialAnalysisId
+            ? report['initialAnalysisId']
+            : report['safety_variables_FK'];
+
+        return {...report, 'safety_variables': activeVariables};
+      }).toList();
+
+      // Apply the compliance filter client-side to bypass the PostgREST inner join limitation
+      if (selectedComplianceLevel != null) {
+        processedReports = processedReports.where((report) {
+          final vars = report['safety_variables'];
+          if (vars == null) return false;
+          return vars['Overall Status'] == selectedComplianceLevel;
+        }).toList();
+      }
+
       setState(() {
-        reports = List<Map<String, dynamic>>.from(response);
-        debugPrint(reports.toString());
+        reports = processedReports;
         isLoading = false;
       });
+
       loadFilterLists();
     } catch (e) {
       setState(() => isLoading = false);
@@ -264,7 +282,7 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     };
 
     for (var report in reports) {
-      final vars = report['safety_variables_FK'];
+      final vars = report['safety_variables'];
       if (vars != null) {
         _incrementBreakdownCount(
           breakdown,
@@ -318,11 +336,11 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     };
 
     final totalReports = reports
-        .where((r) => r["safety_variables_FK"] != null)
+        .where((r) => r["safety_variables"] != null)
         .length;
 
     for (var report in reports) {
-      final vars = report['safety_variables_FK'];
+      final vars = report['safety_variables'];
       if (vars != null) {
         scores['Ladder Height'] =
             scores['Ladder Height']! + _extractScore(vars['ladderheight']);
@@ -377,8 +395,8 @@ class _ReportsStatisticsPageState extends State<ReportsStatisticsPage> {
     for (var r in data) {
       final String location = r['location'] ?? 'Unknown';
 
-      if (r['safety_variables_FK'] != null) {
-        final String? status = r['safety_variables_FK']['Overall Status'];
+      if (r['safety_variables'] != null) {
+        final String? status = r['safety_variables']['Overall Status'];
         final int score = getScore(status); // Using your scoring logic helper
 
         if (!tracker.containsKey(location)) {

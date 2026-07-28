@@ -17,7 +17,7 @@ class UnlockedSpreaderDistributionCircle extends StatelessWidget {
     Map<bool, int> statusCounts = {true: 0, false: 0};
 
     for (var report in reports) {
-      final vars = report['safety_variables_FK'];
+      final vars = report['safety_variables'];
       if (vars != null) {
         final bool isUnlocked = vars['spreaderUnlocked'] ?? false;
         statusCounts[isUnlocked] = (statusCounts[isUnlocked] ?? 0) + 1;
