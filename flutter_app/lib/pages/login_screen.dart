@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final UserRole userRole = role == 'admin'
           ? UserRole.admin
-          : UserRole.user;
+          : UserRole.technician;
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('user_role', role);

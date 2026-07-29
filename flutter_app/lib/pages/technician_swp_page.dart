@@ -864,7 +864,7 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                                       email:
                                                           "technician@example.com",
                                                       password: '',
-                                                      role: UserRole.user,
+                                                      role: UserRole.technician,
                                                     );
 
                                                 Navigator.pushAndRemoveUntil(
