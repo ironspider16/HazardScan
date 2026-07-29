@@ -1,6 +1,6 @@
 // lib/config/app_users.dart
 
-enum UserRole { admin, user }
+enum UserRole { admin, technician }
 
 class AppUser {
   final String email;

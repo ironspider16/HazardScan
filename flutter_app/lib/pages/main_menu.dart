@@ -148,7 +148,7 @@ class MainMenu extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    const ChangeTechnicianPasswordPage(),
+                                    const ChangePasswordPage(),
                               ),
                             );
                           },

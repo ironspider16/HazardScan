@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
+import 'package:kkhazardscan/widgets/App_Textfield.dart';
+import 'package:kkhazardscan/widgets/Menu_button.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class ChangeTechnicianPasswordPage extends StatefulWidget {
-  const ChangeTechnicianPasswordPage({super.key});
+class ChangePasswordPage extends StatefulWidget {
+  const ChangePasswordPage({super.key});
 
   @override
-  State<ChangeTechnicianPasswordPage> createState() =>
-      _ChangeTechnicianPasswordPageState();
+  State<ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _ChangeTechnicianPasswordPageState
-    extends State<ChangeTechnicianPasswordPage> {
+class _ChangePasswordPageState extends State<ChangePasswordPage> {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
@@ -21,6 +21,8 @@ class _ChangeTechnicianPasswordPageState
 
   bool _hidePassword = true;
   bool _isChangingPassword = false;
+  String selectedRole = 'Admin';
+  final List<String> roles = ['Admin', 'Technician'];
 
   @override
   void dispose() {
@@ -36,7 +38,7 @@ class _ChangeTechnicianPasswordPageState
     return null;
   }
 
-  Future<void> _changeTechnicianPassword() async {
+  Future<void> _changePassword() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) {
@@ -56,11 +58,14 @@ class _ChangeTechnicianPasswordPageState
 
       final response = await _supabase.functions.invoke(
         'change-technician-password',
-        body: {'new_password': _passwordController.text},
+        body: {
+          'new_password': _passwordController.text,
+          'role': selectedRole.toLowerCase(),
+        },
       );
 
       if (response.status < 200 || response.status >= 300) {
-        String message = 'Unable to change technician password.';
+        String message = 'Unable to change $selectedRole password.';
 
         if (response.data is Map) {
           message = response.data['error']?.toString() ?? message;
@@ -73,7 +78,7 @@ class _ChangeTechnicianPasswordPageState
 
       _passwordController.clear();
 
-      _showMessage('Technician password changed successfully.');
+      _showMessage('$selectedRole password changed successfully.');
     } on AuthException catch (error) {
       if (!mounted) return;
 
@@ -110,158 +115,99 @@ class _ChangeTechnicianPasswordPageState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundWhite,
-      appBar: const UniversalAppBar(title: 'Change Technician Password'),
+      appBar: const UniversalAppBar(title: 'Change Password'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
             horizontal: AppPadding.page,
-            vertical: 30,
+            vertical: AppPadding.tight,
           ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 550),
-              child: Card(
-                color: Colors.white,
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const Icon(
-                          Icons.admin_panel_settings_outlined,
-                          size: 60,
-                          color: Colors.blue,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Change Technician Password',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Enter a new password for the technician account.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.grey, fontSize: 15),
-                        ),
-                        const SizedBox(height: 30),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade200),
-                          ),
-                          child: const Row(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.blue,
-                                child: Icon(
-                                  Icons.engineering_outlined,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Account',
-                                      style: TextStyle(
-                                        color: Colors.grey,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Technician',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        TextFormField(
-                          controller: _passwordController,
-                          enabled: !_isChangingPassword,
-                          obscureText: _hidePassword,
-                          validator: _validatePassword,
-                          textInputAction: TextInputAction.done,
-                          onFieldSubmitted: (_) {
-                            if (!_isChangingPassword) {
-                              _changeTechnicianPassword();
-                            }
-                          },
-                          decoration: InputDecoration(
-                            labelText: 'New Technician Password',
-                            hintText: 'Enter the new password',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              onPressed: _isChangingPassword
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _hidePassword = !_hidePassword;
-                                      });
-                                    },
-                              icon: Icon(
-                                _hidePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        SizedBox(
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            onPressed: _isChangingPassword
-                                ? null
-                                : _changeTechnicianPassword,
-                            icon: _isChangingPassword
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.lock_reset),
-                            label: Text(
-                              _isChangingPassword
-                                  ? 'Changing Password...'
-                                  : 'Change Password',
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+          child: Card(
+            color: AppColors.primaryTint,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.lock_reset,
+                      size: AppPadding.Largest,
+                      color: AppColors.primaryBlue,
                     ),
-                  ),
+                    const SizedBox(height: AppPadding.tight),
+                    const Text(
+                      'Change Password',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppPadding.tight),
+                    const Text(
+                      'Enter a new password for the technician or admin account.',
+                      style: AppTypography.faintbody,
+                    ),
+                    const SizedBox(height: AppPadding.medium),
+                    DropdownMenu<String>(
+                      requestFocusOnTap: false,
+                      expandedInsets: EdgeInsets.zero,
+                      initialSelection: selectedRole,
+                      onSelected: (String? newValue) {
+                        setState(() {
+                          selectedRole = newValue ?? 'Admin';
+                        });
+                      },
+                      dropdownMenuEntries: roles.map<DropdownMenuEntry<String>>(
+                        (String value) {
+                          return DropdownMenuEntry<String>(
+                            value: value,
+                            label: value,
+                          );
+                        },
+                      ).toList(),
+                    ),
+
+                    const SizedBox(height: AppPadding.tight),
+                    AppTextfield(
+                      label: '',
+                      islabel: false,
+                      controller: _passwordController,
+                      hint: "New $selectedRole Password",
+                      obscureText: _hidePassword,
+                      prefixIcon: Icons.lock_outline,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _hidePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () =>
+                            setState(() => _hidePassword = !_hidePassword),
+                      ),
+                      validator: _validatePassword,
+                    ),
+                    const SizedBox(height: AppPadding.medium),
+                    MenuButton(
+                      label: "Change password",
+                      isPrimary: true,
+                      icon: _isChangingPassword
+                          ? Icons.hourglass_empty
+                          : Icons.lock_reset,
+                      onTap: () {
+                        if (!_isChangingPassword) {
+                          _changePassword();
+                        }
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),

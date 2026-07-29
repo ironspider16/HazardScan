@@ -168,7 +168,7 @@ class _InitialAuthGatewayState extends State<InitialAuthGateway> {
     _authenticatedUser = AppUser(
       id: 0,
       email: session.user.email ?? '',
-      role: role == 'admin' ? UserRole.admin : UserRole.user,
+      role: role == 'admin' ? UserRole.admin : UserRole.technician,
       password: '',
     );
     setState(() => _isResolvingRoute = false);
