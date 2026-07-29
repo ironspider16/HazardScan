@@ -59,7 +59,7 @@ class LocalReportCompiler {
     List<Uint8List>? finalImagesBytes,
   }) async {
     final pdf = pw.Document();
-    final font = await PdfGoogleFonts.notoSansSymbols2Regular();
+    final font = await PdfGoogleFonts.notoSansRegular();
     final fontBold = await PdfGoogleFonts.notoSansBold();
 
     final String headerDate = submittedAt != null
@@ -98,7 +98,7 @@ class LocalReportCompiler {
           pw.SizedBox(height: 16),
 
           // Section 1 — Site details
-          _sectionHeader('1. Site & Personnel Details'),
+          _sectionHeader('Site & Personnel Details'),
           pw.SizedBox(height: 8),
           _infoGrid([
             ['Location', location.isEmpty ? 'Not Declared' : location],
@@ -120,8 +120,8 @@ class LocalReportCompiler {
           // Section 2 — AI summary
           _sectionHeader(
             isComparative
-                ? '2. Rectification Summary (AI Insight)'
-                : '2. First-Pass Compliance Notice',
+                ? 'Rectification Summary (AI Insight)'
+                : 'First-Pass Compliance Notice',
           ),
           pw.SizedBox(height: 8),
           _aiSummaryBox(
@@ -135,7 +135,7 @@ class LocalReportCompiler {
 
           // Section 3 — Evolution matrix (comparative only)
           if (isComparative) ...[
-            _sectionHeader('3. Metric Evolution (Before  =>  After)'),
+            _sectionHeader('Metric Evolution'),
             pw.SizedBox(height: 8),
             _evolutionTable(initialAiData, finalAiData, getField),
             pw.SizedBox(height: 16),
@@ -170,8 +170,8 @@ class LocalReportCompiler {
           pw.SizedBox(height: 16),
           _sectionHeader(
             isComparative
-                ? '4. Initial Inspection — Hazard Identification'
-                : '3. Hazard Identification & Assessment',
+                ? 'Initial Inspection — Hazard Identification'
+                : 'Hazard Identification & Assessment',
           ),
           pw.SizedBox(height: 8),
           _passLabel(
@@ -200,7 +200,7 @@ class LocalReportCompiler {
           footer: (ctx) => _pageFooter(ctx),
           build: (_) => [
             pw.SizedBox(height: 16),
-            _sectionHeader('5. Rectified Inspection — Verified Safe State'),
+            _sectionHeader('Rectified Inspection — Verified Safe State'),
             pw.SizedBox(height: 8),
             _passLabel('RECTIFIED AUDIT PASS — SAFE STATE', _green, _greenTint),
             pw.SizedBox(height: 12),
@@ -229,8 +229,8 @@ class LocalReportCompiler {
                   children: [
                     _sectionHeader(
                       isComparative
-                          ? '6. Side-By-Side Visual Evidence Comparison'
-                          : '4. Site Evidence Photography',
+                          ? 'Side-By-Side Visual Evidence Comparison'
+                          : 'Site Evidence Photography',
                     ),
                     pw.SizedBox(height: 12),
 

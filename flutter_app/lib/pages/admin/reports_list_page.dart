@@ -167,8 +167,8 @@ class _ReportsListPageState extends State<ReportsListPage> {
     try {
       final bool filterbyCompliance = selectedComplianceLevel != null;
       String selectQuery = filterbyCompliance
-          ? '*, swp_templates!inner(id, category, title), safety_variables_FK!inner(*)'
-          : '*, swp_templates!inner(id, category, title), safety_variables_FK(*)';
+          ? '*, swp_templates!inner(id, category, title), safety_variables_FK!inner(*), initialAnalysisId(*)'
+          : '*, swp_templates!inner(id, category, title), safety_variables_FK(*), initialAnalysisId(*)';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')

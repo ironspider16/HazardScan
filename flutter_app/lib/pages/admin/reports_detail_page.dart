@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:kkhazardscan/Design/status_Colors.dart';
 import 'package:kkhazardscan/Design/style_constant.dart';
 import 'package:kkhazardscan/widgets/Universal_appbar.dart';
 
@@ -23,6 +22,10 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
   late final String reportCode;
   late final String category;
   late final bool spreaderUnlocked;
+  late final Map<String, dynamic>? initialAnalysisData;
+  late final int totalAttempts;
+  late final String? aiChangeAnalysis;
+  late final bool isComparative;
 
   // Helper method to safely evaluate dynamic data to a boolean without throwing TypeErrors
   bool _parseBool(dynamic value) {
@@ -71,6 +74,390 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
 
     // Safely evaluate the boolean using the helper
     spreaderUnlocked = _parseBool(safetyVar['spreaderUnlocked']);
+    dynamic rawInitialVar = widget.report['initialAnalysisId'];
+    if (rawInitialVar is Map) {
+      initialAnalysisData = Map<String, dynamic>.from(rawInitialVar);
+    } else {
+      initialAnalysisData = null;
+    }
+    totalAttempts = widget.report['totalAttempts'] as int? ?? 1;
+    aiChangeAnalysis = widget.report['aiChangeAnalysis']?.toString() ?? '';
+    isComparative = initialAnalysisData != null && totalAttempts > 1;
+  }
+
+  Color _statusColor(String status) {
+    switch (status.trim().toUpperCase()) {
+      case 'DANGEROUS':
+        return Colors.red.shade700;
+      case 'SAFE':
+        return Colors.green.shade700;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _complianceBadge(String status) {
+    final color = _statusColor(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color, width: 0.5),
+      ),
+      child: Text(
+        status.isEmpty ? 'N/A' : status,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  // Status banner - mirrors PDF _statusBanner
+  Widget _statusBanner(String status) {
+    final color = _statusColor(status);
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        border: Border.all(color: color, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'FINAL CLOSURE COMPLIANCE STATUS',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              status.toUpperCase(),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Section header - blue left border
+  Widget _sectionHeader(String title) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primaryTint,
+        border: Border(
+          left: BorderSide(color: AppColors.primaryBlue, width: 4),
+        ),
+      ),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primaryBlue,
+          letterSpacing: 0.5,
+        ),
+      ),
+    );
+  }
+
+  // Info grid - label/value table
+  Widget _infoGrid(List<List<String>> rows) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.borderGrey),
+      ),
+      child: Table(
+        columnWidths: const {0: FlexColumnWidth(1.2), 1: FlexColumnWidth(2)},
+        children: rows
+            .map(
+              (row) => TableRow(
+                children: [
+                  Container(
+                    color: Colors.grey.shade100,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    child: Text(
+                      row[0],
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 7,
+                    ),
+                    child: Text(row[1], style: const TextStyle(fontSize: 12)),
+                  ),
+                ],
+              ),
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  // Pass label
+  Widget _passLabel(String text, Color color) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withAlpha(20),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  // Category card - mirrors PDF _hazardCard
+  Widget _categoryCard(String label, Map<String, dynamic> block) {
+    final compliance = block['compliance']?.toString().toUpperCase() ?? 'N/A';
+    final description = block['description']?.toString() ?? '';
+    final reasoning = block['reasoning']?.toString() ?? '';
+    final advice = block['advice']?.toString() ?? '';
+    final color = _statusColor(compliance);
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 0, 16, 10),
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.borderGrey),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        children: [
+          // header: category name + badge
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: color.withAlpha(15),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(6),
+                topRight: Radius.circular(6),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                _complianceBadge(compliance),
+              ],
+            ),
+          ),
+          Divider(height: 1),
+          // field rows
+          _fieldRow('Observation', description),
+          Divider(height: 1, color: Colors.grey.shade50),
+          _fieldRow('Reasoning', reasoning),
+          Divider(height: 1, color: Colors.grey.shade50),
+          _fieldRow('Corrective Action', advice),
+        ],
+      ),
+    );
+  }
+
+  Widget _fieldRow(String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(child: Text(value, style: TextStyle(fontSize: 12))),
+        ],
+      ),
+    );
+  }
+
+  // Evolution table row
+  Widget _evolutionTable(
+    Map<String, dynamic> initialData,
+    Map<String, dynamic> finalData,
+  ) {
+    final categories = [
+      ['Working at Heights', 'ladderheight'],
+      ['Personal Protective Equipment', 'ppe'],
+      ['Buddy System Requirements', 'buddySystem'],
+      ['Electrical & Machinery Safeguards', 'electricalMachinery'],
+      ['Housekeeping and Area Hazards', 'areaHazards'],
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Table(
+        border: TableBorder.all(color: AppColors.borderGrey, width: 0.5),
+        columnWidths: const {0: FlexColumnWidth(1.6), 1: FlexColumnWidth(2.4)},
+        children: [
+          TableRow(
+            decoration: BoxDecoration(color: AppColors.primaryBlue),
+            children: [
+              _tableCell('Safety Check Module', isHeader: true),
+              _tableCell('Status Transformation', isHeader: true),
+            ],
+          ),
+          ...categories.map((cat) {
+            final before =
+                (initialData[cat[1]] as Map<String, dynamic>?)?['compliance']
+                    ?.toString()
+                    .toUpperCase() ??
+                'N/A';
+            final after =
+                (finalData[cat[1]] as Map<String, dynamic>?)?['compliance']
+                    ?.toString()
+                    .toUpperCase() ??
+                'N/A';
+            return TableRow(
+              children: [
+                _tableCell(cat[0]),
+                Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Row(
+                    children: [
+                      _complianceBadge(before),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          '->',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                      _complianceBadge(after),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _tableCell(String text, {bool isHeader = false}) {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: isHeader ? Colors.white : AppColors.textMain,
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _hazardCards(Map<String, dynamic> data) {
+    final categories = [
+      ['Working at Heights', 'ladderheight'],
+      ['Personal Protective Equipment', 'ppe'],
+      ['Buddy System Requirements', 'buddySystem'],
+      ['Electrical & Machinery Safeguards', 'electricalMachinery'],
+      ['Housekeeping and Area Hazards', 'areaHazards'],
+    ];
+    return categories.map((cat) {
+      final block = data[cat[1]] as Map<String, dynamic>? ?? {};
+      return _categoryCard(cat[0], block);
+    }).toList();
+  }
+
+  // AI summary box
+  Widget _aiSummaryBox(String text) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border.all(color: AppColors.borderGrey),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 13, height: 1.5)),
+    );
+  }
+
+  // Image replacement notice
+  Widget _imageNotice() {
+    return Container(
+      width:
+          double.infinity, // Spans full width so left/right margins are equal
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        border: Border.all(color: AppColors.borderGrey),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment:
+            CrossAxisAlignment.center, // Centers all children horizontally
+        children: [
+          Icon(Icons.email_outlined, color: AppColors.primaryBlue, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            'Report Code: $reportCode',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'The full inspection report including site photographs has been distributed to immediate email recipients. Request a copy using the report code above.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: Colors.black87),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildInfoRow(IconData icon, String label, String value) {
@@ -145,15 +532,13 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Modified: Extract status logic to variables for cleaner container building and N/A handling
     final String rawStatus = safetyVar['Overall Status'] ?? 'N/A';
-    final String overallStatus = 'Overall Status: $rawStatus'.toUpperCase();
-    final Color statusColor = SafetyStatusHelper.getColor(rawStatus);
 
     return Scaffold(
       appBar: const UniversalAppBar(title: 'Reports Detail Page'),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Card(
               elevation: 0,
@@ -163,7 +548,8 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                 AppPadding.medium,
                 AppPadding.medium,
                 AppPadding.medium,
-                AppPadding.tight),
+                AppPadding.tight,
+              ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(0),
               ),
@@ -185,7 +571,6 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                       ),
                     ),
                     const Divider(height: 24.0, thickness: 1.0),
-
                     if (ptwNumber != 'N/A')
                       _buildInfoRow(
                         Icons.assignment_turned_in,
@@ -196,6 +581,14 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                     _buildInfoRow(Icons.badge, 'Designation', designation),
                     _buildInfoRow(Icons.location_on, 'Location', location),
                     _buildInfoRow(Icons.category, 'Category', category),
+                    _buildInfoRow(
+                      Icons.loop,
+                      'Rectification Attempts',
+                      isComparative
+                          ? '$totalAttempts attempt(s) required to achieve compliance'
+                          : 'Site passed on first analysis',
+                    ),
+                    const SizedBox(height: AppPadding.tight),
                     Text(
                       'Details',
                       style: AppTypography.body.copyWith(
@@ -221,308 +614,81 @@ class _ReportsDetailPageState extends State<ReportsDetailPage> {
                 ),
               ),
             ),
-            Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppPadding.medium,
-                    0,
-                    AppPadding.medium,
-                    0,
+
+            if ((aiChangeAnalysis ?? '').isNotEmpty) ...[
+              _sectionHeader(
+                isComparative
+                    ? 'Rectification Summary (AI Insight)'
+                    : 'First-Pass Compliance Notice',
+              ),
+              _aiSummaryBox(aiChangeAnalysis ?? ''),
+            ],
+
+            if (isComparative) ...[
+              _sectionHeader('Metric Evolution'),
+              _evolutionTable(initialAnalysisData!, safetyVar),
+            ],
+
+            if (spreaderUnlocked) ...[
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  color: Colors.red.shade700.withAlpha(26),
+                  child: Row(
                     children: [
-                      if (spreaderUnlocked) ...[
-                        Row(
-                          mainAxisSize: MainAxisSize.max,
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppPadding.tight,
-                                vertical: AppPadding.tight,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade700.withAlpha(26),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    Icons.error,
-                                    color: Colors.red.shade700,
-                                  ),
-                                  const SizedBox(width: AppPadding.tight),
-                                  Text(
-                                    "LADDER'S SPREADER BAR UNLOCKED",
-                                    style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      letterSpacing: 1.0, // Increased from 10
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                      Icon(Icons.error, color: Colors.red.shade700, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        "LADDER'S SPREADER BAR UNLOCKED",
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                          letterSpacing: 1.0,
                         ),
-                      ],
-                      const SizedBox(height: AppPadding.tight),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppPadding.tight,
-                          vertical: AppPadding.tight,
-                        ),
-                        decoration: BoxDecoration(
-                          color: statusColor.withAlpha(26),
-                        ),
-                        child: Text(
-                          overallStatus,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            letterSpacing: 1.0, // Increased from 10
-                          ),
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: _buildReasonsList(safetyVar).map((reason) {
-                          final String trimmed = reason.trim();
-                          if (trimmed.isEmpty) return const SizedBox.shrink();
-
-                          final String upperReason = trimmed.toUpperCase();
-
-                          final bool isRecommendation =
-                              trimmed.startsWith("Recommendation:") ||
-                              upperReason.startsWith("• ADVICE:") ||
-                              upperReason.contains("ADVICE:");
-
-                          final bool isCategoryHeader =
-                              !trimmed.startsWith("•") &&
-                              !trimmed.startsWith("[") &&
-                              !isRecommendation &&
-                              trimmed.contains(":") &&
-                              (upperReason.contains("COMPLIANT") ||
-                                  upperReason.contains("DANGEROUS") ||
-                                  upperReason.contains("SAFE") ||
-                                  upperReason.contains("N/A"));
-
-                          final bool isBulletDetail =
-                              trimmed.startsWith("•") ||
-                              upperReason.startsWith("DESCRIPTION:") ||
-                              upperReason.startsWith("REASONING:");
-
-                          if (isCategoryHeader) {
-                            final parts = trimmed.split(":");
-                            final String categoryName = parts[0].trim();
-                            final String complianceStatus = parts.length > 1
-                                ? parts[1].trim()
-                                : "N/A";
-                            final Color subStatusColor =
-                                SafetyStatusHelper.getColor(complianceStatus);
-
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                top: AppPadding.large,
-                                bottom: AppPadding.medium,
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    categoryName.toUpperCase(),
-                                    // Modified: Increased header font size
-                                    style: AppTypography.body.copyWith(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: subStatusColor.withAlpha(30),
-                                      borderRadius: BorderRadius.circular(0),
-                                    ),
-                                    child: Text(
-                                      complianceStatus.toUpperCase(),
-                                      // Modified: Increased sub-status font size
-                                      style: AppTypography.body.copyWith(
-                                        color: subStatusColor,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else if (isRecommendation) {
-                            String adviceText = trimmed;
-                            if (adviceText.startsWith("Recommendation:")) {
-                              adviceText = adviceText
-                                  .replaceFirst("Recommendation:", "")
-                                  .trim();
-                            } else if (adviceText.startsWith("•")) {
-                              String temp = adviceText.substring(1).trim();
-                              if (temp.toUpperCase().startsWith("ADVICE:")) {
-                                adviceText = temp.substring(7).trim();
-                              } else {
-                                adviceText = temp;
-                              }
-                            } else if (adviceText.toUpperCase().startsWith(
-                              "ADVICE:",
-                            )) {
-                              adviceText = adviceText.substring(7).trim();
-                            }
-
-                            return Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 12, top: 6),
-                              padding: const EdgeInsets.all(AppPadding.medium),
-                              decoration: BoxDecoration(
-                                color: Colors.blueAccent.withValues(alpha : 0.04),
-                                borderRadius: BorderRadius.circular(8),
-                                border: const Border(
-                                  left: BorderSide(
-                                    color: Colors.blueAccent,
-                                    width: 4,
-                                  ),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    "CORRECTIVE ADVICE:",
-                                    // Modified: Increased font size for advice label
-                                    style: TextStyle(
-                                      color: Colors.blueAccent,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: AppPadding.tight),
-                                  Text(
-                                    adviceText,
-                                    // Modified: Increased body text size
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 12,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else if (isBulletDetail) {
-                            String bodyText = trimmed;
-                            if (bodyText.startsWith("•")) {
-                              bodyText = bodyText.substring(1).trim();
-                            }
-
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                left: 8,
-                                bottom: 8,
-                                right: 8,
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    "• ",
-                                    style: TextStyle(
-                                      color: Colors.black45,
-                                      fontSize:
-                                          12, // Modified: Increased bullet size
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      bodyText,
-                                      // Modified: Increased body text size
-                                      style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 13,
-                                        height: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            String category = "OBSERVATION";
-                            String bodyText = trimmed;
-
-                            if (trimmed.startsWith("[")) {
-                              final closingBracketIdx = trimmed.indexOf("]");
-                              if (closingBracketIdx != -1) {
-                                category = trimmed.substring(
-                                  1,
-                                  closingBracketIdx,
-                                );
-                                bodyText = trimmed
-                                    .substring(closingBracketIdx + 1)
-                                    .trim();
-                              }
-                            }
-
-                            return Container(
-                              width: double.infinity,
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.all(AppPadding.medium),
-                              decoration: BoxDecoration(
-                                color: AppColors.backgroundWhite,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: AppColors.borderGrey,
-                                  width: 1.0,
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    category.toUpperCase(),
-                                    // Modified: Increased observation label size
-                                    style: const TextStyle(
-                                      color: Colors.black54,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: AppPadding.tight),
-                                  Text(
-                                    bodyText,
-                                    // Modified: Increased body text size
-                                    style: const TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 16,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        }).toList(),
                       ),
                     ],
                   ),
                 ),
-              ],
+              ),
+            ],
+
+            _sectionHeader(
+              isComparative
+                  ? 'Initial Inspection — Hazard Identification'
+                  : 'Hazard Identification & Assessment',
             ),
+            _passLabel(
+              isComparative
+                  ? 'INITIAL AUDIT PASS — UNSAFE STATE'
+                  : 'SINGLE PASS — COMPLIANT STATE',
+              isComparative ? Colors.red.shade700 : Colors.green.shade700,
+            ),
+            const SizedBox(height: 8),
+            ..._hazardCards(isComparative ? initialAnalysisData! : safetyVar),
+
+            if (isComparative) ...[
+              _sectionHeader('Rectified Inspection — Verified Safe State'),
+              _passLabel(
+                'RECTIFIED AUDIT PASS — SAFE STATE',
+                Colors.green.shade700,
+              ),
+              const SizedBox(height: 8),
+              ..._hazardCards(safetyVar),
+            ],
+
+            _sectionHeader(
+              isComparative ? 'Evidence Photography' : 'Evidence Photography',
+            ),
+            const SizedBox(height: 8),
+            _imageNotice(),
+            const SizedBox(height: 32),
           ],
         ),
       ),
