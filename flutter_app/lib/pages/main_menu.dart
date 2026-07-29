@@ -129,7 +129,7 @@ class MainMenu extends StatelessWidget {
                         const SizedBox(height: AppPadding.medium),
 
                         MenuButton(
-                          label: "AI Engine Matrix",
+                          label: "AI Analysis Metrics",
                           onTap: () {
                             Navigator.push(
                               context,
@@ -142,7 +142,7 @@ class MainMenu extends StatelessWidget {
                         const SizedBox(height: AppPadding.medium),
 
                         MenuButton(
-                          label: "Change Technician's Password",
+                          label: "Change Password",
                           onTap: () {
                             Navigator.push(
                               context,

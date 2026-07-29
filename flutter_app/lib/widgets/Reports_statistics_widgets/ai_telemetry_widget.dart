@@ -26,6 +26,7 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
   Map<String, int> _keySlotUsage = {};
 
   List<Map<String, dynamic>> _recentFailures = [];
+  List<Map<String, dynamic>> _allLogs = [];
 
   @override
   void initState() {
@@ -46,7 +47,7 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
           .from('ai_telemetry_logs')
           .select(
             'success, latency, model_used, key_slot, error_type, '
-            'error_detail, timestamp, system_notice',
+            'error_detail, timestamp, system_notice, image_size_kb, image_count',
           )
           .order('timestamp', ascending: false)
           .limit(200);
@@ -67,6 +68,7 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
           _modelUsage = {};
           _keySlotUsage = {};
           _recentFailures = [];
+          _allLogs = [];
         });
 
         return;
@@ -78,13 +80,37 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
         return row['success'] == true;
       }).length;
 
+      // 1. Map model usage to determine the primary model
+      final Map<String, int> modelMap = {};
+      for (final row in data) {
+        final String model =
+            row['model_used']?.toString().trim().isNotEmpty == true
+                ? row['model_used'].toString()
+                : 'Unknown model';
+
+        modelMap[model] = (modelMap[model] ?? 0) + 1;
+      }
+
+      // 2. Determine primary model (most heavily used model)
+      String primaryModel = '';
+      if (modelMap.isNotEmpty) {
+        final sortedEntries = modelMap.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        primaryModel = sortedEntries.first.key;
+      }
+
+      // 3. Fallback rate check: fallback model used or system_notice populated
       final int fallbacks = data.where((row) {
         final bool success = row['success'] == true;
+        final String model = row['model_used']?.toString().trim() ?? '';
         final dynamic systemNotice = row['system_notice'];
+        final bool hasNotice =
+            systemNotice != null && systemNotice.toString().trim().isNotEmpty;
 
-        return success &&
-            systemNotice != null &&
-            systemNotice.toString().trim().isNotEmpty;
+        final bool usedFallbackModel =
+            model.isNotEmpty && model != 'none' && model != primaryModel;
+
+        return success && (usedFallbackModel || hasNotice);
       }).length;
 
       final List<double> latencies = data
@@ -97,17 +123,6 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
       final double avgLatency = latencies.isEmpty
           ? 0
           : latencies.reduce((a, b) => a + b) / latencies.length;
-
-      final Map<String, int> modelMap = {};
-
-      for (final row in data) {
-        final String model =
-            row['model_used']?.toString().trim().isNotEmpty == true
-            ? row['model_used'].toString()
-            : 'Unknown model';
-
-        modelMap[model] = (modelMap[model] ?? 0) + 1;
-      }
 
       final Map<String, int> keyMap = {};
 
@@ -135,11 +150,12 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
         _totalCalls = total;
         _successRate = total > 0 ? (successes / total) * 100 : 0;
         _avgLatency = avgLatency;
-        _fallbackRate = successes > 0 ? (fallbacks / successes) * 100 : 0;
+        _fallbackRate = total > 0 ? (fallbacks / total) * 100 : 0;
 
         _modelUsage = _sortMapByValue(modelMap);
         _keySlotUsage = _sortMapByValue(keyMap);
         _recentFailures = failures;
+        _allLogs = data;
 
         _isLoading = false;
       });
@@ -340,6 +356,14 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
                     return _buildFailureRow(row);
                   }).toList(),
                 ),
+        ),
+
+        const SizedBox(height: AppPadding.medium),
+
+        // Dedicated Paginated Telemetry Log Section
+        TelemetryLogHistorySection(
+          logs: _allLogs,
+          formatTimestamp: _formatTimestamp,
         ),
 
         const SizedBox(height: AppPadding.large),
@@ -702,5 +726,289 @@ class _AiTelemetryPageState extends State<AiTelemetryPage> {
     } catch (_) {
       return timestamp.length >= 16 ? timestamp.substring(0, 16) : timestamp;
     }
+  }
+}
+
+/// Paginated Telemetry Log History Widget (10 logs per page)
+class TelemetryLogHistorySection extends StatefulWidget {
+  final List<Map<String, dynamic>> logs;
+  final String Function(String) formatTimestamp;
+
+  const TelemetryLogHistorySection({
+    super.key,
+    required this.logs,
+    required this.formatTimestamp,
+  });
+
+  @override
+  State<TelemetryLogHistorySection> createState() =>
+      _TelemetryLogHistorySectionState();
+}
+
+class _TelemetryLogHistorySectionState
+    extends State<TelemetryLogHistorySection> {
+  int _currentPage = 0;
+  static const int _pageSize = 10;
+
+  @override
+  void didUpdateWidget(covariant TelemetryLogHistorySection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset to first page if log list changed significantly
+    if (widget.logs.length != oldWidget.logs.length) {
+      _currentPage = 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.logs.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final int totalPages = (widget.logs.length / _pageSize).ceil();
+    final int startIndex = _currentPage * _pageSize;
+    final int endIndex = (startIndex + _pageSize < widget.logs.length)
+        ? startIndex + _pageSize
+        : widget.logs.length;
+
+    final pageLogs = widget.logs.sublist(startIndex, endIndex);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Full Telemetry Log History',
+                    style: AppTypography.body.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Showing ${startIndex + 1}-$endIndex of ${widget.logs.length} calls',
+                    style: AppTypography.body.copyWith(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: pageLogs.length,
+            separatorBuilder: (context, index) => const Divider(height: 16),
+            itemBuilder: (context, index) {
+              final row = pageLogs[index];
+              return _buildLogRow(row);
+            },
+          ),
+
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 4),
+
+          // Pagination Controls
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Page ${_currentPage + 1} of $totalPages',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _currentPage > 0
+                        ? () => setState(() => _currentPage--)
+                        : null,
+                    icon: const Icon(Icons.chevron_left, size: 18),
+                    label: const Text('Previous'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    iconAlignment: IconAlignment.end,
+                    onPressed: _currentPage < totalPages - 1
+                        ? () => setState(() => _currentPage++)
+                        : null,
+                    icon: const Icon(Icons.chevron_right, size: 18),
+                    label: const Text('Next'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogRow(Map<String, dynamic> row) {
+    final bool isSuccess = row['success'] == true;
+    final String model = row['model_used']?.toString().trim() ?? '—';
+    final dynamic keySlot = row['key_slot'];
+    final String latency =
+        row['latency'] != null ? '${row['latency']}s' : '—';
+    final String timestamp =
+        widget.formatTimestamp(row['timestamp']?.toString() ?? '');
+    final String notice = row['system_notice']?.toString().trim() ?? '';
+    final String errorDetail = row['error_detail']?.toString().trim() ?? '';
+
+    // Extract & format image_count
+    final dynamic imageCountRaw = row['image_count'];
+    final String imageCount =
+        imageCountRaw != null ? imageCountRaw.toString() : '—';
+
+    // Extract & format image_size_kb
+    final dynamic imageKbRaw = row['image_size_kb'];
+    String formattedImageSize = '—';
+    if (imageKbRaw != null) {
+      final double? kb = double.tryParse(imageKbRaw.toString());
+      if (kb != null) {
+        if (kb >= 1024) {
+          formattedImageSize = '${(kb / 1024).toStringAsFixed(2)} MB';
+        } else {
+          formattedImageSize = '${kb.toStringAsFixed(1)} KB';
+        }
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 6,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: isSuccess ? Colors.green.shade50 : Colors.red.shade50,
+                border: Border.all(
+                  color: isSuccess
+                      ? Colors.green.shade300
+                      : Colors.red.shade300,
+                ),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                isSuccess ? 'SUCCESS' : 'FAILED',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: isSuccess
+                      ? Colors.green.shade700
+                      : Colors.red.shade700,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              model,
+              style: AppTypography.body.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            Icon(
+              Icons.timer_outlined,
+              size: 12,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              latency,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Text(
+              'Key Slot: ${keySlot ?? "—"}',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.image_outlined,
+              size: 12,
+              color: Colors.grey.shade600,
+            ),
+            const SizedBox(width: 3),
+            Text(
+              'Img: $imageCount ($formattedImageSize)',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+            const Spacer(),
+            Text(
+              timestamp,
+              style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+        if (notice.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(
+            'Notice: $notice',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.orange.shade800,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+        if (!isSuccess &&
+            errorDetail.isNotEmpty &&
+            errorDetail != 'NONE') ...[
+          const SizedBox(height: 4),
+          Text(
+            'Error: $errorDetail',
+            style: TextStyle(fontSize: 11, color: Colors.red.shade700),
+          ),
+        ],
+      ],
+    );
   }
 }
