@@ -141,7 +141,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
       final String templateTitle = swpTemplate != null
           ? (swpTemplate['title'] ?? '').toString().toLowerCase()
           : '';
-      final safetyVar = report['safety_variables_FK'];
+      final safetyVar = report['safety_variables'];
       final String overallStatus = safetyVar != null
           ? (safetyVar['Overall Status'] ?? '').toString().toLowerCase()
           : '';
@@ -165,10 +165,14 @@ class _ReportsListPageState extends State<ReportsListPage> {
     setState(() => isLoading = true);
 
     try {
-      final bool filterbyCompliance = selectedComplianceLevel != null;
-      String selectQuery = filterbyCompliance
-          ? '*, swp_templates!inner(id, category, title), safety_variables_FK!inner(*), initialAnalysisId(*)'
-          : '*, swp_templates!inner(id, category, title), safety_variables_FK(*), initialAnalysisId(*)';
+      // Removed the trailing comma and the dynamic !inner joins.
+      // Enforcing !inner on mutually exclusive columns drops all valid rows.
+      final String selectQuery = '''
+        *, 
+        swp_templates!inner(id, category, title), 
+        safety_variables_FK(*),
+        initialAnalysisId(*)
+      ''';
 
       PostgrestFilterBuilder query = supabase
           .from('safety_reports')
@@ -183,21 +187,12 @@ class _ReportsListPageState extends State<ReportsListPage> {
             );
       }
 
-      // Filter by SWP Template Category
       if (selectedCategory != null) {
         query = query.eq('swp_templates.category', selectedCategory!);
       }
 
-      // Filter by SWP Template Title
       if (selectedTitle != null) {
         query = query.eq('swp_templates.title', selectedTitle!);
-      }
-
-      if (selectedComplianceLevel != null) {
-        query = query.eq(
-          'safety_variables_FK.Overall Status',
-          selectedComplianceLevel!,
-        );
       }
 
       if (selectedLocation != null) {
@@ -212,11 +207,34 @@ class _ReportsListPageState extends State<ReportsListPage> {
         'submitted_at',
         ascending: sortAscending,
       );
+
+      final List<Map<String, dynamic>> rawData =
+          List<Map<String, dynamic>>.from(response);
+
+      // Map and coalesce the correct safety variables payload per row
+      var processedReports = rawData.map((report) {
+        final hasInitialAnalysisId = report['initialAnalysisId'] != null;
+        final activeVariables = hasInitialAnalysisId
+            ? report['initialAnalysisId']
+            : report['safety_variables_FK'];
+
+        return {...report, 'safety_variables': activeVariables};
+      }).toList();
+
+      // Apply the compliance filter client-side to bypass the PostgREST inner join limitation
+      if (selectedComplianceLevel != null) {
+        processedReports = processedReports.where((report) {
+          final vars = report['safety_variables'];
+          if (vars == null) return false;
+          return vars['Overall Status'] == selectedComplianceLevel;
+        }).toList();
+      }
+
       setState(() {
-        reports = List<Map<String, dynamic>>.from(response);
-        debugPrint(reports.toString());
+        reports = processedReports;
         isLoading = false;
       });
+
       loadFilterLists();
     } catch (e) {
       setState(() => isLoading = false);
@@ -348,7 +366,7 @@ class _ReportsListPageState extends State<ReportsListPage> {
         report['swp_templates']?['title'] ?? 'N/A';
     final String location = report['location'] ?? 'No location';
     final reportCode = report['report_code'] ?? "unknown ID";
-    final safetyVar = report['safety_variables_FK'];
+    final safetyVar = report['safety_variables'];
 
     // Extract compliance status to color-code the card's edge
     final String overallStatus = safetyVar?['Overall Status'] ?? 'UNKNOWN';
@@ -874,47 +892,49 @@ class _ReportsListPageState extends State<ReportsListPage> {
       final report = selectedObjs[i];
       try {
         // Reconstruct the nested AI data map from flat database columns
-        final safetyVar =
-            report['safety_variables_FK'] as Map<String, dynamic>?;
+        final initialSafetyVar =
+            report['safety_variables'] as Map<String, dynamic>;
+        final finalSafetyVar = 
+            report['safety_variables_FK'] as Map<String, dynamic>;
 
         final Map<String, dynamic> initialAiData = {
-          'overallStatus': safetyVar?['Overall Status'] ?? 'PENDING',
+          'overallStatus': initialSafetyVar?['Overall Status'] ?? 'PENDING',
           'ladderHeight':
-              safetyVar?['ladderheight'] ??
+              initialSafetyVar?['ladderheight'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'ppe':
-              safetyVar?['ppe'] ??
+              initialSafetyVar?['ppe'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'buddySystem':
-              safetyVar?['buddySystem'] ??
+              initialSafetyVar?['buddySystem'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'areaHazards':
-              safetyVar?['areaHazards'] ??
+              initialSafetyVar?['areaHazards'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'electricalMachinery':
-              safetyVar?['electricalMachinery'] ??
+              initialSafetyVar?['electricalMachinery'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
-          'spreaderUnlocked': safetyVar?['spreaderUnlocked'] ?? false,
+          'spreaderUnlocked': initialSafetyVar?['spreaderUnlocked'] ?? false,
         };
 
         final Map<String, dynamic> finalAiData = {
-          'overallStatus': safetyVar?['Overall Status'] ?? 'PENDING',
+          'overallStatus': finalSafetyVar?['Overall Status'] ?? 'PENDING',
           'ladderHeight':
-              safetyVar?['ladderheight'] ??
+              finalSafetyVar?['ladderheight'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'ppe':
-              safetyVar?['ppe'] ??
+              finalSafetyVar?['ppe'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'buddySystem':
-              safetyVar?['buddySystem'] ??
+              finalSafetyVar?['buddySystem'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'areaHazards':
-              safetyVar?['areaHazards'] ??
+              finalSafetyVar?['areaHazards'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
           'electricalMachinery':
-              safetyVar?['electricalMachinery'] ??
+              finalSafetyVar?['electricalMachinery'] ??
               {'status': 'N/A', 'notes': 'No AI evaluation available'},
-          'spreaderUnlocked': safetyVar?['spreaderUnlocked'] ?? false,
+          'spreaderUnlocked': finalSafetyVar?['spreaderUnlocked'] ?? false,
         };
 
         // Compile PDF locally without image evidence

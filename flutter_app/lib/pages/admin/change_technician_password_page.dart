@@ -57,7 +57,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       }
 
       final response = await _supabase.functions.invoke(
-        'change-technician-password',
+        'change-password',
         body: {
           'new_password': _passwordController.text,
           'role': selectedRole.toLowerCase(),
