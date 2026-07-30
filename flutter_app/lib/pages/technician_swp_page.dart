@@ -183,9 +183,11 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
     if (updatedData != null) {
       setState(() {
-        _globalAiData = updatedData;
-        _globalPdfBytes =
-            null; // Invalidate any cached PDF so it regenerates with new data
+        _globalAiData = {
+          ..._globalAiData ?? {},  // keep all existing AI output data
+          ...updatedData,          // overlay with technician's edited data
+        };
+        _globalPdfBytes = null;
       });
     }
   }
@@ -401,12 +403,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         }
 
         _lastAttemptedImages = List<Uint8List>.from(_globalImageBytes);
-        _aiChangeAnalysis = (decodedData['aiChangeAnalysis'] as String? ?? '')
-            .trim();
+        _aiChangeAnalysis = (decodedData['aiChangeAnalysis'] as String? ?? '').trim();
         if (incomingStatus != 'SAFE') {
           _isAnalyzing = false;
         }
 
+        _globalImageBytes.clear();
         _globalPdfBytes = null;
         _isAnalyzing = false;
       });
@@ -747,10 +749,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
                                                     employer: deptCtrl.text,
                                                     manualNotes:
                                                         _globalDetailsCtrl.text,
-                                                    initialAiData:
-                                                        _firstAiData ??
-                                                        _globalAiData ??
-                                                        {},
+                                                    initialAiData: _attemptCount > 1
+                                                        ? (_firstAiData ?? _globalAiData ?? {})
+                                                        : _globalAiData ?? {},
                                                     finalAiData:
                                                         _globalAiData ?? {},
                                                     totalAttempts:
@@ -952,10 +953,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
         technician: name,
         employer: department,
         manualNotes: _globalDetailsCtrl.text,
-        initialAiData:
-            _firstAiData ??
-            _globalAiData ??
-            {}, // Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
+        initialAiData: _attemptCount > 1
+            ? (_firstAiData ?? _globalAiData ?? {})
+            : _globalAiData ?? {},// Pass current AI data even if PDF preview wasn't generated to ensure report has the latest analysis results
         finalAiData: _globalAiData ?? {},
         totalAttempts: _attemptCount,
         aiChangeAnalysis: _aiChangeAnalysis,
@@ -1157,12 +1157,12 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
             }
           }
 
-          if (_globalImageBytes.isEmpty) {
+          if (_lastAttemptedImages.isEmpty) {
             return "Please upload a site photo for safety analysis";
           }
 
           final status = _globalAiData?['overallStatus'];
-          if (status != "SAFE" && !_finishedAnalyzing) {
+          if (status != "SAFE" && status != "N/A" && !_finishedAnalyzing) {
             return "Photo analysis and SAFE overall status required. Please analyze/retake.";
           }
 
@@ -1179,9 +1179,9 @@ class _TechnicianSWPPageState extends State<TechnicianSWPPage> {
 
           bool isPtwValid = ptw.trim().isNotEmpty;
           bool requiresPtw = isAbove3m ? isPtwValid : true;
-          bool hasImage = _globalImageBytes.isNotEmpty;
+          bool hasImage = _lastAttemptedImages.isNotEmpty;
           final status = _globalAiData?['overallStatus'];
-          bool hasValidStatus = (status == "SAFE");
+          bool hasValidStatus = (status == "SAFE" || status == "N/A");
 
           return (isChecklistDone &&
               requiresPtw &&

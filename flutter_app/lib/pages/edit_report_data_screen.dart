@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kkhazardscan/Design/style_constant.dart';
 
 class EditReportDataScreen extends StatefulWidget {
   final Map<String, dynamic> initialAiData;
@@ -10,157 +11,342 @@ class EditReportDataScreen extends StatefulWidget {
 }
 
 class _EditReportDataScreenState extends State<EditReportDataScreen> {
-  // Map containing deep copies of controllers organized by category
-  final Map<String, Map<String, TextEditingController>> _controllers = {};
+  // Valid compliance values — PARTIALLY COMPLIANT and COMPLIANT removed
+  static const List<String> _validStatuses = ['SAFE', 'DANGEROUS', 'N/A'];
+
+  // Only the technician's added text is stored here — original AI text is read-only
+  final Map<String, TextEditingController> _additionControllers = {};
   late String _overallStatus;
 
-  // Define categories matching exactly what your LocalReportCompiler reads
   final List<Map<String, String>> _categories = [
-    {'key': 'ladderHeight', 'label': 'Working at Heights'},
-    {'key': 'ppe', 'label': 'Personal Protective Equipment (PPE)'},
-    {'key': 'buddySystem', 'label': 'Buddy System'},
-    {'key': 'electricalMachinery', 'label': 'Electrical & Machinery Hazards'},
-    {'key': 'areaHazards', 'label': 'Housekeeping and Area Hazards'},
+    {'key': 'ladderHeight',        'label': 'Working at Heights'},
+    {'key': 'ppe',                  'label': 'Personal Protective Equipment (PPE)'},
+    {'key': 'buddySystem',          'label': 'Buddy System'},
+    {'key': 'electricalMachinery',  'label': 'Electrical & Machinery Hazards'},
+    {'key': 'areaHazards',          'label': 'Housekeeping and Area Hazards'},
   ];
 
   @override
   void initState() {
     super.initState();
-    _overallStatus = widget.initialAiData['overallStatus'] ?? 'PENDING';
 
-    // Populate editing controllers dynamically from current AI Map data
-    for (var category in _categories) {
-      final String key = category['key']!;
-      final Map<String, dynamic> block = widget.initialAiData[key] ?? {};
+    final raw = widget.initialAiData['overallStatus']?.toString().toUpperCase() ?? 'N/A';
+    _overallStatus = _validStatuses.contains(raw) ? raw : 'N/A';
 
-      _controllers[key] = {
-        'compliance': TextEditingController(text: block['compliance']?.toString() ?? 'COMPLIANT'),
-        'description': TextEditingController(text: block['description']?.toString() ?? ''),
-        'reasoning': TextEditingController(text: block['reasoning']?.toString() ?? ''),
-        'advice': TextEditingController(text: block['advice']?.toString() ?? ''),
-      };
+    // One free-text controller per category for the technician's added remarks
+    for (final cat in _categories) {
+      _additionControllers[cat['key']!] = TextEditingController();
     }
   }
 
   @override
   void dispose() {
-    // Prevent memory leaks by cleanly disposing all dynamic text controllers
-    for (var innerMap in _controllers.values) {
-      for (var controller in innerMap.values) {
-        controller.dispose();
-      }
+    for (final ctrl in _additionControllers.values) {
+      ctrl.dispose();
     }
     super.dispose();
   }
 
-  // Pack the typed values back into a map structured perfectly for the compiler
+  // Returns original AI text for a given category and field
+  String _aiField(String categoryKey, String field) {
+    final block = widget.initialAiData[categoryKey];
+    if (block is Map) {
+      return block[field]?.toString().trim() ?? '';
+    }
+    return '';
+  }
+
+  // Builds the updated map passed back to the technician page
   void _saveChanges() {
     final Map<String, dynamic> updatedData = {
       'overallStatus': _overallStatus,
     };
 
-    _controllers.forEach((categoryKey, fields) {
-      updatedData[categoryKey] = {
-        'compliance': fields['compliance']!.text,
-        'description': fields['description']!.text,
-        'reasoning': fields['reasoning']!.text,
-        'advice': fields['advice']!.text,
+    for (final cat in _categories) {
+      final key   = cat['key']!;
+      final block = widget.initialAiData[key];
+      final Map<String, dynamic> original =
+          block is Map ? Map<String, dynamic>.from(block) : {};
+
+      final String addedText = _additionControllers[key]!.text.trim();
+
+      // Append technician addition to description and reasoning if provided
+      // Advice field is preserved as-is from AI — never modified
+      updatedData[key] = {
+        'compliance':  original['compliance'] ?? 'N/A',
+        'description': addedText.isEmpty
+            ? (original['description'] ?? '')
+            : '${original['description'] ?? ''}\n\n(EDIT: $addedText)',
+        'reasoning':   original['reasoning'] ?? '',
+        'advice':      original['advice'] ?? '',
       };
-    });
+    }
 
     Navigator.pop(context, updatedData);
+  }
+
+  Color _statusColor(String s) {
+    switch (s.toUpperCase()) {
+      case 'DANGEROUS': return Colors.red.shade700;
+      case 'SAFE':      return Colors.green.shade700;
+      default:          return Colors.grey;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.backgroundWhite,
       appBar: AppBar(
-        title: const Text("Refine AI Observations"),
+        backgroundColor: AppColors.primaryBlue,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          'Add Remarks',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save, color: Colors.blueAccent),
+          TextButton.icon(
             onPressed: _saveChanges,
+            icon: const Icon(Icons.check, color: Colors.white, size: 18),
+            label: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(AppPadding.medium),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Overall status dropdown editor
-            Card(
-              child: ListTile(
-                title: const Text("Overall Report Status", style: TextStyle(fontWeight: FontWeight.bold)),
-                trailing: DropdownButton<String>(
-                  value: ['DANGEROUS', 'PARTIALLY COMPLIANT', 'COMPLIANT', 'SAFE'].contains(_overallStatus.toUpperCase()) 
-                      ? _overallStatus.toUpperCase() 
-                      : 'COMPLIANT',
-                  items: ['DANGEROUS', 'PARTIALLY COMPLIANT', 'COMPLIANT', 'SAFE'].map((String status) {
-                    return DropdownMenuItem<String>(value: status, child: Text(status));
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => _overallStatus = val);
-                  },
-                ),
+
+            // ── Overall Status ──────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppPadding.medium, vertical: AppPadding.tight),
+              decoration: BoxDecoration(
+                color: AppColors.primaryTint,
+                border: Border.all(color: AppColors.borderGrey),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Overall Status',
+                      style: AppTypography.body
+                          .copyWith(fontWeight: FontWeight.bold)),
+                  DropdownButton<String>(
+                    value: _overallStatus,
+                    underline: const SizedBox.shrink(),
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusSmall),
+                    items: _validStatuses.map((s) {
+                      return DropdownMenuItem(
+                        value: s,
+                        child: Text(s,
+                            style: TextStyle(
+                                color: _statusColor(s),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => _overallStatus = val);
+                    },
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            
-            // Loop and build cards for the 4 core categories
-            ..._categories.map((cat) {
-              final String key = cat['key']!;
-              final String label = cat['label']!;
-              final fields = _controllers[key]!;
 
-              return Card(
-                margin: const EdgeInsets.only(bottom: 16),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+            const SizedBox(height: AppPadding.medium),
+
+            // ── Info notice ─────────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.all(AppPadding.tight),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                border: Border.all(color: Colors.amber.shade300),
+                borderRadius:
+                    BorderRadius.circular(AppDimensions.radiusSmall),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline,
+                      color: Colors.amber.shade800, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'AI observations are read-only. Use the addition field to append your remarks.',
+                      style: AppTypography.body.copyWith(
+                          fontSize: 12, color: Colors.amber.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: AppPadding.medium),
+
+            // ── Category cards ──────────────────────────────────────────────
+            ..._categories.map((cat) {
+              final key   = cat['key']!;
+              final label = cat['label']!;
+
+              final String aiDescription = _aiField(key, 'description');
+              final String aiReasoning   = _aiField(key, 'reasoning');
+              final String compliance    =
+                  _aiField(key, 'compliance').toUpperCase();
+              final Color badgeColor     = _statusColor(compliance);
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: AppPadding.medium),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: AppColors.borderGrey),
+                  borderRadius:
+                      BorderRadius.circular(AppDimensions.radiusSmall),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    // Card header
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppPadding.medium,
+                          vertical: AppPadding.tight),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withAlpha(20),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(AppDimensions.radiusSmall),
+                          topRight: Radius.circular(AppDimensions.radiusSmall),
+                        ),
+                      ),
+                      child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Expanded(
+                            child: Text(label,
+                                style: AppTypography.body.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textMain)),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: badgeColor.withAlpha(25),
+                              border: Border.all(color: badgeColor, width: 0.5),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                             child: Text(
-                              label,
-                              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.blueAccent),
+                              compliance.isEmpty ? 'N/A' : compliance,
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: badgeColor),
                             ),
                           ),
-                          DropdownButton<String>(
-                            value: ['DANGEROUS', 'PARTIALLY COMPLIANT', 'COMPLIANT', 'SAFE'].contains(fields['compliance']!.text.toUpperCase())
-                                ? fields['compliance']!.text.toUpperCase()
-                                : 'COMPLIANT',
-                            items: ['DANGEROUS', 'PARTIALLY COMPLIANT', 'COMPLIANT', 'SAFE'].map((val) => DropdownMenuItem(value: val, child: Text(val))).toList(),
-                            onChanged: (val) => setState(() => fields['compliance']!.text = val ?? 'COMPLIANT'),
-                          )
                         ],
                       ),
-                      const Divider(),
-                      TextField(
-                        controller: fields['description'],
-                        decoration: const InputDecoration(labelText: "Observation Text"),
-                        maxLines: null,
-                      ),
-                      TextField(
-                        controller: fields['reasoning'],
-                        decoration: const InputDecoration(labelText: "Reasoning Matrix"),
-                        maxLines: null,
-                      ),
-                      TextField(
-                        controller: fields['advice'],
-                        decoration: const InputDecoration(labelText: "Corrective Actions / Recommendations"),
-                        maxLines: null,
-                      ),
+                    ),
+
+                    // AI Observation (read-only)
+                    if (aiDescription.isNotEmpty) ...[
+                      _readOnlyField('Observation', aiDescription),
+                      const Divider(height: 1, color: Color(0xFFE5E7EB)),
                     ],
-                  ),
+
+                    // AI Reasoning (read-only)
+                    if (aiReasoning.isNotEmpty) ...[
+                      _readOnlyField('Reasoning', aiReasoning),
+                      const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                    ],
+
+                    // Technician addition field (editable)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                          AppPadding.medium,
+                          AppPadding.tight,
+                          AppPadding.medium,
+                          AppPadding.medium),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Your Remarks (optional)',
+                            style: AppTypography.body.copyWith(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.primaryBlue),
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: _additionControllers[key],
+                            maxLines: null,
+                            style: AppTypography.body,
+                            decoration: InputDecoration(
+                              hintText: 'Add your observations here...',
+                              hintStyle: AppTypography.body.copyWith(
+                                  color: Colors.grey.shade400),
+                              filled: true,
+                              fillColor: AppColors.backgroundWhite,
+                              contentPadding: const EdgeInsets.all(AppPadding.tight),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppDimensions.radiusSmall),
+                                borderSide:
+                                    BorderSide(color: AppColors.borderGrey),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppDimensions.radiusSmall),
+                                borderSide:
+                                    BorderSide(color: AppColors.borderGrey),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                    AppDimensions.radiusSmall),
+                                borderSide: BorderSide(
+                                    color: AppColors.primaryBlue, width: 1.5),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               );
             }),
+
+            const SizedBox(height: AppPadding.medium),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _readOnlyField(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppPadding.medium, vertical: AppPadding.tight),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(label,
+                style: AppTypography.body.copyWith(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey)),
+          ),
+          Expanded(
+            child: Text(value,
+                style: AppTypography.body.copyWith(
+                    fontSize: 12, color: AppColors.textMain, height: 1.5)),
+          ),
+        ],
       ),
     );
   }
