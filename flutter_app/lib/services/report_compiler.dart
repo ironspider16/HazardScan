@@ -104,7 +104,7 @@ class LocalReportCompiler {
             ['Location', location.isEmpty ? 'Not Declared' : location],
             ['technician', technician.isEmpty ? 'Unassigned' : technician],
             [
-              'Employer / Contractor',
+              'Department',
               employer.isEmpty ? 'Not Declared' : employer,
             ],
             ['Inspection Time', '$headerDate  $headerTime SGT'],
