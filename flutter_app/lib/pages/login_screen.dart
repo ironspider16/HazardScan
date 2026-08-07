@@ -16,15 +16,19 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  static const Map<String, String> roleEmail = {
+    'admin': 'admin@example.com',
+    'technician': 'technician@example.com'
+  };
+  String _selectedRole = "technician";
+  String _loginEmail = "technician@example.com";
 
   bool _showPassword = false;
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
   }
@@ -34,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final email = _emailCtrl.text.trim();
+    final email = _loginEmail; // Use the email based on the selected role
     final password = _passwordCtrl.text.trim();
 
     try {
@@ -144,15 +148,40 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: AppPadding.extraLarge),
 
                   // EMAIL FIELD
-                  SizedBox(
+                  // SizedBox(
+                  //   width: fieldWidth,
+                  //   child: AppTextfield(
+                  //     controller: _emailCtrl,
+                  //     label: "Email",
+                  //     hint: "Email Address",
+                  //     prefixIcon: Icons.email_outlined,
+                  //     validator: (v) =>
+                  //         (v == null || v.isEmpty) ? "Email is required" : null,
+                  //   ),
+                  // ),
+                
+                  Container(
                     width: fieldWidth,
-                    child: AppTextfield(
-                      controller: _emailCtrl,
-                      label: "Email",
-                      hint: "Email Address",
-                      prefixIcon: Icons.email_outlined,
-                      validator: (v) =>
-                          (v == null || v.isEmpty) ? "Email is required" : null,
+                    child: DropdownMenu<String>(
+                      label: const Text("Select Role"),
+                      requestFocusOnTap: false,
+                      expandedInsets: EdgeInsets.zero,
+                      initialSelection: _selectedRole,
+                      onSelected: (String? newValue) {
+                        if (newValue == null) return;
+                        setState(() {
+                          _selectedRole = newValue;
+                          _loginEmail = roleEmail[_selectedRole] ?? 'technician@example.com';
+                        });
+                      },
+                      dropdownMenuEntries: roleEmail.keys.map<DropdownMenuEntry<String>>((
+                        String value,
+                      ) {
+                        return DropdownMenuEntry<String>(
+                          value: value,
+                          label: value,
+                        );
+                      }).toList(),
                     ),
                   ),
 

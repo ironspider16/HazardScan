@@ -10,7 +10,7 @@ import 'admin/reports_statistics_page.dart';
 import 'admin/reports_list_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:kkhazardscan/widgets/Reports_statistics_widgets/ai_telemetry_widget.dart';
-import 'package:kkhazardscan/pages/admin/change_technician_password_page.dart';
+import 'package:kkhazardscan/pages/admin/change_password_page.dart';
 
 class MainMenu extends StatelessWidget {
   final AppUser user;
