@@ -44,6 +44,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   String _getBoxLabel(Detection d) {
+    if (d.confidence < 0.7) return "";
     return "${d.label} ${(d.confidence * 100).toStringAsFixed(1)}%";
   }
 
